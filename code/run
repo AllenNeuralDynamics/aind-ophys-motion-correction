@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -ex
+
+# This is the master script for the capsule. When you click "Reproducible Run", the code in this file will execute.
+python -m aind_ophys_pipeline_utils.run_util -i /data/ -o /results/ -p 70 -a create-input-json -c suite2p_motion_correction # auto-generate input.json, here for plane 70
+
+# python registration_utils.py -p 70  # auto-generate input.json, here for plane 70
+time python registration.py --input_json /data/input.json # run registration
