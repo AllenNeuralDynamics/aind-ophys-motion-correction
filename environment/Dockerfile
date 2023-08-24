@@ -9,9 +9,6 @@ COPY git-askpass /
 
 RUN pip3 install -U --no-cache-dir \
     torch --index-url https://download.pytorch.org/whl/cpu
-RUN git clone https://github.com/AllenNeuralDynamics/aind-ophys-pipeline-utils.git
-WORKDIR aind-ophys-pipeline-utils
-RUN pip install -e .
 WORKDIR /
 RUN pip3 install -U --no-cache-dir \
     aind-ophys-utils \
@@ -22,3 +19,4 @@ RUN pip3 install -U --no-cache-dir \
     pandas \
     sbxreader \
     suite2p==0.13.1
+    aind-ophys-pipeline-utils
