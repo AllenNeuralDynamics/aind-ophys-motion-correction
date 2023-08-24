@@ -260,6 +260,10 @@ class Suite2PRegistration(argschema.ArgSchemaParser):
             suite_args_copy.pop("refImg")
             args_copy.pop("refImg")
             args_copy["suite2p_args"] = suite_args_copy
+            utils.write_output_metadata(
+                json.dumps(args_copy),
+                suite2p_args["h5py"],
+                self.args["motion_corrected_output"])
             f.create_dataset(
                 name="metadata", data=json.dumps(args_copy).encode("utf-8")
             )

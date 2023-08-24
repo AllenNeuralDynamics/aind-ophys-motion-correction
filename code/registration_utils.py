@@ -7,8 +7,12 @@ import warnings
 from glob import glob
 from itertools import product
 from time import time
-from typing import Callable, List, Tuple
+from typing import Callable, List, Tuple, Union
+from pathlib import Path
+import re
 
+from aind_data_schema import Processing
+from aind_data_schema.processing import DataProcess
 import h5py
 import numpy as np
 from aind_ophys_utils.array_utils import normalize_array
@@ -848,3 +852,48 @@ if __name__ == "__main__":
             json.dump(data, j, indent=2)
     except Exception as e:
         raise Exception(f"Error writing json file: {e}")
+
+def get_plane(processed_file: Union[str, Path]) -> str:
+    """Get the plane from the processed file name
+
+    Args:
+        processed_file (str): path to processed file
+
+    Returns:
+        str: plane
+    """
+
+    try:
+        re.findall(r"\d+um", processed_file)[0].split("um")[0]
+    except IndexError:
+        raise IndexError("No plane depth found")
+    assert int(plane)
+    return plane
+
+def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_corrected_movie: Union[str, Path]) -> None:
+    """Writes output metadata to plane processing.json
+
+    Args:
+        input_dir (str): path to data directory
+        output_dir (str): path to results directory
+        plane (str): plane to process
+    """
+    processing = Processing(
+        name="Suite2p motion correction",
+        version="0.0.0",
+        data_process=[
+            DataProcess(
+                name="Image thresholding",
+                version="0.0.0",
+                start_date_time=metadata["start_date_time"],
+                end_date_time=metadata["end_date_time"],
+                input_location=raw_movie,
+                output_location=motion_corrected_movie,
+                code_url="https://github.com/AllenNeuralDynamics/aind-ophys-motion-correction/tree/main/code",
+                parameters=metadata,
+            )
+        ],
+    )
+    processing.write_standard_file(
+        output_directory=output_dir, prefix=f"{plane}um_suite2p_motion_correction"
+    )
