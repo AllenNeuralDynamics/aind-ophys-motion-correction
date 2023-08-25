@@ -9,6 +9,7 @@ from itertools import product
 from time import time
 from typing import Callable, List, Tuple, Union
 from pathlib import Path
+import re
 
 from aind_data_schema import Processing
 from aind_data_schema.processing import DataProcess
@@ -777,6 +778,22 @@ def identify_and_clip_outliers(
     return data, indices
 
 
+def make_output_directory(output_dir: str, h5_file: str, plane: str) -> str:
+    """Creates the output directory if it does not exist
+
+    Args:
+        output_dir (str): output directory
+        h5_file (str): h5 file path
+        plane (str): plane number
+    Returns:
+        output_dir (str): output directory
+    """
+    exp_to_match = r"Other_\d{6}_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}"
+    parent_dir = re.findall(exp_to_match, h5_file)[0]
+    output_dir = os.path.join(output_dir, parent_dir, plane)
+    os.makedirs(output_dir, exist_ok=True)
+    return output_dir
+
 def get_frame_rate_platform_json(input_dir: str) -> float:
     """Get the frame rate from the platform json file.
     Platform json will need to get copied to each data directory throughout the pipeline
@@ -793,11 +810,10 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
     """
     try:
         try:
-            platform_json = glob(
-                f"{input_dir}/Other_[0-9]*/Other/ophys/*platform.json"
-            )[0]
+            platform_directory = os.path.pardir(os.path.pardir(input_dir))
+            platform_json = glob.glob(f"{platform_directory}/*platform.json")
         except IndexError:
-            platform_json = glob(f"{input_dir}*platform.json")[0]
+            raise IndexError
         with open(platform_json) as f:
             data = json.load(f)
         frame_rate = data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
@@ -805,6 +821,41 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
     except IndexError as exc:
         raise Exception(f"Error: {exc}")
 
+def create_input_json(input_file: str, output_dir: str, plane: str) -> dict:
+    """Generates suite2p motion correction input json for a given plane
+
+    Args:
+        input_file (str): path to data directory or path to raw movie
+        output_dir (str): path to results directory
+        plane (int, optional): Plane to process if session directory is passed. Defaults to None.
+
+    Returns:
+        dict: suite2p motion correction input_file json
+    """
+    output_dir = make_output_directory(output_dir, h5_file, plane)
+
+    frame_rate_hz = get_frame_rate_platform_json(input_file)
+    return {
+        "h5py": input_file,
+        "movie_frame_rate_hz": frame_rate_hz,
+        "motion_corrected_output": os.path.join(output_dir, f"suite2p_motion_output.h5"),
+        "motion_diagnostics_output": os.path.join(
+            output_dir, f"suite2p_rigid_motion_transform.csv"
+        ),
+        "max_projection_output": os.path.join(
+            output_dir, f"suite2p_maximum_projection.png"
+        ),
+        "avg_projection_output": os.path.join(
+            output_dir, f"suite2p_average_projection.png"
+        ),
+        "registration_summary_output": os.path.join(
+            output_dir, f"suite2p_registration_summary.png"
+        ),
+        "motion_correction_preview_output": os.path.join(
+            output_dir, f"suite2p_motion_preview.webm"
+        ),
+        "output_json": os.path.join(output_dir, f"suite2p_motion_correction_output.json"),
+    }
 
 def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_corrected_movie: Union[str, Path]) -> None:
     """Writes output metadata to plane processing.json
@@ -842,7 +893,7 @@ if __name__ == "__main__":
     # Generate input json
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-i", "--input-dir", type=str, help="Input directory", default="../data/"
+        "-i", "--input-filename", type=str, help="Path to raw movie", default="../data/"
     )
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="../results/"
