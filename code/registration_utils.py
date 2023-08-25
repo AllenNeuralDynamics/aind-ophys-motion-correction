@@ -11,6 +11,7 @@ from typing import Callable, List, Tuple, Union
 from pathlib import Path
 import re
 from datetime import datetime as dt
+import pytz
 
 
 from aind_data_schema import Processing
@@ -779,6 +780,15 @@ def identify_and_clip_outliers(
     )
     return data, indices
 
+def now() -> str:
+    """Generates string with current date and time in PST
+
+    Returns:
+        str: YYYY-MM-DD_HH-MM-SS
+    """
+    current_dt = dt.now(tz=pytz.timezone("America/Los_Angeles"))
+    return f"{current_dt.strftime('Y-m-d')}_{current_dt.strftime('H:M:S')}"
+
 
 def make_output_directory(output_dir: str, h5_file: str, plane: str) -> str:
     """Creates the output directory if it does not exist
@@ -791,7 +801,7 @@ def make_output_directory(output_dir: str, h5_file: str, plane: str) -> str:
         output_dir (str): output directory
     """
     exp_to_match = r"Other_\d{6}_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}"
-    parent_dir = re.findall(exp_to_match, h5_file)[0]
+    parent_dir = re.findall(exp_to_match, h5_file)[0] + "_processed_" + now()
     output_dir = os.path.join(output_dir, parent_dir, plane)
     os.makedirs(output_dir, exist_ok=True)
     return output_dir
