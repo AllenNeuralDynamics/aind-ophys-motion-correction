@@ -260,6 +260,9 @@ class Suite2PRegistration(argschema.ArgSchemaParser):
             suite_args_copy.pop("refImg")
             args_copy.pop("refImg")
             args_copy["suite2p_args"] = suite_args_copy
+            f.create_dataset(
+                name="metadata", data=json.dumps(args_copy).encode("utf-8")
+            )
             # save Suite2p registration metrics
             f.create_group("reg_metrics")
             f.create_dataset("reg_metrics/regDX", data=ops["regDX"])
@@ -268,18 +271,15 @@ class Suite2PRegistration(argschema.ArgSchemaParser):
         self.logger.info(
             "saved Suite2P output to " f"{self.args['motion_corrected_output']}"
         )
-        f.create_dataset(
-                name="metadata", data=json.dumps(args_copy).encode("utf-8")
-            )
         # make projections
         mx_proj = utils.projection_process(data, projection="max")
         av_proj = utils.projection_process(data, projection="avg")
-        # TODO: normalize here, if desired
-        # save projections
         utils.write_output_metadata(
             json.dumps(args_copy),
             suite2p_args["h5py"],
             self.args["motion_corrected_output"])
+        # TODO: normalize here, if desired
+        # save projections
         for im, dst_path in zip(
             [mx_proj, av_proj],
             [
