@@ -271,10 +271,13 @@ class Suite2PRegistration(argschema.ArgSchemaParser):
         self.logger.info(
             "saved Suite2P output to " f"{self.args['motion_corrected_output']}"
         )
-
         # make projections
         mx_proj = utils.projection_process(data, projection="max")
         av_proj = utils.projection_process(data, projection="avg")
+        utils.write_output_metadata(
+            json.dumps(args_copy),
+            suite2p_args["h5py"],
+            self.args["motion_corrected_output"])
         # TODO: normalize here, if desired
         # save projections
         for im, dst_path in zip(

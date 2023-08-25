@@ -7,8 +7,11 @@ import warnings
 from glob import glob
 from itertools import product
 from time import time
-from typing import Callable, List, Tuple
+from typing import Callable, List, Tuple, Union
+from pathlib import Path
 
+from aind_data_schema import Processing
+from aind_data_schema.processing import DataProcess
 import h5py
 import numpy as np
 from aind_ophys_utils.array_utils import normalize_array
@@ -802,6 +805,38 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
     except IndexError as exc:
         raise Exception(f"Error: {exc}")
 
+
+def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_corrected_movie: Union[str, Path]) -> None:
+    """Writes output metadata to plane processing.json
+
+    Parameters
+    ----------
+    metadata: dict
+        parameters from suite2p motion correction
+    raw_movie: str
+        path to raw movies
+    motion_corrected_movie: str
+        path to motion corrected movies
+    """
+    processing = Processing(
+        name="Suite2p motion correction",
+        version="0.0.0",
+        data_process=[
+            DataProcess(
+                name="Other",
+                version="0.0.0",
+                start_date_time=metadata["start_date_time"],
+                end_date_time=metadata["end_date_time"],
+                input_location=raw_movie,
+                output_location=motion_corrected_movie,
+                code_url="https://github.com/AllenNeuralDynamics/aind-ophys-motion-correction/tree/main/code",
+                parameters=metadata,
+            )
+        ],
+    )
+    processing.write_standard_file(
+        output_directory=os.path.pardir(motion_corrected_movie)
+        )
 
 if __name__ == "__main__":
     # Generate input json
