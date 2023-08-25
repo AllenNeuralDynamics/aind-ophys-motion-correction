@@ -832,7 +832,7 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
     """
     try:
         try:
-            platform_directory = os.path.pardir(os.path.pardir(input_dir))
+            platform_directory = os.path.dirname(os.path.dirname(input_dir))
             platform_json = glob.glob(f"{platform_directory}/*platform.json")
         except IndexError:
             raise IndexError
@@ -873,7 +873,7 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_co
         ],
     )
     processing.write_standard_file(
-        output_directory=os.path.pardir(motion_corrected_movie)
+        output_directory=os.path.dirname(motion_corrected_movie)
         )
 
 if __name__ == "__main__":
@@ -888,10 +888,9 @@ if __name__ == "__main__":
     # parser.add_argument("-p", "--plane", type=str, help="Plane depth", default=None)
 
     args = parser.parse_args()
-    plane = args.plane
     h5_file = args.input_filename
     # if not plane:
-    plane = os.path.pardir(h5_file)
+    plane = os.path.dirname(h5_file).split("/")[-1]
     output_dir = make_output_directory(args.output_dir, h5_file, plane)
     try:
         frame_rate_hz = get_frame_rate_platform_json(h5_file)
