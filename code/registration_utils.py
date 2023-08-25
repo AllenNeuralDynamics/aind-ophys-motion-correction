@@ -793,7 +793,7 @@ def now() -> str:
     return f"{current_dt.strftime('%Y-%m-%d')}_{current_dt.strftime('%H-%M-%S')}"
 
 
-def make_output_directory(output_dir: str, h5_file: str, plane: str) -> str:
+def make_output_directory(output_dir: str, h5_file: str, plane: str=None) -> str:
     """Creates the output directory if it does not exist
     
     Parameters
@@ -812,7 +812,10 @@ def make_output_directory(output_dir: str, h5_file: str, plane: str) -> str:
     """
     exp_to_match = r"Other_\d{6}_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}"
     parent_dir = re.findall(exp_to_match, h5_file)[0] + "_processed_" + now()
-    output_dir = os.path.join(output_dir, parent_dir, plane)
+    if plane:
+        output_dir = os.path.join(output_dir, parent_dir, plane)
+    else:
+        output_dir = os.path.join(output_dir, parent_dir)
     os.makedirs(output_dir, exist_ok=True)
     return output_dir
 
@@ -890,7 +893,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     h5_file = args.input_filename
     # if not plane:
-    plane = os.path.dirname(h5_file).split("/")[-1]
+    try:
+        plane = os.path.dirname(h5_file).split("/")[-1]
+        assert plane == int
+    except AssertionError:
+        plane = None
     output_dir = make_output_directory(args.output_dir, h5_file, plane)
     try:
         frame_rate_hz = get_frame_rate_platform_json(h5_file)
