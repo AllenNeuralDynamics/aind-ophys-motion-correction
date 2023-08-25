@@ -14,6 +14,7 @@ import suite2p
 from PIL import Image
 from time import time
 
+
 import registration_utils as utils
 from registration_qc import RegistrationQC
 from schemas import (Suite2PRegistrationInputSchema,
