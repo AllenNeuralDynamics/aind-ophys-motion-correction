@@ -809,10 +809,14 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
 def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_corrected_movie: Union[str, Path]) -> None:
     """Writes output metadata to plane processing.json
 
-    Args:
-        metadata (dict): parameters from suite2p motion correction
-        raw_movie (str): path to raw movies
-        motion_corrected_movie (str): path to motion corrected movies
+    Parameters
+    ----------
+    metadata: dict
+        parameters from suite2p motion correction
+    raw_movie: str
+        path to raw movies
+    motion_corrected_movie: str
+        path to motion corrected movies
     """
     processing = Processing(
         name="Suite2p motion correction",
