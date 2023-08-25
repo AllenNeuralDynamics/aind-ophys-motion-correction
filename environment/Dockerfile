@@ -7,6 +7,8 @@ ARG GIT_ASKPASS
 ARG GIT_ACCESS_TOKEN
 COPY git-askpass /
 
+RUN ["apt-get", "update"]
+RUN ["apt-get", "install", "-y", "vim"]
 RUN pip3 install -U --no-cache-dir \
     torch --index-url https://download.pytorch.org/whl/cpu
 WORKDIR /
