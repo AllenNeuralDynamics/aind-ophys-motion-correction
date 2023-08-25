@@ -857,12 +857,10 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_co
         path to motion corrected movies
     """
     processing = Processing(
-        name="Suite2p motion correction",
-        version="0.0.0",
         data_processes=[
             DataProcess(
                 name="Other",
-                version="0.0.0",
+                version="0.0.1",
                 start_date_time=dt.now(),  # TODO: Add actual dt
                 end_date_time=dt.now(),  # TODO: Add actual dt
                 input_location=raw_movie,
@@ -873,7 +871,7 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_co
         ],
     )
     processing.write_standard_file(
-        output_directory=os.path.dirname(motion_corrected_movie)
+        output_directory=Path(os.path.dirname(motion_corrected_movie))
         )
 
 if __name__ == "__main__":
