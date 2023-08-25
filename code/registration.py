@@ -275,13 +275,10 @@ class Suite2PRegistration(argschema.ArgSchemaParser):
         # make projections
         mx_proj = utils.projection_process(data, projection="max")
         av_proj = utils.projection_process(data, projection="avg")
-        try:
-            utils.write_output_metadata(
-                json.dumps(args_copy),
-                suite2p_args["h5py"],
-                self.args["motion_corrected_output"])
-        except Exception as e:
-            logging.error(f"Error, {e}")
+        utils.write_output_metadata(
+            json.dumps(args_copy),
+            suite2p_args["h5py"],
+            self.args["motion_corrected_output"])
         # TODO: normalize here, if desired
         # save projections
         for im, dst_path in zip(
