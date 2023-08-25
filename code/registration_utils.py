@@ -859,7 +859,7 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_co
     processing = Processing(
         name="Suite2p motion correction",
         version="0.0.0",
-        data_process=[
+        data_processes=[
             DataProcess(
                 name="Other",
                 version="0.0.0",
