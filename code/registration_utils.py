@@ -10,6 +10,8 @@ from time import time
 from typing import Callable, List, Tuple, Union
 from pathlib import Path
 import re
+from datetime import datetime as dt
+
 
 from aind_data_schema import Processing
 from aind_data_schema.processing import DataProcess
@@ -876,8 +878,8 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_co
             DataProcess(
                 name="Other",
                 version="0.0.0",
-                start_date_time=metadata["start_date_time"],
-                end_date_time=metadata["end_date_time"],
+                start_date_time=dt.now(),  # TODO: Add actual dt
+                end_date_time=dt.now(),  # TODO: Add actual dt
                 input_location=raw_movie,
                 output_location=motion_corrected_movie,
                 code_url="https://github.com/AllenNeuralDynamics/aind-ophys-motion-correction/tree/main/code",
