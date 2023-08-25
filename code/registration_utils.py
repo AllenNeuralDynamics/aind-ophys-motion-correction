@@ -9,7 +9,6 @@ from itertools import product
 from time import time
 from typing import Callable, List, Tuple, Union
 from pathlib import Path
-import re
 
 from aind_data_schema import Processing
 from aind_data_schema.processing import DataProcess
@@ -806,20 +805,21 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
     except IndexError as exc:
         raise Exception(f"Error: {exc}")
 
+
 def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_corrected_movie: Union[str, Path]) -> None:
     """Writes output metadata to plane processing.json
 
     Args:
-        input_dir (str): path to data directory
-        output_dir (str): path to results directory
-        plane (str): plane to process
+        metadata (dict): parameters from suite2p motion correction
+        raw_movie (str): path to raw movies
+        motion_corrected_movie (str): path to motion corrected movies
     """
     processing = Processing(
         name="Suite2p motion correction",
         version="0.0.0",
         data_process=[
             DataProcess(
-                name="Image thresholding",
+                name="Other",
                 version="0.0.0",
                 start_date_time=metadata["start_date_time"],
                 end_date_time=metadata["end_date_time"],
@@ -831,8 +831,8 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_co
         ],
     )
     processing.write_standard_file(
-        output_directory=output_dir, prefix=f"{plane}um_suite2p_motion_correction"
-    )
+        output_directory=os.path.pardir(motion_corrected_movie)
+        )
 
 if __name__ == "__main__":
     # Generate input json
@@ -879,20 +879,3 @@ if __name__ == "__main__":
             json.dump(data, j, indent=2)
     except Exception as e:
         raise Exception(f"Error writing json file: {e}")
-
-def get_plane(processed_file: Union[str, Path]) -> str:
-    """Get the plane from the processed file name
-
-    Args:
-        processed_file (str): path to processed file
-
-    Returns:
-        str: plane
-    """
-
-    try:
-        re.findall(r"\d+um", processed_file)[0].split("um")[0]
-    except IndexError:
-        raise IndexError("No plane depth found")
-    assert int(plane)
-    return plane
