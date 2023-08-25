@@ -19,4 +19,5 @@ RUN pip3 install -U --no-cache-dir \
     pandas \
     sbxreader \
     suite2p==0.13.1 \
-    aind-ophys-pipeline-utils
+    aind-ophys-pipeline-utils \
+    aind-data-schema
