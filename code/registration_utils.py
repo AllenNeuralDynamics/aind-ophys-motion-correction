@@ -860,10 +860,10 @@ if __name__ == "__main__":
     # Generate input json
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-i", "--input-filename", type=str, help="Path to raw movie", default="../data/"
+        "-i", "--input-filename", type=str, help="Path to raw movie", default="/data/"
     )
     parser.add_argument(
-        "-o", "--output-dir", type=str, help="Output directory", default="../results/"
+        "-o", "--output-dir", type=str, help="Output directory", default="/results/"
     )
     parser.add_argument("-p", "--plane", type=str, help="Plane depth", default=None)
 
@@ -896,7 +896,7 @@ if __name__ == "__main__":
         )
 
     try:
-        with open("../data/input.json", "w") as j:
+        with open("/data/input.json", "w") as j:
             json.dump(data, j, indent=2)
     except Exception as e:
         raise Exception(f"Error writing json file: {e}")
