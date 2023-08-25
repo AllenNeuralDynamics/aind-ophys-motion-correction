@@ -885,17 +885,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="/results/"
     )
-    parser.add_argument("-p", "--plane", type=str, help="Plane depth", default=None)
+    # parser.add_argument("-p", "--plane", type=str, help="Plane depth", default=None)
 
     args = parser.parse_args()
     plane = args.plane
     h5_file = args.input_filename
-    if plane is None:
-        h5_file = glob(f"{h5_file}/*.h5")[0]
-    else:
-        h5_file = glob(
-            f"{h5_file}/Other_[0-9]*/Other/ophys/planes/{plane}/*um.h5"
-        )[0]
+    # if not plane:
+    plane = os.path.pardir(h5_file)
     output_dir = make_output_directory(args.output_dir, h5_file, plane)
     try:
         frame_rate_hz = get_frame_rate_platform_json(h5_file)
