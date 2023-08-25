@@ -12,12 +12,12 @@ from pathlib import Path
 import re
 from datetime import datetime as dt
 import pytz
+import h5py
+import numpy as np
 
 
 from aind_data_schema import Processing
 from aind_data_schema.processing import DataProcess
-import h5py
-import numpy as np
 from aind_ophys_utils.array_utils import normalize_array
 from scipy.ndimage import median_filter
 from scipy.stats import sigmaclip
