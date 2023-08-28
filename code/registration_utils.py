@@ -811,7 +811,10 @@ def make_output_directory(output_dir: str, h5_file: str, plane: str=None) -> str
         output directory
     """
     exp_to_match = r"Other_\d{6}_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}"
-    parent_dir = re.findall(exp_to_match, h5_file)[0] + "_processed_" + now()
+    try:
+        parent_dir = re.findall(exp_to_match, h5_file)[0] + "_processed_" + now()
+    except IndexError:
+        return output_dir
     if plane:
         output_dir = os.path.join(output_dir, parent_dir, plane)
     else:
