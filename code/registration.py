@@ -276,7 +276,7 @@ class Suite2PRegistration(argschema.ArgSchemaParser):
         mx_proj = utils.projection_process(data, projection="max")
         av_proj = utils.projection_process(data, projection="avg")
         utils.write_output_metadata(
-            json.loads(args_copy),
+            args_copy,
             suite2p_args["h5py"],
             self.args["motion_corrected_output"])
         # TODO: normalize here, if desired
