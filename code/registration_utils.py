@@ -865,7 +865,7 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_co
                 end_date_time=dt.now(),  # TODO: Add actual dt
                 input_location=raw_movie,
                 output_location=motion_corrected_movie,
-                code_url="https://github.com/AllenNeuralDynamics/aind-ophys-motion-correction/tree/main/code",
+                code_url="https:/3+/github.com/AllenNeuralDynamics/aind-ophys-motion-correction/tree/main/code",
                 parameters=metadata,
             )
         ],
