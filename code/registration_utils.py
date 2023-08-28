@@ -893,6 +893,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     h5_file = args.input_filename
+    if not h5_file:
+        h5_file = glob.glob("/data/*.h5")[0]
     # if not plane:
     try:
         plane = os.path.dirname(h5_file).split("/")[-1]
