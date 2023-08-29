@@ -882,19 +882,18 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_co
 
 
 def find_h5_file():
-    name = ".h5"
+    name = "um.h5"
     path = "/data/"
-    result = []
     for root, dirs, files in os.walk(path):
-        if name in files:
-            result.append(os.path.join(root, name))
-    return result
+        for f in files:
+            if name in f:
+                return os.path.join(root, f)
 
 if __name__ == "__main__":
     # Generate input json
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-i", "--input-filename", type=str, help="Path to raw movie", default="/data/"
+        "-i", "--input-filename", type=str, help="Input filename"
     )
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="/results/"
@@ -904,16 +903,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     h5_file = args.input_filename
     if not h5_file:
-        files = find_h5_file()
-        if len(files) > 1:
-            raise Exception(f"Error, Found multiple h5 files, Files, {files}")
-        else:
-            h5_file = files[0]
+        h5_file = find_h5_file()
     # if not plane:
-    try:
-        plane = os.path.dirname(h5_file).split("/")[-1]
-        assert plane == int
-    except AssertionError:
+    plane = os.path.dirname(h5_file).split("/")[-1]
+    if not plane.isdigit():
         plane = None
     output_dir = make_output_directory(args.output_dir, h5_file, plane)
     try:
