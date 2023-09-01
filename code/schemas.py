@@ -1,39 +1,6 @@
 from pathlib import Path
-
 import argschema
-import h5py
 import marshmallow as mm
-
-
-class ExistingFile(argschema.fields.InputFile):
-    pass
-
-
-class H5InputFile(mm.fields.Str):
-    """
-    H5InputFile is a subclass of :class:`marshmallow.fields.Str` which
-    is a path to an h5 file location. The file must end with an extension
-    of '.h5' or '.hdf5' and must be able to be opened by `h5py.File`.
-    """
-
-    def _validate(self, value):
-        if not (str(value).endswith(".h5") or str(value).endswith(".hdf5")):
-            raise mm.ValidationError(
-                "H5 input file must have extension '.h5' "
-                f"or '.hdf5'. Input file = {value}"
-            )
-        try:
-            with h5py.File(value, "r"):
-                pass
-        except OSError as e:
-            raise mm.ValidationError(
-                f"Error occurred loading file {value}. "
-                f"Underlying error: \nOSError: - {e}"
-            )
-
-
-class ExistingH5File(H5InputFile):
-    pass
 
 
 class Suite2PRegistrationInputSchema(argschema.ArgSchema):
@@ -448,31 +415,31 @@ class Suite2PRegistrationInputSchema(argschema.ArgSchema):
 
 
 class Suite2PRegistrationOutputSchema(argschema.schemas.DefaultSchema):
-    motion_corrected_output = ExistingH5File(
+    motion_corrected_output = argschema.fields.InputFile(
         required=True,
         description="destination path for hdf5 motion corrected video.",
     )
-    motion_diagnostics_output = ExistingFile(
+    motion_diagnostics_output = argschema.fields.InputFile(
         required=True,
         description=("Path of *.csv file containing motion correction offsets"),
     )
-    max_projection_output = ExistingFile(
+    max_projection_output = argschema.fields.InputFile(
         required=True,
         description=(
             "Desired path for *.png of the max projection of the "
             "motion corrected video."
         ),
     )
-    avg_projection_output = ExistingFile(
+    avg_projection_output = argschema.fields.InputFile(
         required=True,
         description=(
             "Desired path for *.png of the avg projection of the "
             "motion corrected video."
         ),
     )
-    registration_summary_output = ExistingFile(
+    registration_summary_output = argschema.fields.InputFile(
         required=True, description="Desired path for *.png for summary QC plot"
     )
-    motion_correction_preview_output = ExistingFile(
+    motion_correction_preview_output = argschema.fields.InputFile(
         required=True, description="Desired path for *.webm motion preview"
     )
