@@ -1680,6 +1680,7 @@ if __name__ == "__main__":  # pragma: nocover
         f"Writing the LIMS expected 'OphysMotionXyOffsetData' "
         f"csv file to: {args['motion_diagnostics_output']}"
     )
+    
     if len(clipped_indices) != 0 and not suite2p_args["nonrigid"]:
         logger.warning(
             "some offsets have been clipped and the values "
@@ -1687,20 +1688,6 @@ if __name__ == "__main__":  # pragma: nocover
             "{args['motion_diagnostics_output']} "
             "where (x_clipped OR y_clipped) = True are not valid"
         )
-
-    qc_args = {
-        k: args[k]
-        for k in [
-            "movie_frame_rate_hz",
-            "max_projection_output",
-            "avg_projection_output",
-            "motion_diagnostics_output",
-            "motion_corrected_output",
-            "motion_correction_preview_output",
-            "registration_summary_output",
-            "log_level",
-        ]
-    }
 
     # create and write the summary png
     motion_offset_df = pd.read_csv(args["motion_diagnostics_output"])
@@ -1819,16 +1806,3 @@ if __name__ == "__main__":  # pragma: nocover
 
     # Clean up temporary directory
     tmp_dir.cleanup()
-
-    outj = {
-        k: args[k]
-        for k in [
-            "motion_corrected_output",
-            "motion_diagnostics_output",
-            "max_projection_output",
-            "avg_projection_output",
-            "registration_summary_output",
-            "motion_correction_preview_output",
-        ]
-    }
-    self.output(outj, indent=2)
