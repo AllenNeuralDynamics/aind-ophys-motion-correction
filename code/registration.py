@@ -1343,7 +1343,7 @@ if __name__ == "__main__":  # pragma: nocover
             f'Loading {suite2p_args["nimg_init"]} frames '
             "for reference image creation."
         )
-        intial_frames = load_initial_frames(
+        initial_frames = load_initial_frames(
             file_path=suite2p_args["h5py"],
             h5py_key=suite2p_args["h5py_key"],
             n_frames=suite2p_args["nimg_init"],
@@ -1382,7 +1382,7 @@ if __name__ == "__main__":  # pragma: nocover
             )
 
             optimize_result = optimize_motion_parameters(
-                initial_frames=intial_frames,
+                initial_frames=initial_frames,
                 smooth_sigmas=smooth_sigmas,
                 smooth_sigma_times=smooth_sigma_times,
                 suite2p_args=suite2p_args,
@@ -1404,7 +1404,7 @@ if __name__ == "__main__":  # pragma: nocover
             tic =-time()
             logger.info("Creating custom reference image...")
             suite2p_args["refImg"] = compute_reference(
-                input_frames=intial_frames,
+                input_frames=initial_frames,
                 niter=args["max_reference_iterations"],
                 maxregshift=suite2p_args["maxregshift"],
                 smooth_sigma=suite2p_args["smooth_sigma"],
