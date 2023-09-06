@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -ex
 
-time python registration.py "$@"
+python registration.py "$@"
