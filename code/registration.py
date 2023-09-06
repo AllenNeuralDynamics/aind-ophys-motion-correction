@@ -1,37 +1,28 @@
 import copy
-import json
-import os
 import shutil
 import sys
 import tempfile
 from pathlib import Path
 import logging
 import argparse
-import h5py
 import numpy as np
 import pandas as pd
 import suite2p
 from PIL import Image
 from time import time
-
 import registration_utils as utils
 from registration_qc import RegistrationQC
-import argparse
 import json
-import logging
 import os
 import subprocess
 import warnings
 from glob import glob
 from itertools import product
-from time import time
 from typing import Callable, List, Tuple, Union
-from pathlib import Path
 import re
 from datetime import datetime as dt
 import pytz
 import h5py
-import numpy as np
 
 from aind_data_schema import Processing
 from aind_data_schema.processing import DataProcess
@@ -42,6 +33,7 @@ from suite2p.registration.register import (pick_initial_reference,
                                            register_frames)
 from suite2p.registration.rigid import (apply_masks, compute_masks, phasecorr,
                                         phasecorr_reference, shift_frame)
+
 def is_S3(file_path: str):
     """Test if a file is in a S3 bucket
     Parameters
@@ -879,21 +871,6 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_co
         output_directory=Path(os.path.dirname(motion_corrected_movie))
         )
 
-def set_default_outputs(data):
-    stem = Path(data["h5py"]).stem
-    for key, default in (
-        ("motion_corrected_output", "_registered.h5"),
-        ("motion_diagnostics_output", "_motion_transform.csv"),
-        ("max_projection_output", "_maximum_projection.png"),
-        ("avg_projection_output", "_average_projection.png"),
-        ("registration_summary_output", "_registration_summary.png"),
-        ("motion_correction_preview_output", "_motion_preview.webm"),
-        ("output_json", "_motion_correction_output.json"),
-    ):
-        if data[key] is None:
-            data[key] = "../results/" + stem + default
-    return data
-
 def check_trim_frames(data):
     """Make sure that if the user sets auto_remove_empty_frames
     and timing frames is already requested, raise an error.
@@ -914,6 +891,13 @@ def check_trim_frames(data):
 if __name__ == "__main__":  # pragma: nocover
     # Create an ArgumentParser object
     parser = argparse.ArgumentParser(description="Suite2P Registration")
+
+    parser.add_argument(
+        "-i", "--input-filename", type=str, help="Path to raw movie", default="/data/Other_667826_2023-04-10_16-08-00/Other/ophys/planes/70/70um.h5"
+    )
+    parser.add_argument(
+        "-o", "--output-dir", type=str, help="Output directory", default="/results/"
+    )
 
     # s2p IO settings (file paths)
     parser.add_argument("--h5py", type=str, required=True,
@@ -1156,10 +1140,7 @@ if __name__ == "__main__":  # pragma: nocover
         "time motion correction."
     )
 
-    # Allen-specific options
-    parser.add_argument("--movie_frame_rate_hz", type=float, required=True,
-        help="Frame rate of movie, usually 31Hz or 11Hz",
-    )
+
     parser.add_argument( "--motion_corrected_output", type=str, default=None,
         help="Destination path for hdf5 motion corrected video.",
     )
@@ -1170,14 +1151,6 @@ if __name__ == "__main__":  # pragma: nocover
         help="Desired path for *.png of the max projection of the motion corrected video.",
     )
 
-   # Generate input json
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-i", "--input-filename", type=str, help="Path to raw movie", default="/data/Other_667826_2023-04-10_16-08-00/Other/ophys/planes/70/70um.h5"
-    )
-    parser.add_argument(
-        "-o", "--output-dir", type=str, help="Output directory", default="/results/"
-    )
     # Parse command-line arguments
     args = parser.parse_args()
     # General settings
@@ -1192,6 +1165,7 @@ if __name__ == "__main__":  # pragma: nocover
         plane = None
     output_dir = make_output_directory(args.output_dir, h5_file, plane)
 
+    # We extract the frame rate from the platform json file
     try:
         frame_rate_hz = get_frame_rate_platform_json(h5_file)
     except Exception:
@@ -1224,6 +1198,7 @@ if __name__ == "__main__":  # pragma: nocover
     # Here we overwrite the parameters for suite2p that will not change in our 
     # processing pipeline. These are parameters that are not exposed to 
     # minimize code length. 
+    suite2p_args["h5py"] = h5_file
     suite2p_args["roidetect"] = False
     suite2p_args["do_registration"] = 1
     suite2p_args["data_path"]=[] # TODO: remove this if not needed by suite2p
@@ -1381,7 +1356,7 @@ if __name__ == "__main__":  # pragma: nocover
 
     # identify and clip offset outliers
     detrend_size = int(
-        self.args["movie_frame_rate_hz"] * self.args["outlier_detrend_window"]
+        frame_rate_hz * self.args["outlier_detrend_window"]
     )
     xlimit = int(ops["Lx"] * self.args["outlier_maxregshift"])
     ylimit = int(ops["Ly"] * self.args["outlier_maxregshift"])
