@@ -9,7 +9,6 @@ import pandas as pd
 import suite2p
 from PIL import Image
 from time import time
-from registration_qc import RegistrationQC
 import json
 import os
 import subprocess
@@ -1114,28 +1113,6 @@ if __name__ == "__main__":  # pragma: nocover
         help="Force the use of an external reference image (default: True)",
     )
 
-    parser.add_argument("--movie_lower_quantile", type=float, default=0.1,
-        help="Lower quantile threshold for avg projection histogram adjustment of movie (default: 0.1)",
-    )
-
-    parser.add_argument("--movie_upper_quantile", type=float, default=0.999,
-        help="Upper quantile threshold for avg projection histogram adjustment of movie (default: 0.999)",
-    )
-
-    parser.add_argument("--preview_frame_bin_seconds", type=float,
-        default=2.0,
-        help=(
-            "before creating the webm, the movies will be "
-            "averaged into bins of this many seconds."
-        ),
-    )
-
-    parser.add_argument("--preview_playback_factor", type=float, default=10.0,
-        help=(
-            "the preview movie will playback at this factor " "times real-time."
-        ),
-    )
-
     parser.add_argument("--outlier_detrend_window", type=float, default=3.0,
         help=(
             "for outlier rejection in the xoff/yoff outputs "
@@ -1239,65 +1216,6 @@ if __name__ == "__main__":  # pragma: nocover
         "steps=1."
     )
 
-    parser.add_argument(
-        "--n_batches",
-        type=int,
-        default=20,
-        help="Number of batches of size suite2p_args['batch_size'] to "
-        "load from the movie for smoothing parameter testing. "
-        "Batches are evenly spaced throughout the movie."
-    )
-
-    # smooth_sigma_min
-    parser.add_argument(
-        "--smooth_sigma_min",
-        type=float,
-        default=0.65,
-        help="Minimum value of the parameter search for smooth_sigma (default: 0.65)",
-    )
-
-    # smooth_sigma_max
-    parser.add_argument(
-        "--smooth_sigma_max",
-        type=float,
-        default=2.15,
-        help="Maximum value of the parameter search for smooth_sigma (default: 2.15)",
-    )
-
-    # smooth_sigma_steps
-    parser.add_argument(
-        "--smooth_sigma_steps",
-        type=int,
-        default=4,
-        help="Number of steps to grid between smooth_sigma and smooth_sigma_max (default: 4)",
-    )
-
-    # smooth_sigma_time_min
-    parser.add_argument(
-        "--smooth_sigma_time_min",
-        type=float,
-        default=0,
-        help="Minimum value of the parameter search for smooth_sigma_time (default: 0)",
-    )
-
-    # smooth_sigma_time_max
-    parser.add_argument(
-        "--smooth_sigma_time_max",
-        type=float,
-        default=6,
-        help="Maximum value of the parameter search for smooth_sigma_time (default: 6)",
-    )
-
-    # smooth_sigma_time_steps
-    parser.add_argument(
-        "--smooth_sigma_time_steps",
-        type=int,
-        default=7,
-        help="Number of steps to grid between smooth_sigma and "
-        "smooth_sigma_time_max. Large values will add significant "
-        "time motion correction."
-    )
-
     # Parse command-line arguments
     args = parser.parse_args()
     # General settings
@@ -1332,6 +1250,34 @@ if __name__ == "__main__":  # pragma: nocover
         args[key] = os.path.join(
             output_dir, os.path.splitext(os.path.basename(h5_file))[0] + default
         )
+
+    # These are hardcoded parameters of the wrapper. Those are tracked but 
+    # not exposed.
+
+    # Lower quantile threshold for avg projection histogram adjustment of movie (default: 0.1)
+    args["movie_lower_quantile"] = 0.1
+    # Upper quantile threshold for avg projection histogram adjustment of movie (default: 0.999)
+    args["movie_upper_quantile"] = 0.999
+    # Before creating the webm, the movies will be averaged into bins of this many seconds.
+    args["preview_frame_bin_seconds"] = 2.0
+    # The preview movie will playback at this factor times real-time.
+    args["preview_playback_factor"] = 10.0
+
+    # Number of batches to load from the movie for smoothing parameter testing. Batches are evenly spaced throughout the movie.
+    args["n_batches"] = 20
+    # Minimum value of the parameter search for smooth_sigma.
+    args["smooth_sigma_min"] = 0.65
+    # Maximum value of the parameter search for smooth_sigma.
+    args["smooth_sigma_max"] = 2.15
+    # Number of steps to grid between smooth_sigma and smooth_sigma_max.
+    args["smooth_sigma_steps"] = 4 
+    # Minimum value of the parameter search for smooth_sigma_time.
+    args["smooth_sigma_time_min"] = 0
+    # Maximum value of the parameter search for smooth_sigma_time.
+    args["smooth_sigma_time_max"] = 6 
+    # Number of steps to grid between smooth_sigma and smooth_sigma_time_max.
+    # Large values will add significant time motion correction
+    args["smooth_sigma_time_steps"] = 7 
 
     # Set suite2p args.
     suite2p_args = suite2p.default_ops()
@@ -1680,7 +1626,7 @@ if __name__ == "__main__":  # pragma: nocover
         f"Writing the LIMS expected 'OphysMotionXyOffsetData' "
         f"csv file to: {args['motion_diagnostics_output']}"
     )
-    
+
     if len(clipped_indices) != 0 and not suite2p_args["nonrigid"]:
         logger.warning(
             "some offsets have been clipped and the values "
