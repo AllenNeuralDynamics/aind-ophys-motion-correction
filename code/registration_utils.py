@@ -817,7 +817,7 @@ def make_output_directory(output_dir: str, h5_file: str, plane: str=None) -> str
         
     except IndexError:
         with open(os.path.join(output_dir, "test.txt"), "w") as f:
-            f.writelines(f"NO MATCH {output_dir}")
+            f.writelines(f"NO MATCH {output_dir}, {exp_to_match}, {h5_file}")
         return output_dir
     if plane:
         output_dir = os.path.join(output_dir, parent_dir, plane)
