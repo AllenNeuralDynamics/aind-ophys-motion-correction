@@ -810,7 +810,7 @@ def make_output_directory(output_dir: str, h5_file: str, plane: str=None) -> str
     output_dir: str
         output directory
     """
-    exp_to_match = r"Other_\d{6}_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}"
+    exp_to_match = "Other_\d{6}_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}"
     try:
         parent_dir = re.findall(exp_to_match, h5_file)[0] + "_processed_" + now()
     except IndexError:
@@ -897,6 +897,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="/results/"
+    )
+    parser.add_argument(
+        "-m", "--multip-plane", type=bool, help="When running multiple planes", default=False
     )
     # parser.add_argument("-p", "--plane", type=str, help="Plane depth", default=None)
 
