@@ -911,7 +911,7 @@ if __name__ == "__main__":
     plane = os.path.dirname(h5_file).split("/")[-1]
     if not plane.isdigit():
         plane = None
-    abs_output = str(Path(args.output_dir).absolute())
+    abs_output = str(Path(args.output_dir).resolve())
     output_dir = make_output_directory(abs_output, h5_file, plane)
     try:
         frame_rate_hz = get_frame_rate_platform_json(h5_file)
