@@ -813,13 +813,19 @@ def make_output_directory(output_dir: str, h5_file: str, plane: str=None) -> str
     exp_to_match = r"Other_\d{6}_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}"
     try:
         parent_dir = re.findall(exp_to_match, h5_file)[0] + "_processed_" + now()
+        odir = os.path.join(output_dir, parent_dir)
+        
     except IndexError:
+        with open(os.path.join(output_dir, "test.txt"), "w") as f:
+            f.writelines(f"NO MATCH {output_dir}")
         return output_dir
     if plane:
         output_dir = os.path.join(output_dir, parent_dir, plane)
     else:
         output_dir = os.path.join(output_dir, parent_dir)
     os.makedirs(output_dir, exist_ok=True)
+    with open(os.path.join(odir, "test.txt"), "w") as f:
+        f.writelines(f"BOTH {odir}")
     return output_dir
 
 def get_frame_rate_platform_json(input_dir: str) -> float:
