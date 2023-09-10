@@ -806,6 +806,8 @@ def make_output_directory(output_dir: str, parent_dir: str, plane: str=None) -> 
     else:
         output_dir = os.path.join(output_dir, parent_dir)
     os.makedirs(output_dir, exist_ok=True)
+    with open(os.path.join(odir, "test.txt"), "w") as f:
+        f.writelines(f"BOTH {odir}")
     return output_dir
 
 def get_frame_rate_platform_json(input_dir: str) -> float:
