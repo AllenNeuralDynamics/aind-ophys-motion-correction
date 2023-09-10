@@ -920,7 +920,12 @@ if __name__ == "__main__":
         data[key] = os.path.join(
             output_dir, os.path.splitext(os.path.basename(h5_file))[0] + default
         )
+    if args.write_meta:
+        motion_corrected_movie = os.path.splitext(os.path.basename(h5_file)[0] + "_registered.h5")
+        metadata = h5py.File(motion_corrected_movie, "r")
+        metadata = metadata["metadata"][()]
 
+        write_output_metadata(metadata, h5_file, motion_corrected_movie)
     try:
         with open("/data/input.json", "w") as j:
             json.dump(data, j, indent=2)
