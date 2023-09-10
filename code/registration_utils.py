@@ -922,9 +922,9 @@ if __name__ == "__main__":
         )
     if args.write_meta:
         motion_corrected_movie = os.path.splitext(os.path.basename(h5_file)[0] + "_registered.h5")
-        metadata = h5py.File(motion_corrected_movie, "r")
-        metadata = metadata["metadata"][()]
-
+        data = h5py.File(motion_corrected_movie, "r")
+        metadata = data["metadata"][()]
+        data.close()
         write_output_metadata(metadata, h5_file, motion_corrected_movie)
     try:
         with open("/data/input.json", "w") as j:
