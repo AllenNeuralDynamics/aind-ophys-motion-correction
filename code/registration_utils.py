@@ -781,27 +781,15 @@ def identify_and_clip_outliers(
     return data, indices
 
 
-def now() -> str:
-    """Generates string with current date and time in PST
-    
-    Returns
-    -------
-    str 
-        YYYY-MM-DD_HH-MM-SS
-    """
-    current_dt = dt.now(tz=pytz.timezone("America/Los_Angeles"))
-    return f"{current_dt.strftime('%Y-%m-%d')}_{current_dt.strftime('%H-%M-%S')}"
-
-
-def make_output_directory(output_dir: str, h5_file: str, plane: str=None) -> str:
+def make_output_directory(output_dir: str, parent_dir: str, plane: str=None) -> str:
     """Creates the output directory if it does not exist
     
     Parameters
     ----------
     output_dir: str
         output directory
-    h5_file: str 
-        h5 file path
+    parent_dir: str 
+        parent_dir_name
     plane: str
         plane number
     
@@ -810,15 +798,9 @@ def make_output_directory(output_dir: str, h5_file: str, plane: str=None) -> str
     output_dir: str
         output directory
     """
-    exp_to_match = r"Other_\d{6}_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}"
-    try:
-        parent_dir = re.findall(exp_to_match, h5_file)[0] + "_processed_" + now()
-        odir = os.path.join(output_dir, parent_dir)
-        
-    except IndexError:
-        with open(os.path.join(output_dir, "test.txt"), "w") as f:
-            f.writelines(f"NO MATCH {output_dir}, {exp_to_match}, {h5_file}")
-        return output_dir
+    current_dt = dt.now(tz=pytz.timezone("America/Los_Angeles"))
+    current_dt = f"{current_dt.strftime('%Y-%m-%d')}_{current_dt.strftime('%H-%M-%S')}"
+    parent_dir = os.path.join(output_dir, parent_dir) + "_processed_" + current_dt
     if plane:
         output_dir = os.path.join(output_dir, parent_dir, plane)
     else:
@@ -902,7 +884,7 @@ if __name__ == "__main__":
         "-i", "--input-filename", type=str, help="Input filename"
     )
     parser.add_argument(
-        "-o", "--output-dir", type=str, help="Output directory", default="/results/"
+        "-o", "--output-dir", type=str, help="Output directory", default="../results/"
     )
     # parser.add_argument("-p", "--plane", type=str, help="Plane depth", default=None)
 
@@ -910,12 +892,15 @@ if __name__ == "__main__":
     h5_file = args.input_filename
     if not h5_file:
         h5_file = find_h5_file()
-    # if not plane:
     plane = os.path.dirname(h5_file).split("/")[-1]
     if not plane.isdigit():
         plane = None
-    abs_output = str(Path(args.output_dir).resolve())
-    output_dir = make_output_directory(abs_output, h5_file, plane)
+    abs_output = os.path.abspath(args.output_dir)
+    data_dir = os.path.abspath("../data")
+    data_description = os.path.join(data_dir, "data_description.json")
+    with open(data_description) as f:
+        acquisition_parent_name = json.load(f)["name"]
+    output_dir = make_output_directory(abs_output, acquisition_parent_name, plane)
     try:
         frame_rate_hz = get_frame_rate_platform_json(h5_file)
     except Exception:
