@@ -867,9 +867,8 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_co
         )
 
 
-def find_h5_file():
+def find_h5_file(path):
     name = "um.h5"
-    path = "/data/"
     for root, dirs, files in os.walk(path):
         for f in files:
             if name in f:
@@ -879,26 +878,29 @@ if __name__ == "__main__":
     # Generate input json
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-i", "--input-filename", type=str, help="Input filename"
+        "-i", "--input-dir", type=str, help="Input filename", default= "../data/"
     )
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="../results/"
     )
-    # parser.add_argument("-p", "--plane", type=str, help="Plane depth", default=None)
 
     args = parser.parse_args()
-    h5_file = args.input_filename
-    if not h5_file:
-        h5_file = find_h5_file()
+    input_dir = os.path.abspath(args.input_dir)
+    output_dir = os.path.abspath(args.output_dir)
+    expression = "Other_\d{6}_\d{4}-\d{2}-\d{2}_\d{2}-\{2}-\d{2}"
+    data_dir = [i for i in glob.glob(f"{input_dir}/*") if re.findall(expression, i)]
+    if not data_dir:
+        data_dir = os.path.abspath("../data/")
+    else:
+        data_dir = data_dir[0]
+    h5_file = find_h5_file(input_dir)
     plane = os.path.dirname(h5_file).split("/")[-1]
     if not plane.isdigit():
         plane = None
-    abs_output = os.path.abspath(args.output_dir)
-    data_dir = os.path.abspath("../data")
     data_description = os.path.join(data_dir, "data_description.json")
     with open(data_description) as f:
         acquisition_parent_name = json.load(f)["name"]
-    output_dir = make_output_directory(abs_output, acquisition_parent_name, plane)
+    output_dir = make_output_directory(output_dir, acquisition_parent_name, plane)
     try:
         frame_rate_hz = get_frame_rate_platform_json(h5_file)
     except Exception:
