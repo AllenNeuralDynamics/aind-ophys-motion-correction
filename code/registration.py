@@ -13,8 +13,10 @@ import pandas as pd
 import suite2p
 from PIL import Image
 from time import time
+from datetime import datetime as dt
 
-
+from aind_data_schema import Processing
+from aind_data_schema.processing import DataProcess
 import registration_utils as utils
 from registration_qc import RegistrationQC
 from schemas import (Suite2PRegistrationInputSchema,
@@ -272,6 +274,23 @@ class Suite2PRegistration(argschema.ArgSchemaParser):
         self.logger.info(
             "saved Suite2P output to " f"{self.args['motion_corrected_output']}"
         )
+        processing = Processing(
+        data_processes=[
+                DataProcess(
+                    name="Other",
+                    version="0.0.1",
+                    start_date_time=dt.now(),  # TODO: Add actual dt
+                    end_date_time=dt.now(),  # TODO: Add actual dt
+                    input_location=suite2p_args["h5py"],
+                    output_location=self.args["motion_corrected_output"],
+                    code_url="https:/3+/github.com/AllenNeuralDynamics/aind-ophys-motion-correction/tree/main/code",
+                    parameters=suite_args_copy,
+                )
+            ],
+        )
+        processing.write_standard_file(
+            output_directory=Path(os.path.dirname(self.args["motion_corrected_output"]))
+            )
         # make projections
         mx_proj = utils.projection_process(data, projection="max")
         av_proj = utils.projection_process(data, projection="avg")

@@ -5,4 +5,4 @@ set -ex
 python -m registration_utils  # auto-generate input.json, here for plane 70
 
 # python registration_utils.py -p 70  # auto-generate input.json, here for plane 70
-#time python registration.py --input_json /data/input.json # run registration
+time python registration.py --input_json /data/input.json # run registration

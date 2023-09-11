@@ -806,8 +806,6 @@ def make_output_directory(output_dir: str, parent_dir: str, plane: str=None) -> 
     else:
         output_dir = os.path.join(output_dir, parent_dir)
     os.makedirs(output_dir, exist_ok=True)
-    with open(os.path.join(odir, "test.txt"), "w") as f:
-        f.writelines(f"BOTH {odir}")
     return output_dir
 
 def get_frame_rate_platform_json(input_dir: str) -> float:
@@ -827,7 +825,7 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
     try:
         try:
             platform_directory = os.path.dirname(os.path.dirname(input_dir))
-            platform_json = glob.glob(f"{platform_directory}/*platform.json")
+            platform_json = glob(f"{platform_directory}/*platform.json")
         except IndexError:
             raise IndexError
         with open(platform_json) as f:
@@ -836,37 +834,6 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
         return frame_rate
     except IndexError as exc:
         raise Exception(f"Error: {exc}")
-    
-
-def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_corrected_movie: Union[str, Path]) -> None:
-    """Writes output metadata to plane processing.json
-
-    Parameters
-    ----------
-    metadata: dict
-        parameters from suite2p motion correction
-    raw_movie: str
-        path to raw movies
-    motion_corrected_movie: str
-        path to motion corrected movies
-    """
-    processing = Processing(
-        data_processes=[
-            DataProcess(
-                name="Other",
-                version="0.0.1",
-                start_date_time=dt.now(),  # TODO: Add actual dt
-                end_date_time=dt.now(),  # TODO: Add actual dt
-                input_location=raw_movie,
-                output_location=motion_corrected_movie,
-                code_url="https:/3+/github.com/AllenNeuralDynamics/aind-ophys-motion-correction/tree/main/code",
-                parameters=metadata,
-            )
-        ],
-    )
-    processing.write_standard_file(
-        output_directory=Path(os.path.dirname(motion_corrected_movie))
-        )
 
 
 def find_h5_file(path):
@@ -885,12 +852,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="../results/"
     )
-
     args = parser.parse_args()
     input_dir = os.path.abspath(args.input_dir)
     output_dir = os.path.abspath(args.output_dir)
-    expression = "Other_\d{6}_\d{4}-\d{2}-\d{2}_\d{2}-\{2}-\d{2}"
-    data_dir = [i for i in glob.glob(f"{input_dir}/*") if re.findall(expression, i)]
+    expression = 'Other_\d{6}_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}'
+    data_dir = [i for i in glob(f"{input_dir}/*") if re.findall(expression, i)]
     if not data_dir:
         data_dir = os.path.abspath("../data/")
     else:
@@ -920,12 +886,6 @@ if __name__ == "__main__":
         data[key] = os.path.join(
             output_dir, os.path.splitext(os.path.basename(h5_file))[0] + default
         )
-    if args.write_meta:
-        motion_corrected_movie = os.path.splitext(os.path.basename(h5_file)[0] + "_registered.h5")
-        data = h5py.File(motion_corrected_movie, "r")
-        metadata = data["metadata"][()]
-        data.close()
-        write_output_metadata(metadata, h5_file, motion_corrected_movie)
     try:
         with open("/data/input.json", "w") as j:
             json.dump(data, j, indent=2)
