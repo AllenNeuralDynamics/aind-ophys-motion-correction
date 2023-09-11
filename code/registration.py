@@ -1239,7 +1239,7 @@ if __name__ == "__main__":  # pragma: nocover
     print(args)
     # We construct the paths to the outputs
     args.movie_frame_rate_hz = frame_rate_hz
-    
+
     for key, default in (
         ("motion_corrected_output", "_registered.h5"),
         ("motion_diagnostics_output", "_motion_transform.csv"),
@@ -1249,37 +1249,39 @@ if __name__ == "__main__":  # pragma: nocover
         ("motion_correction_preview_output", "_motion_preview.webm"),
         ("output_json", "_motion_correction_output.json"),
     ):
-        args[key] = os.path.join(
+        
+        setattr(args, key, os.path.join(
             output_dir, os.path.splitext(os.path.basename(h5_file))[0] + default
+            )
         )
 
     # These are hardcoded parameters of the wrapper. Those are tracked but 
     # not exposed.
 
     # Lower quantile threshold for avg projection histogram adjustment of movie (default: 0.1)
-    args["movie_lower_quantile"] = 0.1
+    args.movie_lower_quantile = 0.1
     # Upper quantile threshold for avg projection histogram adjustment of movie (default: 0.999)
-    args["movie_upper_quantile"] = 0.999
+    args.movie_upper_quantile = 0.999
     # Before creating the webm, the movies will be averaged into bins of this many seconds.
-    args["preview_frame_bin_seconds"] = 2.0
+    args.preview_frame_bin_seconds = 2.0
     # The preview movie will playback at this factor times real-time.
-    args["preview_playback_factor"] = 10.0
+    args.preview_playback_factor = 10.0
 
     # Number of batches to load from the movie for smoothing parameter testing. Batches are evenly spaced throughout the movie.
-    args["n_batches"] = 20
+    args.n_batches = 20
     # Minimum value of the parameter search for smooth_sigma.
-    args["smooth_sigma_min"] = 0.65
+    args.smooth_sigma_min = 0.65
     # Maximum value of the parameter search for smooth_sigma.
-    args["smooth_sigma_max"] = 2.15
+    args.smooth_sigma_max = 2.15
     # Number of steps to grid between smooth_sigma and smooth_sigma_max.
-    args["smooth_sigma_steps"] = 4 
+    args.smooth_sigma_steps = 4 
     # Minimum value of the parameter search for smooth_sigma_time.
-    args["smooth_sigma_time_min"] = 0
+    args.smooth_sigma_time_min = 0
     # Maximum value of the parameter search for smooth_sigma_time.
-    args["smooth_sigma_time_max"] = 6 
+    args.smooth_sigma_time_max = 6 
     # Number of steps to grid between smooth_sigma and smooth_sigma_time_max.
     # Large values will add significant time motion correction
-    args["smooth_sigma_time_steps"] = 7 
+    args.smooth_sigma_time_steps = 7 
 
     # Set suite2p args.
     suite2p_args = suite2p.default_ops()
