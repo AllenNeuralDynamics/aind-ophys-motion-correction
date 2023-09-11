@@ -1238,7 +1238,8 @@ if __name__ == "__main__":  # pragma: nocover
 
     print(args)
     # We construct the paths to the outputs
-    args["movie_frame_rate_hz"] = frame_rate_hz
+    args.movie_frame_rate_hz = frame_rate_hz
+    
     for key, default in (
         ("motion_corrected_output", "_registered.h5"),
         ("motion_diagnostics_output", "_motion_transform.csv"),
