@@ -1282,6 +1282,10 @@ if __name__ == "__main__":  # pragma: nocover
     # Large values will add significant time motion correction
     args["smooth_sigma_time_steps"] = 7 
 
+    # This is part of a complex scheme to pass an image that is a bit too 
+    # complicated. Will remove when tested. 
+    args["refImg"] = []
+
     # Set suite2p args.
     suite2p_args = suite2p.default_ops()
 
