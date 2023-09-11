@@ -808,6 +808,36 @@ def make_output_directory(output_dir: str, parent_dir: str, plane: str=None) -> 
     os.makedirs(output_dir, exist_ok=True)
     return output_dir
 
+def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_corrected_movie: Union[str, Path]) -> None:
+    """Writes output metadata to plane processing.json
+
+    Parameters
+    ----------
+    metadata: dict
+        parameters from suite2p motion correction
+    raw_movie: str
+        path to raw movies
+    motion_corrected_movie: str
+        path to motion corrected movies
+    """
+    processing = Processing(
+        data_processes=[
+            DataProcess(
+                name="Other",
+                version="0.0.1",
+                start_date_time=dt.now(),  # TODO: Add actual dt
+                end_date_time=dt.now(),  # TODO: Add actual dt
+                input_location=raw_movie,
+                output_location=motion_corrected_movie,
+                code_url="https:/3+/github.com/AllenNeuralDynamics/aind-ophys-motion-correction/tree/main/code",
+                parameters=metadata,
+            )
+        ],
+    )
+    processing.write_standard_file(
+        output_directory=Path(os.path.dirname(motion_corrected_movie))
+        )
+        
 def get_frame_rate_platform_json(input_dir: str) -> float:
     """Get the frame rate from the platform json file.
     Platform json will need to get copied to each data directory throughout the pipeline

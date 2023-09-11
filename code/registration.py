@@ -246,51 +246,6 @@ class Suite2PRegistration(argschema.ArgSchemaParser):
         is_valid[: self.args["trim_frames_start"]] = False
         is_valid[len(data) - self.args["trim_frames_end"] :] = False
 
-        # write the hdf5
-        with h5py.File(self.args["motion_corrected_output"], "w") as f:
-            f.create_dataset("data", data=data, chunks=(1, *data.shape[1:]))
-            # Sort the reference image used to register. If we do not used
-            # our custom reference image creation code, this dataset will
-            # be empty.
-            f.create_dataset("ref_image", data=suite2p_args["refImg"])
-            # Write a copy of the configuration output of this dataset into the
-            # HDF5 file.
-            args_copy = copy.deepcopy(self.args)
-            suite_args_copy = copy.deepcopy(suite2p_args)
-            # We have to pop the ref image out as numpy arrays can't be
-            # serialized into json. The reference image is instead stored in
-            # the 'ref_image' dataset.
-            suite_args_copy.pop("refImg")
-            args_copy.pop("refImg")
-            args_copy["suite2p_args"] = suite_args_copy
-            f.create_dataset(
-                name="metadata", data=json.dumps(args_copy).encode("utf-8")
-            )
-            # save Suite2p registration metrics
-            f.create_group("reg_metrics")
-            f.create_dataset("reg_metrics/regDX", data=ops["regDX"])
-            f.create_dataset("reg_metrics/regPC", data=ops["regPC"])
-            f.create_dataset("reg_metrics/tPC", data=ops["tPC"])
-        self.logger.info(
-            "saved Suite2P output to " f"{self.args['motion_corrected_output']}"
-        )
-        processing = Processing(
-        data_processes=[
-                DataProcess(
-                    name="Other",
-                    version="0.0.1",
-                    start_date_time=dt.now(),  # TODO: Add actual dt
-                    end_date_time=dt.now(),  # TODO: Add actual dt
-                    input_location=suite2p_args["h5py"],
-                    output_location=self.args["motion_corrected_output"],
-                    code_url="https:/3+/github.com/AllenNeuralDynamics/aind-ophys-motion-correction/tree/main/code",
-                    parameters=suite_args_copy,
-                )
-            ],
-        )
-        processing.write_standard_file(
-            output_directory=Path(os.path.dirname(self.args["motion_corrected_output"]))
-            )
         # make projections
         mx_proj = utils.projection_process(data, projection="max")
         av_proj = utils.projection_process(data, projection="avg")
