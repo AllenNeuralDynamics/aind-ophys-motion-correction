@@ -1236,6 +1236,7 @@ if __name__ == "__main__":  # pragma: nocover
     except Exception:
         frame_rate_hz = 30.
 
+    print(args)
     # We construct the paths to the outputs
     args["movie_frame_rate_hz"] = frame_rate_hz
     for key, default in (
