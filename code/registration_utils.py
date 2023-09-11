@@ -836,8 +836,7 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
         raise Exception(f"Error: {exc}")
 
 
-def find_h5_file(path):
-    name = "um.h5"
+def find_file(path, name):
     for root, dirs, files in os.walk(path):
         for f in files:
             if name in f:
@@ -861,11 +860,11 @@ if __name__ == "__main__":
         data_dir = os.path.abspath("../data/")
     else:
         data_dir = data_dir[0]
-    h5_file = find_h5_file(input_dir)
+    h5_file = find_file(input_dir, "um.h5")
     plane = os.path.dirname(h5_file).split("/")[-1]
     if not plane.isdigit():
         plane = None
-    data_description = os.path.join(data_dir, "data_description.json")
+    data_description = find_file(data_dir, "data_description.json")
     with open(data_description) as f:
         acquisition_parent_name = json.load(f)["name"]
     output_dir = make_output_directory(output_dir, acquisition_parent_name, plane)
