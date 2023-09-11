@@ -30,7 +30,7 @@ mpl.use("Agg")
 
 from aind_data_schema import Processing
 from aind_data_schema.processing import DataProcess
-from aind_ophys_array_utils import normalize_array
+from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.video_utils import downsample_h5_video, encode_video
 
 from suite2p.registration.register import (pick_initial_reference,
