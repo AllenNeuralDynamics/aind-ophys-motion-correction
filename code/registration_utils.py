@@ -892,8 +892,13 @@ if __name__ == "__main__":
         data_dir = data_dir[0]
     h5_file = find_file(input_dir, "um.h5")
     plane = os.path.dirname(h5_file).split("/")[-1]
-    if not plane.isdigit():
-        plane = None
+    if not plane.isdigit():  # b/c of a formatting issue on my part...this is really dumb
+        if len(h5_file.split("_")) == 1: 
+            plane = h5_file.split("um")[0] 
+        elif len(h5_file.split("_")) > 1:
+            plane = h5_file.split("_")[-1].split("um")[0]
+        else:
+            plane = None
     data_description = find_file(data_dir, "data_description.json")
     with open(data_description) as f:
         acquisition_parent_name = json.load(f)["name"]
