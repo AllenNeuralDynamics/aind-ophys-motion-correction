@@ -901,7 +901,6 @@ if __name__ == "__main__":
         else:
             plane = None
     data_description = find_file(data_dir, "data_description.json")
-    print(f"~~~~~~~~~~~~~~~~{data_description}")
     with open(os.path.join(output_dir, "data_description_path.log"), "w") as f:
         f.writelines(f"{data_description}")
     with open(data_description) as f:
