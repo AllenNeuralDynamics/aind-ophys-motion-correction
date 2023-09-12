@@ -1674,7 +1674,7 @@ if __name__ == "__main__":  # pragma: nocover
     processed_vids = [
         ds_partial(i)
         for i in [
-            Path(args["h5py"]),
+            Path(h5_file),
             Path(args["motion_corrected_output"]),
         ]
     ]
@@ -1695,7 +1695,7 @@ if __name__ == "__main__":  # pragma: nocover
 
     # compute crispness of mean image using raw and registered movie
     with (
-        h5py.File(args["h5py"]) as f_raw,
+        h5py.File(h5_file) as f_raw,
         h5py.File(args["motion_corrected_output"], "r+") as f,
     ):
         mov_raw = f_raw["data"]
