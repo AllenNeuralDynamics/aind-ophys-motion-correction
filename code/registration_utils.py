@@ -871,6 +871,12 @@ def find_file(path, name):
         for f in files:
             if name in f:
                 return os.path.join(root, f)
+        for d in dirs:
+            for f in files:
+                if name in f:
+                    return os.path.join(root, d, f)
+
+
 
 if __name__ == "__main__":
     # Generate input json
