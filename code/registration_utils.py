@@ -900,7 +900,6 @@ if __name__ == "__main__":
             plane = h5_file.split("_")[-1].split("um")[0]
         else:
             plane = None
-    print(f"~~~~~~~~~~~~~~~~~~{os.listdir(input_dir)}")
     data_description = find_file(data_dir, "data_description.json")
     print(f"~~~~~~~~~~~~~~~~{data_description}")
     with open(os.path.join(output_dir, "data_description_path.log"), "w") as f:
