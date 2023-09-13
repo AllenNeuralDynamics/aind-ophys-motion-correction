@@ -871,6 +871,12 @@ def find_file(path, name):
         for f in files:
             if name in f:
                 return os.path.join(root, f)
+        for d in dirs:
+            for f in files:
+                if name in f:
+                    return os.path.join(root, d, f)
+
+
 
 if __name__ == "__main__":
     # Generate input json
@@ -900,6 +906,9 @@ if __name__ == "__main__":
         else:
             plane = None
     data_description = find_file(data_dir, "data_description.json")
+    print(f"~~~~~~~~~~~~~~~~{data_description}")
+    with open(os.path.join(output_dir, "data_description_path.log"), "w") as f:
+        f.writelines(f"{data_description}")
     with open(data_description) as f:
         acquisition_parent_name = json.load(f)["name"]
     output_dir = make_output_directory(output_dir, acquisition_parent_name, plane)
