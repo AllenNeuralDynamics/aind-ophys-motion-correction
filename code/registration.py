@@ -15,8 +15,6 @@ from PIL import Image
 from time import time
 from datetime import datetime as dt
 
-from aind_data_schema import Processing
-from aind_data_schema.processing import DataProcess
 import registration_utils as utils
 from registration_qc import RegistrationQC
 from schemas import (Suite2PRegistrationInputSchema,
