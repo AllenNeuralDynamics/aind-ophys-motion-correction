@@ -836,34 +836,7 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_co
     )
     processing.write_standard_file(
         output_directory=Path(os.path.dirname(motion_corrected_movie))
-        )
-        
-def get_frame_rate_platform_json(input_dir: str) -> float:
-    """Get the frame rate from the platform json file.
-    Platform json will need to get copied to each data directory throughout the pipeline
-
-    Parameters
-    ----------
-    input_dir: str
-        directory where file is located
-
-    Returns
-    -------
-    frame_rate: float
-        frame rate
-    """
-    try:
-        try:
-            platform_directory = os.path.dirname(os.path.dirname(input_dir))
-            platform_json = glob(f"{platform_directory}/*platform.json")
-        except IndexError:
-            raise IndexError
-        with open(platform_json) as f:
-            data = json.load(f)
-        frame_rate = data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
-        return frame_rate
-    except IndexError as exc:
-        raise Exception(f"Error: {exc}")
+        )    
 
 
 def find_file(path, name):
@@ -906,10 +879,11 @@ if __name__ == "__main__":
     with open(data_description) as f:
         acquisition_parent_name = json.load(f)["name"]
     output_dir = make_output_directory(output_dir, acquisition_parent_name, plane)
-    try:
-        frame_rate_hz = get_frame_rate_platform_json(h5_file)
-    except Exception:
-        frame_rate_hz = 30.
+    platform_directory = os.path.dirname(os.path.dirname(input_dir))
+    platform_json = glob(f"{platform_directory}/*platform.json")[0]
+    with open(platform_json) as f:
+        data = json.load(f)
+    frame_rate_hz = data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
     data = {"h5py": h5_file, "movie_frame_rate_hz": frame_rate_hz}
     for key, default in (
         ("motion_corrected_output", "_registered.h5"),
