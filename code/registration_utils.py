@@ -855,9 +855,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="../results/"
     )
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Run with only first 5000 frames"
+    )
     args = parser.parse_args()
     input_dir = os.path.abspath(args.input_dir)
     output_dir = os.path.abspath(args.output_dir)
+    debug = args.debug
     expression = 'Other_\d{6}_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}'
     data_dir = [i for i in glob(f"{input_dir}/*") if re.findall(expression, i)]
     if not data_dir:
@@ -873,6 +877,14 @@ if __name__ == "__main__":
             plane = h5_file.split("_")[-1].split("um")[0]
         else:
             plane = None
+    if debug:
+        raw_data = h5py.File(h5_file, "r")
+        trimmed_data = raw_data['data'][:5000]
+        raw_data.close()
+        trimmed_fn = f"../data/{plane}um.h5"
+        with h5py.File(trimmed_fn, "w") as f:
+            f.create_dataset("data", data=trimmed_data)
+        h5_file = trimmed_fn
     data_description = find_file(data_dir, "data_description.json")
     with open(os.path.join(output_dir, "data_description_path.log"), "w") as f:
         f.writelines(f"{data_description}")
