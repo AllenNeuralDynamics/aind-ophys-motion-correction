@@ -891,13 +891,7 @@ if __name__ == "__main__":
     with open(data_description) as f:
         acquisition_parent_name = json.load(f)["name"]
     output_dir = make_output_directory(output_dir, acquisition_parent_name, plane)
-    platform_dir= os.path.dirname(os.path.dirname(input_dir))
-    platform_json = glob(f"{platform_dir}/*platform_json")
-    if not platform_json:
-        platform_dir = os.path.join(data_dir, 'Other', 'ophys')
-        platform_json = glob(f"{platform_dir}/*platform.json")[0]
-    else:
-        platform_json = platform_json[0]
+    platform_json = find_file(input_dir, "platform.json")
     with open(platform_json) as f:
         data = json.load(f)
     frame_rate_hz = data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
