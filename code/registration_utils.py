@@ -781,15 +781,13 @@ def identify_and_clip_outliers(
     return data, indices
 
 
-def make_output_directory(output_dir: str, parent_dir: str, plane: str=None) -> str:
+def make_output_directory(output_dir: str, plane: str=None) -> str:
     """Creates the output directory if it does not exist
     
     Parameters
     ----------
     output_dir: str
         output directory
-    parent_dir: str 
-        parent_dir_name
     plane: str
         plane number
     
@@ -798,13 +796,10 @@ def make_output_directory(output_dir: str, parent_dir: str, plane: str=None) -> 
     output_dir: str
         output directory
     """
-    current_dt = dt.now(tz=pytz.timezone("America/Los_Angeles"))
-    current_dt = f"{current_dt.strftime('%Y-%m-%d')}_{current_dt.strftime('%H-%M-%S')}"
-    parent_dir = os.path.join(output_dir, parent_dir) + "_processed_" + current_dt
     if plane:
-        output_dir = os.path.join(output_dir, parent_dir, plane)
+        output_dir = os.path.join(output_dir, plane)
     else:
-        output_dir = os.path.join(output_dir, parent_dir)
+        output_dir = os.path.join(output_dir)
     os.makedirs(output_dir, exist_ok=True)
     return output_dir
 
@@ -850,10 +845,10 @@ if __name__ == "__main__":
     # Generate input json
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-i", "--input-dir", type=str, help="Input filename", default= "../data/"
+        "-i", "--input-dir", type=str, help="Input directory", default= "/data/"
     )
     parser.add_argument(
-        "-o", "--output-dir", type=str, help="Output directory", default="../results/"
+        "-o", "--output-dir", type=str, help="Output directory", default="/results/"
     )
     parser.add_argument(
         "-d", "--debug", action="store_true", help="Run with only first 5000 frames"
@@ -862,6 +857,7 @@ if __name__ == "__main__":
     input_dir = os.path.abspath(args.input_dir)
     output_dir = os.path.abspath(args.output_dir)
     debug = args.debug
+    print("Setting debug")
     expression = 'Other_\d{6}_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}'
     data_dir = [i for i in glob(f"{input_dir}/*") if re.findall(expression, i)]
     if not data_dir:
@@ -869,6 +865,7 @@ if __name__ == "__main__":
     else:
         data_dir = data_dir[0]
     h5_file = find_file(input_dir, "um.h5")
+    print(f"H5 FILE {h5_file}")
     plane = os.path.dirname(h5_file).split("/")[-1]
     if not plane.isdigit():  # b/c of a formatting issue on my part...this is really dumb
         if len(h5_file.split("_")) == 1: 
@@ -877,24 +874,22 @@ if __name__ == "__main__":
             plane = h5_file.split("_")[-1].split("um")[0]
         else:
             plane = None
-    if debug:
-        raw_data = h5py.File(h5_file, "r")
-        trimmed_data = raw_data['data'][:5000]
-        raw_data.close()
-        trimmed_fn = f"../data/{plane}um.h5"
-        with h5py.File(trimmed_fn, "w") as f:
-            f.create_dataset("data", data=trimmed_data)
-        h5_file = trimmed_fn
-    data_description = find_file(data_dir, "data_description.json")
-    with open(os.path.join(output_dir, "data_description_path.log"), "w") as f:
-        f.writelines(f"{data_description}")
-    with open(data_description) as f:
-        acquisition_parent_name = json.load(f)["name"]
-    output_dir = make_output_directory(output_dir, acquisition_parent_name, plane)
+    output_dir = make_output_directory(output_dir, plane)
     platform_json = find_file(input_dir, "platform.json")
     with open(platform_json) as f:
         data = json.load(f)
     frame_rate_hz = data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
+    
+    if debug:
+        raw_data = h5py.File(h5_file, "r")
+        frames_6min = int(360 * float(frame_rate_hz))
+        print(f"FRAMES: {frames_6min}")
+        trimmed_data = raw_data['data'][:frames_6min]
+        raw_data.close()
+        trimmed_fn = f"{input_dir}/{plane}um.h5"
+        with h5py.File(trimmed_fn, "w") as f:
+            f.create_dataset("data", data=trimmed_data)
+        h5_file = trimmed_fn
     data = {"h5py": h5_file, "movie_frame_rate_hz": frame_rate_hz}
     for key, default in (
         ("motion_corrected_output", "_registered.h5"),
@@ -909,7 +904,8 @@ if __name__ == "__main__":
             output_dir, os.path.splitext(os.path.basename(h5_file))[0] + default
         )
     try:
-        with open("/data/input.json", "w") as j:
+        print(f'DUMPING JSON {input_dir}/input.json')
+        with open(f"{input_dir}/input.json", "w") as j:
             json.dump(data, j, indent=2)
     except Exception as e:
         raise Exception(f"Error writing json file: {e}")
