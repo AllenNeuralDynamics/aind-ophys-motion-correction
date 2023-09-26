@@ -876,6 +876,7 @@ if __name__ == "__main__":
             plane = None
     output_dir = make_output_directory(output_dir, plane)
     platform_json = find_file(input_dir, "platform.json")
+    shutil.copy(platform_json, output_dir)
     with open(platform_json) as f:
         data = json.load(f)
     frame_rate_hz = data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
