@@ -14,7 +14,7 @@ from datetime import datetime as dt
 import pytz
 import h5py
 import numpy as np
-
+import shutil
 
 from aind_data_schema import Processing
 from aind_data_schema.processing import DataProcess
