@@ -781,30 +781,30 @@ def identify_and_clip_outliers(
     return data, indices
 
 
-def make_output_directory(output_dir: str, plane: str=None) -> str:
+def make_output_directory(output_dir: str, experiment_id: str=None) -> str:
     """Creates the output directory if it does not exist
     
     Parameters
     ----------
     output_dir: str
         output directory
-    plane: str
-        plane number
+    experiment_id: str
+        experiment_id number
     
     Returns
     -------
     output_dir: str
         output directory
     """
-    if plane:
-        output_dir = os.path.join(output_dir, plane)
+    if experiment_id:
+        output_dir = os.path.join(output_dir, experiment_id)
     else:
         output_dir = os.path.join(output_dir)
     os.makedirs(output_dir, exist_ok=True)
     return output_dir
 
 def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_corrected_movie: Union[str, Path]) -> None:
-    """Writes output metadata to plane processing.json
+    """Writes output metadata to  processing.json
 
     Parameters
     ----------
@@ -835,14 +835,15 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_co
 
 
 def find_file(path, name):
-    for root, dirs, files in os.walk(path):
+    for root, dirs, files in os.walk(str(path)):
         for f in files:
             if name in f:
-                return os.path.join(root, f)
+                return Path(os.path.join(root, f))
 
 
 if __name__ == "__main__":
     # Generate input json
+    # assuming a structure of /data/multiplane-ophys_234324_date_time/mpophys
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-i", "--input-dir", type=str, help="Input directory", default= "/data/"
@@ -854,27 +855,20 @@ if __name__ == "__main__":
         "-d", "--debug", action="store_true", help="Run with only first 5000 frames"
     )
     args = parser.parse_args()
-    input_dir = os.path.abspath(args.input_dir)
-    output_dir = os.path.abspath(args.output_dir)
+    input_dir = Path(args.input_dir).resolve()
+    output_dir = Path(args.output_dir).resolve()
     debug = args.debug
     print("Setting debug")
-    expression = 'Other_\d{6}_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}'
+    expression = 'ophys_experiment_\d{9}'
     data_dir = [i for i in glob(f"{input_dir}/*") if re.findall(expression, i)]
     if not data_dir:
-        data_dir = os.path.abspath("../data/")
+        data_dir = Path("../data/").resolve()
     else:
         data_dir = data_dir[0]
     h5_file = find_file(input_dir, "um.h5")
-    print(f"H5 FILE {h5_file}")
-    plane = os.path.dirname(h5_file).split("/")[-1]
-    if not plane.isdigit():  # b/c of a formatting issue on my part...this is really dumb
-        if len(h5_file.split("_")) == 1: 
-            plane = h5_file.split("um")[0] 
-        elif len(h5_file.split("_")) > 1:
-            plane = h5_file.split("_")[-1].split("um")[0]
-        else:
-            plane = None
-    output_dir = make_output_directory(output_dir, plane)
+    
+    experiment_id = h5_file.name.split(".")[0]
+    output_dir = make_output_directory(output_dir, experiment_id)
     platform_json = find_file(input_dir, "platform.json")
     shutil.copy(platform_json, output_dir)
     with open(platform_json) as f:
@@ -887,7 +881,7 @@ if __name__ == "__main__":
         print(f"FRAMES: {frames_6min}")
         trimmed_data = raw_data['data'][:frames_6min]
         raw_data.close()
-        trimmed_fn = f"{input_dir}/{plane}um.h5"
+        trimmed_fn = f"{input_dir}/{experiment_id}.h5"
         with h5py.File(trimmed_fn, "w") as f:
             f.create_dataset("data", data=trimmed_data)
         h5_file = trimmed_fn
