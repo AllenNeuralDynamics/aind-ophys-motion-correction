@@ -864,7 +864,7 @@ if __name__ == "__main__":
         data_dir = Path("../data/").resolve()
     else:
         data_dir = data_dir[0]
-    with open(data_dir / 'log.txt', "w") as f:
+    with open(output_dir / 'log.txt', "w") as f:
         f.writelines(data_dir)
     print(f"DATA DIR {data_dir}")
     h5_file = find_file(str(data_dir), "\d{9}.h5")
