@@ -834,10 +834,10 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_co
         )    
 
 
-def find_file(path, name):
+def find_file(path, pattern):
     for root, dirs, files in os.walk(str(path)):
         for f in files:
-            if name in f:
+            if re.findall(pattern, f):
                 return Path(os.path.join(root, f))
 
 
@@ -859,17 +859,15 @@ if __name__ == "__main__":
     output_dir = Path(args.output_dir).resolve()
     debug = args.debug
     print("Setting debug")
-    expression = 'ophys_experiment_\d{9}'
-    data_dir = [i for i in glob(f"{input_dir}/*") if re.findall(expression, i)]
+    data_dir = [i for i in input_dir.glob("*") if "multiplane" in str(i)]
     if not data_dir:
         data_dir = Path("../data/").resolve()
     else:
         data_dir = data_dir[0]
-    h5_file = find_file(input_dir, "um.h5")
-    
+    h5_file = find_file(str(data_dir), "\d{9}.h5")
     experiment_id = h5_file.name.split(".")[0]
     output_dir = make_output_directory(output_dir, experiment_id)
-    platform_json = find_file(input_dir, "platform.json")
+    platform_json = find_file(str(data_dir), "platform.json")
     shutil.copy(platform_json, output_dir)
     with open(platform_json) as f:
         data = json.load(f)
@@ -885,7 +883,7 @@ if __name__ == "__main__":
         with h5py.File(trimmed_fn, "w") as f:
             f.create_dataset("data", data=trimmed_data)
         h5_file = trimmed_fn
-    data = {"h5py": h5_file, "movie_frame_rate_hz": frame_rate_hz}
+    data = {"h5py": str(h5_file), "movie_frame_rate_hz": frame_rate_hz}
     for key, default in (
         ("motion_corrected_output", "_registered.h5"),
         ("motion_diagnostics_output", "_motion_transform.csv"),
