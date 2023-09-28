@@ -864,6 +864,7 @@ if __name__ == "__main__":
         data_dir = Path("../data/").resolve()
     else:
         data_dir = data_dir[0]
+    print(f"DATA DIR {data_dir}")
     h5_file = find_file(str(data_dir), "\d{9}.h5")
     experiment_id = h5_file.name.split(".")[0]
     output_dir = make_output_directory(output_dir, experiment_id)
