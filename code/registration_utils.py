@@ -629,6 +629,7 @@ def find_movie_start_end_empty_frames(
 
     # We discover empty or extrema frames by comparing the mean of each frames
     # to the mean of the full movie.
+    import pdb;pdb.set_trace()
     means = frames.mean(axis=(1, 2))
     mean_of_frames = means.mean()
 
