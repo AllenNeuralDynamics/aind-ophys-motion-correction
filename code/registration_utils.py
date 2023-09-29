@@ -870,7 +870,7 @@ if __name__ == "__main__":
     if not experiment_folders:
         h5_file = find_file(str(data_dir), "\d{9}.h5")
     else:
-        exp_id = experiment_folders[0].split("_")[-1]
+        exp_id = str(experiment_folders[0]).split("_")[-1]
         h5_file = find_file(str(data_dir), f"{exp_id}.h5")
     with open(output_dir / 'log.txt', "w") as f:
         f.writelines(str(data_dir))
@@ -886,9 +886,9 @@ if __name__ == "__main__":
     
     if debug:
         raw_data = h5py.File(h5_file, "r")
-        frames_6min = int(360 * float(frame_rate_hz))
-        print(f"FRAMES: {frames_6min}")
-        trimmed_data = raw_data['data'][:frames_6min]
+        frames_10min = int(600 * float(frame_rate_hz))
+        print(f"FRAMES: {frames_10min}")
+        trimmed_data = raw_data['data'][:frames_10min]
         raw_data.close()
         trimmed_fn = f"{input_dir}/{experiment_id}.h5"
         with h5py.File(trimmed_fn, "w") as f:
