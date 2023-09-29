@@ -865,10 +865,17 @@ if __name__ == "__main__":
         data_dir = Path("../data/").resolve()
     else:
         data_dir = data_dir[0]
+    # Try and grab an ophys experiment since some versions of acquisition have the sync file named the same as the uncorrected movie
+    experiment_folders = list(data_dir.glob("mpophys/ophys_experiment*"))
+    if not experiment_folders:
+        h5_file = find_file(str(data_dir), "\d{9}.h5")
+    else:
+        exp_id = experiment_folders[0].split("_")[-1]
+        h5_file = find_file(str(data_dir), f"{exp_id}.h5")
     with open(output_dir / 'log.txt', "w") as f:
         f.writelines(str(data_dir))
     print(f"DATA DIR {data_dir}")
-    h5_file = find_file(str(data_dir), "\d{9}.h5")
+    
     experiment_id = h5_file.name.split(".")[0]
     output_dir = make_output_directory(output_dir, experiment_id)
     platform_json = find_file(str(data_dir), "platform.json")
