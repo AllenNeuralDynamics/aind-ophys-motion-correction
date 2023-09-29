@@ -629,7 +629,6 @@ def find_movie_start_end_empty_frames(
 
     # We discover empty or extrema frames by comparing the mean of each frames
     # to the mean of the full movie.
-    import pdb;pdb.set_trace()
     means = frames.mean(axis=(1, 2))
     mean_of_frames = means.mean()
 
@@ -886,9 +885,9 @@ if __name__ == "__main__":
     
     if debug:
         raw_data = h5py.File(h5_file, "r")
-        frames_10min = int(600 * float(frame_rate_hz))
-        print(f"FRAMES: {frames_10min}")
-        trimmed_data = raw_data['data'][:frames_10min]
+        frames_6min = int(360 * float(frame_rate_hz))
+        print(f"FRAMES: {frames_6min}")
+        trimmed_data = raw_data['data'][:frames_6min]
         raw_data.close()
         trimmed_fn = f"{input_dir}/{experiment_id}.h5"
         with h5py.File(trimmed_fn, "w") as f:
