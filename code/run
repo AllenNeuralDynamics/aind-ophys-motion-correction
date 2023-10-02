@@ -2,7 +2,7 @@
 set -ex
 
 # This is the master script for the capsule. When you click "Reproducible Run", the code in this file will execute.
-python -u registration_utils.py  # auto-generate input.json, here for plane 70
+python -u registration_utils.py  --debug # auto-generate input.json, here for plane 70
 
 # python registration_utils.py -p 70  # auto-generate input.json, here for plane 70
 time python registration.py --input_json /data/input.json # run registration
