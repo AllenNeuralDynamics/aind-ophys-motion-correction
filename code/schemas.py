@@ -93,7 +93,7 @@ class Suite2PRegistrationInputSchema(argschema.ArgSchema):
         ),
     )
     nimg_init = argschema.fields.Int(
-        default=5000,
+        default=500,
         description=(
             "How many frames to use to compute reference " "image for registration"
         ),
