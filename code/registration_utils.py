@@ -871,8 +871,6 @@ if __name__ == "__main__":
     else:
         exp_id = str(experiment_folders[0]).split("_")[-1]
         h5_file = find_file(str(data_dir), f"{exp_id}.h5")
-    print(f"DATA DIR {data_dir}")
-    
     experiment_id = h5_file.name.split(".")[0]
     output_dir = make_output_directory(output_dir, experiment_id)
     platform_json = find_file(str(data_dir), "platform.json")

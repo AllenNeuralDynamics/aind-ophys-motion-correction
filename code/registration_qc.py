@@ -338,16 +338,18 @@ class RegistrationQC(argschema.ArgSchemaParser):
         )
 
         # tile into 1 movie, raw on left, motion corrected on right
-        tiled_vids = np.block(processed_vids)
+        try:
+            tiled_vids = np.block(processed_vids)
 
-        # make into a viewable artifact
-        playback_fps = self.args["preview_playback_factor"] \
-            / self.args["preview_frame_bin_seconds"]
-        encode_video(
-            tiled_vids, self.args["motion_correction_preview_output"], playback_fps
-        )
-        self.logger.info("wrote " f"{self.args['motion_correction_preview_output']}")
-
+            # make into a viewable artifact
+            playback_fps = self.args["preview_playback_factor"] \
+                / self.args["preview_frame_bin_seconds"]
+            encode_video(
+                tiled_vids, self.args["motion_correction_preview_output"], playback_fps
+            )
+            self.logger.info("wrote " f"{self.args['motion_correction_preview_output']}")
+        except ValueError:
+            self.logger.info(f"Could not create motion correction preview output")
         # compute crispness of mean image using raw and registered movie
         with (
             h5py.File(self.args["uncorrected_path"]) as f_raw,
