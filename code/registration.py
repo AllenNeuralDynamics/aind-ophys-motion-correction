@@ -398,8 +398,8 @@ class Suite2PRegistration(argschema.ArgSchemaParser):
                 "motion_diagnostics_output",
                 "max_projection_output",
                 "avg_projection_output",
-                "registration_summary_output",
-                "motion_correction_preview_output",
+                "registration_summary_output"
+                #"motion_correction_preview_output",
             ]
         }
         self.output(outj, indent=2)
