@@ -402,7 +402,7 @@ class Suite2PRegistration(argschema.ArgSchemaParser):
                 #"motion_correction_preview_output",
             ]
         }
-        self.output(outj, indent=2)
+        #self.output(outj, indent=2)
 
 
 if __name__ == "__main__":  # pragma: nocover
