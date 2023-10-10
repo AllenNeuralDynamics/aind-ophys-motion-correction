@@ -877,6 +877,8 @@ if __name__ == "__main__":
     shutil.copy(platform_json, output_dir)
     with open(platform_json) as f:
         data = json.load(f)
+    file_splitting_json = find_file(str(data_dir), "MESOSCOPE_FILE_SPLITTING")
+    shutil.copy(file_splitting_json, output_dir)
     frame_rate_hz = data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
     
     if debug:
