@@ -865,8 +865,10 @@ def get_frame_rate_from_sync(sync_file, platform_data):
             rising_edges = sync_data.get_rising_edges(i, units="seconds")
             image_freq = 1 / (np.mean(np.diff(rising_edges)))
             frame_rate_hz = image_freq / imaging_groups
+            
         except ValueError:
             pass
+    sync_data.close()
     if not frame_rate_hz:
         raise ValueError(f"Frame rate no acquired, line labels: {sync_data.line_labels}")
     return frame_rate_hz
