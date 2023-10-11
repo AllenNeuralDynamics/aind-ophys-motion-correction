@@ -895,14 +895,18 @@ if __name__ == "__main__":
         data_dir = data_dir[0]
     # Try and grab an ophys experiment since some versions of acquisition have the sync file named the same as the uncorrected movie
     experiment_folders = list(data_dir.glob("mpophys/ophys_experiment*"))
+    platform_json = find_file(str(data_dir), "platform.json")
+    shutil.copy(platform_json, output_dir)
+    with open(platform_json) as f:
+        data = json.load(f)
     if not experiment_folders:
-        h5_file = find_file(str(data_dir), "\d{9}.h5")
-        sync_file = [i for i in list(data_dir.glob("*.h5")) if str(i) != h5_file]
+        sync_file = [i for i in list(data_dir.glob(data['sync_file'])][0]
+        h5_file = [i for i in list(data_dir.glob("*.h5")) if str(i) != sync_file][0]
+        experiment_id = h5_file.name.split(".")[0]
     else:
-        exp_id = str(experiment_folders[0]).split("_")[-1]
+        experiment_id = str(experiment_folders[0]).split("_")[-1]
         h5_file = find_file(str(data_dir), f"{exp_id}.h5")
         sync_file = list(data_dir.glob("mpophys/*.h5"))[0]
-    experiment_id = h5_file.name.split(".")[0]
     output_dir = make_output_directory(output_dir, experiment_id)
     platform_json = find_file(str(data_dir), "platform.json")
     shutil.copy(platform_json, output_dir)
