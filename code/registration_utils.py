@@ -910,7 +910,6 @@ if __name__ == "__main__":
         data = json.load(f)
     file_splitting_json = find_file(str(data_dir), "MESOSCOPE_FILE_SPLITTING")
     shutil.copy(file_splitting_json, output_dir)
-    frame_rate_hz = data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
     try:
         frame_rate_hz = data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
     except KeyError:
