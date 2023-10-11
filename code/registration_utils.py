@@ -19,12 +19,17 @@ import shutil
 from aind_data_schema import Processing
 from aind_data_schema.processing import DataProcess
 from aind_ophys_utils.array_utils import normalize_array
+from sync_dataset import Sync
 from scipy.ndimage import median_filter
 from scipy.stats import sigmaclip
-from suite2p.registration.register import (pick_initial_reference,
-                                           register_frames)
-from suite2p.registration.rigid import (apply_masks, compute_masks, phasecorr,
-                                        phasecorr_reference, shift_frame)
+from suite2p.registration.register import pick_initial_reference, register_frames
+from suite2p.registration.rigid import (
+    apply_masks,
+    compute_masks,
+    phasecorr,
+    phasecorr_reference,
+    shift_frame,
+)
 
 
 def is_S3(file_path: str):
@@ -74,9 +79,7 @@ def load_initial_frames(
         frame_window = hdf5_file[h5py_key][trim_frames_start:max_frame]
         # Total number of frames in the movie.
         tot_frames = frame_window.shape[0]
-        requested_frames = np.linspace(
-            0, tot_frames, 1 + min(n_frames, tot_frames), dtype=int
-        )[:-1]
+        requested_frames = np.linspace(0, tot_frames, 1 + min(n_frames, tot_frames), dtype=int)[:-1]
         frames = frame_window[requested_frames]
     return frames
 
@@ -236,9 +239,7 @@ def remove_extrema_frames(input_frames: np.ndarray, n_sigma: float = 3) -> np.nd
     """
     frame_means = np.mean(input_frames, axis=(1, 2))
     _, low_cut, high_cut = sigmaclip(frame_means, low=n_sigma, high=n_sigma)
-    trimmed_frames = input_frames[
-        np.logical_and(frame_means > low_cut, frame_means < high_cut)
-    ]
+    trimmed_frames = input_frames[np.logical_and(frame_means > low_cut, frame_means < high_cut)]
     return trimmed_frames
 
 
@@ -555,9 +556,7 @@ def compute_acutance(
     """
     im_max_y, im_max_x = image.shape
 
-    cut_image = image[
-        min_cut_y : im_max_y - max_cut_y, min_cut_x : im_max_x - max_cut_x
-    ]
+    cut_image = image[min_cut_y : im_max_y - max_cut_y, min_cut_x : im_max_x - max_cut_x]
     grady, gradx = np.gradient(cut_image)
     return (grady**2 + gradx**2).mean()
 
@@ -645,9 +644,9 @@ def find_movie_start_end_empty_frames(
         np.argwhere(means[:midpoint] < mean_of_frames - n_sigma * std_est)
     ).flatten()
     end_idxs = (
-        np.sort(
-            np.argwhere(means[midpoint:] < mean_of_frames - n_sigma * std_est)
-        ).flatten() + midpoint)
+        np.sort(np.argwhere(means[midpoint:] < mean_of_frames - n_sigma * std_est)).flatten()
+        + midpoint
+    )
 
     # Get the total number of these frames.
     lowside = len(start_idxs)
@@ -781,16 +780,16 @@ def identify_and_clip_outliers(
     return data, indices
 
 
-def make_output_directory(output_dir: str, experiment_id: str=None) -> str:
+def make_output_directory(output_dir: str, experiment_id: str = None) -> str:
     """Creates the output directory if it does not exist
-    
+
     Parameters
     ----------
     output_dir: str
         output directory
     experiment_id: str
         experiment_id number
-    
+
     Returns
     -------
     output_dir: str
@@ -803,7 +802,10 @@ def make_output_directory(output_dir: str, experiment_id: str=None) -> str:
     os.makedirs(output_dir, exist_ok=True)
     return output_dir
 
-def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_corrected_movie: Union[str, Path]) -> None:
+
+def write_output_metadata(
+    metadata: dict, raw_movie: Union[str, Path], motion_corrected_movie: Union[str, Path]
+) -> None:
     """Writes output metadata to  processing.json
 
     Parameters
@@ -829,9 +831,7 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_co
             )
         ],
     )
-    processing.write_standard_file(
-        output_directory=Path(os.path.dirname(motion_corrected_movie))
-        )    
+    processing.write_standard_file(output_directory=Path(os.path.dirname(motion_corrected_movie)))
 
 
 def find_file(path, pattern):
@@ -841,13 +841,30 @@ def find_file(path, pattern):
                 return Path(os.path.join(root, f))
 
 
+def get_frame_rate_from_sync(sync_file, platform_data):
+    labels = ["vsync_2p", "2p_vsync"]  # older versions of sync may 2p_vsync label
+    imaging_groups = len(
+        platform_data["imaging_plane_groups"]
+    )  # Number of imaging plane groups for frequency calculation
+    frame_rate_hz = None
+    for i in labels:
+        sync_data = Sync(sync_file)
+        try:
+            rising_edges = sync_data.get_rising_edges(i, units="seconds")
+            image_freq = 1 / (np.mean(np.diff(rising_edges)))
+            frame_rate_hz = image_freq / imaging_groups
+        except ValueError:
+            pass
+    if not frame_rate_hz:
+        raise ValueError(f"Frame rate no acquired, line labels: {sync_data.line_labels}")
+    return frame_rate_hz
+
+
 if __name__ == "__main__":
     # Generate input json
     # assuming a structure of /data/multiplane-ophys_234324_date_time/mpophys
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-i", "--input-dir", type=str, help="Input directory", default= "/data/"
-    )
+    parser.add_argument("-i", "--input-dir", type=str, help="Input directory", default="/data/")
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="/results/"
     )
@@ -868,22 +885,26 @@ if __name__ == "__main__":
     experiment_folders = list(data_dir.glob("mpophys/ophys_experiment*"))
     if not experiment_folders:
         h5_file = find_file(str(data_dir), "\d{9}.h5")
+        sync_file = [i for i in list(data_dir.glob("*.h5")) if str(i) != h5_file]
     else:
         exp_id = str(experiment_folders[0]).split("_")[-1]
         h5_file = find_file(str(data_dir), f"{exp_id}.h5")
+        sync_file = list(data_dir.glob("mpophys/*.h5"))[0]
     experiment_id = h5_file.name.split(".")[0]
     output_dir = make_output_directory(output_dir, experiment_id)
     platform_json = find_file(str(data_dir), "platform.json")
     shutil.copy(platform_json, output_dir)
     with open(platform_json) as f:
         data = json.load(f)
-    frame_rate_hz = data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
-    
+    try:
+        frame_rate_hz = data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
+    except KeyError:
+        frame_rate_hz = get_frame_rate_from_sync(sync_file, data)
     if debug:
         raw_data = h5py.File(h5_file, "r")
         frames_6min = int(360 * float(frame_rate_hz))
         print(f"FRAMES: {frames_6min}")
-        trimmed_data = raw_data['data'][:frames_6min]
+        trimmed_data = raw_data["data"][:frames_6min]
         raw_data.close()
         trimmed_fn = f"{input_dir}/{experiment_id}.h5"
         with h5py.File(trimmed_fn, "w") as f:
@@ -903,7 +924,7 @@ if __name__ == "__main__":
             output_dir, os.path.splitext(os.path.basename(h5_file))[0] + default
         )
     try:
-        print(f'DUMPING JSON {input_dir}/input.json')
+        print(f"DUMPING JSON {input_dir}/input.json")
         with open(f"{input_dir}/input.json", "w") as j:
             json.dump(data, j, indent=2)
     except Exception as e:
