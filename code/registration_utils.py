@@ -902,6 +902,7 @@ if __name__ == "__main__":
         data = json.load(f)
     if not experiment_folders:
         sync_file = [i for i in list(data_dir.glob(data['sync_file']))][0]
+        print(list(data_dir.glob("*/*.h5")))
         h5_file = [i for i in list(data_dir.glob("*/*.h5"))][0]
         experiment_id = h5_file.name.split(".")[0]
     else:
