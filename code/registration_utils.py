@@ -842,6 +842,18 @@ def find_file(path, pattern):
 
 
 def get_frame_rate_from_sync(sync_file, platform_data):
+    """ Calculate frame rate from sync file
+    Parameters
+    ----------
+    sync_file: str
+        path to sync file
+    platform_data: dict
+        platform data from platform.json
+    Returns
+    ------- 
+    frame_rate_hz: float
+        frame rate in Hz
+    """
     labels = ["vsync_2p", "2p_vsync"]  # older versions of sync may 2p_vsync label
     imaging_groups = len(
         platform_data["imaging_plane_groups"]
