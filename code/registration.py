@@ -172,6 +172,7 @@ class Suite2PRegistration(argschema.ArgSchemaParser):
             )
 
         suite2p_args["h5py"] = [suite2p_args["h5py"]]
+        print(f"SUITE2P ARGS:    {suite2p_args}")
         suite2p.run_s2p(suite2p_args)
         suite2p_args["h5py"] = suite2p_args["h5py"][0]
 
