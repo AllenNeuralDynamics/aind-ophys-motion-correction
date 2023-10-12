@@ -902,10 +902,8 @@ if __name__ == "__main__":
         data = json.load(f)
     if not experiment_folders:
         sync_file = [i for i in list(data_dir.glob(data['sync_file']))][0]
-        print(list(data_dir.glob("*/*.h5")))
-        experiment_id = [i for i in list(data_dir.glob("*")) if "ophys_experiment" in str(i)][0]
+        experiment_id = list(data_dir.glob("ophys_experiment*"))[0].name.split("_")[-1]
         h5_file = find_file(data_dir, f"{experiment_id}.h5")
-        experiment_id = h5_file.name.split(".")[0]
     else:
         experiment_id = str(experiment_folders[0]).split("_")[-1]
         h5_file = find_file(str(data_dir), f"{experiment_id}.h5")
