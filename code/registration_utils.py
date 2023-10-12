@@ -916,6 +916,8 @@ if __name__ == "__main__":
     if not experiment_folders:
         file_list = list(data_dir.glob("*.h5"))
         print(f"~~~~~~~~~~~~~~FILE LIST: {file_list}")
+        print(list(data_dir.glob("*/*")))
+        print(list(data_dir.glob("*")))
         file_list.remove(data["sync_file"])
         sync_file = [i for i in list(data_dir.glob(data['sync_file']))][0]
         h5_file = [i for i in file_list if re.findall("\d{9}.h5", str(i))][0]
