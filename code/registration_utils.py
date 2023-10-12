@@ -828,6 +828,7 @@ def write_output_metadata(
                 output_location=motion_corrected_movie,
                 code_url="https:/3+/github.com/AllenNeuralDynamics/aind-ophys-motion-correction/tree/main/code",
                 parameters=metadata,
+                software_version="0.1.0"
             )
         ],
     )
