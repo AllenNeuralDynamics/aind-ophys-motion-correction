@@ -914,14 +914,9 @@ if __name__ == "__main__":
     with open(platform_json) as f:
         data = json.load(f)
     if not experiment_folders:
-        print(list(data_dir.glob("*/*")))
-        print(list(data_dir.glob("*")))
         experiment_id = [i for i in data_dir.glob("*") if "ophys_experiment" in str(i)][0].name.split("_")[-1]
-        print(f"EXPERIMENT ID: {experiment_id}")
         h5_file = [i for i in list(data_dir.glob("*/*")) if f"{experiment_id}.h5" in str(i)][0]
-        print(f"H5 FILE: {h5_file}")
         sync_file = [i for i in list(data_dir.glob(data['sync_file']))][0]
-        print(f"SYNC FILE: {sync_file}")
     else:
         experiment_id = str(experiment_folders[0]).split("_")[-1]
         h5_file = find_file(str(data_dir), f"{experiment_id}.h5")
@@ -959,7 +954,8 @@ if __name__ == "__main__":
         )
     try:
         print(f"DUMPING JSON {input_dir}/input.json")
-        print(f"INPUT JSON: {data}")
+        import pprint
+        pprint.pprint(data)
         with open(f"{input_dir}/input.json", "w") as j:
             json.dump(data, j, indent=2)
     except Exception as e:
