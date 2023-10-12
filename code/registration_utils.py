@@ -955,6 +955,8 @@ if __name__ == "__main__":
         )
     try:
         print(f"DUMPING JSON {input_dir}/input.json")
+        import pprint
+        pprint.pprint(data)
         with open(f"{input_dir}/input.json", "w") as j:
             json.dump(data, j, indent=2)
     except Exception as e:
