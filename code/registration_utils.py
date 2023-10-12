@@ -903,6 +903,7 @@ if __name__ == "__main__":
     if not experiment_folders:
         sync_file = [i for i in list(data_dir.glob(data['sync_file']))][0]
         experiment_id = list(data_dir.glob("ophys_experiment*"))[0].name.split("_")[-1]
+        print(experiment_id)
         h5_file = find_file(data_dir, f"{experiment_id}.h5")
     else:
         experiment_id = str(experiment_folders[0]).split("_")[-1]
