@@ -933,7 +933,6 @@ if __name__ == "__main__":
     if debug:
         raw_data = h5py.File(h5_file, "r")
         frames_6min = int(360 * float(frame_rate_hz))
-        print(f"FRAMES: {frames_6min}")
         trimmed_data = raw_data["data"][:frames_6min]
         raw_data.close()
         trimmed_fn = f"{input_dir}/{experiment_id}.h5"
@@ -954,8 +953,8 @@ if __name__ == "__main__":
             output_dir, os.path.splitext(os.path.basename(h5_file))[0] + default
         )
     try:
-        print(f"DUMPING JSON {input_dir}/input.json")
         import pprint
+        print("Input.json")
         pprint.pprint(data)
         with open(f"{input_dir}/input.json", "w") as j:
             json.dump(data, j, indent=2)
