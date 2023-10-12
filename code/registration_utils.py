@@ -821,14 +821,13 @@ def write_output_metadata(
         data_processes=[
             DataProcess(
                 name="Other",
-                version="0.0.1",
                 start_date_time=dt.now(),  # TODO: Add actual dt
                 end_date_time=dt.now(),  # TODO: Add actual dt
                 input_location=raw_movie,
                 output_location=motion_corrected_movie,
                 code_url="https:/3+/github.com/AllenNeuralDynamics/aind-ophys-motion-correction/tree/main/code",
                 parameters=metadata,
-                software_version="0.1.0"
+                version="0.1.0"
             )
         ],
     )

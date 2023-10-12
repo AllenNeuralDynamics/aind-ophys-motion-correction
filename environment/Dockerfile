@@ -19,6 +19,7 @@ RUN pip3 install -U --no-cache-dir \
     numpy \
     pandas \
     sbxreader \
+    
     git+https://github.com/arielleleon/suite2p@bug-pull-from-defined-h5py \
     aind-data-schema \
     pytz
