@@ -835,6 +835,19 @@ def write_output_metadata(
 
 
 def find_file(path, pattern):
+    """
+    Find file in path
+    Parameters
+    ----------
+    path: str
+        path to search
+    pattern: str
+        pattern to search for
+    Returns
+    -------
+    file: str
+        path to file
+    """
     for root, dirs, files in os.walk(str(path)):
         for f in files:
             if re.findall(pattern, f):
@@ -901,18 +914,19 @@ if __name__ == "__main__":
     with open(platform_json) as f:
         data = json.load(f)
     if not experiment_folders:
+        file_list = list(data_dir.glob("*.h5"))
+        print(f"~~~~~~~~~~~~~~FILE LIST: {file_list}")
+        file_list.remove(data["sync_file"])
         sync_file = [i for i in list(data_dir.glob(data['sync_file']))][0]
-        experiment_id = list(data_dir.glob("ophys_experiment*"))[0].name.split("_")[-1]
-        print(experiment_id)
-        h5_file = find_file(data_dir, f"{experiment_id}.h5")
+        h5_file = [i for i in file_list if re.findall("\d{9}.h5", str(i))][0]
     else:
         experiment_id = str(experiment_folders[0]).split("_")[-1]
         h5_file = find_file(str(data_dir), f"{experiment_id}.h5")
         sync_file = list(data_dir.glob("mpophys/*.h5"))[0]
     output_dir = make_output_directory(output_dir, experiment_id)
-    shutil.copy(platform_json, output_dir)
     file_splitting_json = find_file(str(data_dir), "MESOSCOPE_FILE_SPLITTING")
     shutil.copy(file_splitting_json, output_dir)
+    shutil.copy(platform_json, output_dir)
     try:
         frame_rate_hz = data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
     except KeyError:
