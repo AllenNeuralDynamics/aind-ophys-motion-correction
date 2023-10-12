@@ -918,6 +918,7 @@ if __name__ == "__main__":
         experiment_id = [i for i in data_dir.glob("*") if "ophys_experiment" in str(i)][0].name.split("_")[-1]
         h5_file = [i for i in list(data_dir.glob("*/*")) if f"{experiment_id}.h5" in str(i)][0]
         sync_file = [i for i in list(data_dir.glob(data['sync_file']))][0]
+        print(f"----Summary----\nExperimentID: {experiment_id}\nH5 File: {h5_file}\nSync File: {sync_file}\n-----")
     else:
         experiment_id = str(experiment_folders[0]).split("_")[-1]
         h5_file = find_file(str(data_dir), f"{experiment_id}.h5")
