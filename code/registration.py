@@ -1,12 +1,3 @@
-from suite2p.registration.rigid import (apply_masks, compute_masks, phasecorr,
-                                        phasecorr_reference, shift_frame)
-from suite2p.registration.register import (pick_initial_reference,
-                                           register_frames)
-from suite2p.registration.nonrigid import make_blocks
-from aind_ophys_utils.video_utils import downsample_h5_video, encode_video
-from aind_ophys_utils.array_utils import normalize_array
-from aind_data_schema.processing import DataProcess
-from aind_data_schema import Processing
 import argparse
 import copy
 import json
@@ -21,9 +12,10 @@ from datetime import datetime as dt
 from functools import partial
 from glob import glob
 from itertools import product
+from multiprocessing import Pool
 from pathlib import Path
 from time import time
-from typing import Callable, List, Tuple, Union
+from typing import Callable, Optional, Tuple, Union
 
 import cv2
 import h5py
@@ -32,10 +24,19 @@ import numpy as np
 import pandas as pd
 import pytz
 import suite2p
+from aind_data_schema import Processing
+from aind_data_schema.processing import DataProcess
+from aind_ophys_utils.array_utils import normalize_array
+from aind_ophys_utils.video_utils import downsample_h5_video, encode_video
 from matplotlib import pyplot as plt  # noqa: E402
 from PIL import Image
 from scipy.ndimage import median_filter
 from scipy.stats import sigmaclip
+from suite2p.registration.nonrigid import make_blocks
+from suite2p.registration.register import (pick_initial_reference,
+                                           register_frames)
+from suite2p.registration.rigid import (apply_masks, compute_masks, phasecorr,
+                                        phasecorr_reference, shift_frame)
 
 mpl.use("Agg")
 
@@ -101,7 +102,6 @@ def compute_reference(
     smooth_sigma: float,
     smooth_sigma_time: float,
     mask_slope_factor: float = 3,
-    logger: callable = None,
 ) -> np.ndarray:
     """Computes a stacked reference image from the input frames.
 
@@ -161,7 +161,7 @@ def compute_reference(
                 frames,
                 *compute_masks(
                     refImg=ref_image,
-                    maskSlope=3 * smooth_sigma,
+                    maskSlope=mask_slope_factor * smooth_sigma,
                 ),
             ),
             cfRefImg=phasecorr_reference(
@@ -263,7 +263,7 @@ def optimize_motion_parameters(
     trim_frames_start: int = 0,
     trim_frames_end: int = 0,
     n_batches: int = 20,
-    logger: callable = None,
+    logger: Optional[Callable] = None,
 ) -> dict:
     """Loop over a range of parameters and select the best set from the
     max acutance of the final, average image.
@@ -296,7 +296,7 @@ def optimize_motion_parameters(
         Number of batches to load. Processing a large number of frames at once
         will likely result in running out of memory, hence processing in
         batches. Total returned size isn_batches * suit2p_args['batch_size'].
-    logger : callable, optional
+    logger : Optional[Callable]
         Function to print to stdout or a log.
 
     Returns
@@ -606,8 +606,13 @@ def check_and_warn_on_datatype(h5py_name: str, h5py_key: str, logger: Callable):
             )
 
 
+def _mean_of_batch(i, h5py_name, h5py_key):
+    return h5py.File(h5py_name)[h5py_key][i:i + 1000].mean(axis=(1, 2))
+
+
 def find_movie_start_end_empty_frames(
-    h5py_name: str, h5py_key: str, n_sigma: float = 5, logger: callable = None
+    h5py_name: str, h5py_key: str, n_sigma: float = 5,
+    logger: Optional[Callable] = None, n_jobs: Optional[int] = None
 ) -> Tuple[int, int]:
     """Load a movie from HDF5 and find frames at the start and end of the
     movie that are empty or pure noise and 5 sigma discrepant from the
@@ -625,8 +630,10 @@ def find_movie_start_end_empty_frames(
     n_sigma : float
         Number of standard deviations beyond which a frame is considered an
         outlier and "empty".
-    logger : callable, optional
+    logger : Optional[Callable]
         Function to print warning messages to.
+    n_jobs: Optional[int]
+        The number of jobs to run in parallel.
 
     Returns
     -------
@@ -634,15 +641,16 @@ def find_movie_start_end_empty_frames(
         Tuple of the number of frames to cut from the start and end of the
         movie as (n_trim_start, n_trim_end).
     """
-    # Load the data.
-    with h5py.File(h5py_name, "r") as h5_file:
-        frames = h5_file[h5py_key][:]
     # Find the midpoint of the movie.
-    midpoint = frames.shape[0] // 2
-
+    n_frames = h5py.File(h5py_name, "r")[h5py_key].shape[0]
+    midpoint = n_frames // 2
     # We discover empty or extrema frames by comparing the mean of each frames
     # to the mean of the full movie.
-    means = frames.mean(axis=(1, 2))
+    if n_jobs == 1 or n_frames < 2000:
+        means = h5py.File(h5py_name, "r")[h5py_key][:].mean(axis=(1, 2))
+    else:
+        means = np.concatenate(Pool(n_jobs).starmap(
+            _mean_of_batch, product(range(0, n_frames, 1000), [h5py_name], [h5py_key])))
     mean_of_frames = means.mean()
 
     # Compute a robust standard deviation that is not sensitive to the
@@ -679,7 +687,7 @@ def find_movie_start_end_empty_frames(
             )
     if not np.array_equal(
         end_idxs,
-        np.arange(frames.shape[0] - highside, frames.shape[0], dtype=end_idxs.dtype),
+        np.arange(n_frames - highside, n_frames, dtype=end_idxs.dtype),
     ):
         highside = 0
         if logger is not None:
@@ -762,7 +770,7 @@ def projection_process(data: np.ndarray, projection: str = "max") -> np.ndarray:
 
 def identify_and_clip_outliers(
     data: np.ndarray, med_filter_size: int, thresh: int
-) -> Tuple[np.ndarray, List]:
+) -> Tuple[np.ndarray, np.ndarray]:
     """given data, identify the indices of outliers
     based on median filter detrending, and a threshold
 
