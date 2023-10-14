@@ -923,8 +923,7 @@ if __name__ == "__main__":
         sync_file = list(data_dir.glob("mpophys/*.h5"))[0]
     
     file_splitting_json = find_file(str(data_dir), "MESOSCOPE_FILE_SPLITTING")
-    import pdb;pdb.set_trace()
-    session_id = re.findall("d\{9}", file_splitting_json.name)[0]
+    session_id = re.findall("\d{6,11}", file_splitting_json.name)[0]
     output_dir = make_output_directory(output_dir,session_id, experiment_id)
     shutil.copy(file_splitting_json, output_dir)
     shutil.copy(platform_json, output_dir)
