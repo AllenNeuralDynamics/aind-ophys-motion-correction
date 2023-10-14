@@ -778,15 +778,13 @@ def identify_and_clip_outliers(
     return data, indices
 
 
-def make_output_directory(output_dir: str, session_id: str, experiment_id: str) -> str:
+def make_output_directory(output_dir: str, experiment_id: str) -> str:
     """Creates the output directory if it does not exist
 
     Parameters
     ----------
     output_dir: str
         output directory
-    session_id: str
-        session_id number
     experiment_id: str
         experiment_id number
 
@@ -795,8 +793,6 @@ def make_output_directory(output_dir: str, session_id: str, experiment_id: str) 
     output_dir: str
         output directory
     """
-    output_dir = os.path.join(output_dir, session_id)
-    os.makedirs(output_dir, exist_ok=True)
     output_dir = os.path.join(output_dir, experiment_id)
     os.makedirs(output_dir, exist_ok=True)
     return output_dir
@@ -923,8 +919,7 @@ if __name__ == "__main__":
         sync_file = list(data_dir.glob("mpophys/*.h5"))[0]
     
     file_splitting_json = find_file(str(data_dir), "MESOSCOPE_FILE_SPLITTING")
-    session_id = re.findall("\d{6,11}", file_splitting_json.name)[0]
-    output_dir = make_output_directory(output_dir,session_id, experiment_id)
+    output_dir = make_output_directory(output_dir,experiment_id)
     shutil.copy(file_splitting_json, output_dir)
     shutil.copy(platform_json, output_dir)
     try:
