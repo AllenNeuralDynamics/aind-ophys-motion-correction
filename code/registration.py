@@ -872,7 +872,8 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
         raise Exception(f"Error: {exc}")
 
 
-def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_corrected_movie: Union[str, Path]) -> None:
+def write_output_metadata(metadata: dict, raw_movie: Union[str, Path],
+                          motion_corrected_movie: Union[str, Path]) -> None:
     """Writes output metadata to plane processing.json
 
     Parameters
@@ -893,7 +894,8 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_co
                 end_date_time=dt.now(),  # TODO: Add actual dt
                 input_location=raw_movie,
                 output_location=motion_corrected_movie,
-                code_url="https:/3+/github.com/AllenNeuralDynamics/aind-ophys-motion-correction/tree/main/code",
+                code_url=("https://github.com/AllenNeuralDynamics/"
+                          "aind-ophys-motion-correction/tree/main/code"),
                 parameters=metadata,
             )
         ],
@@ -1128,15 +1130,18 @@ if __name__ == "__main__":  # pragma: nocover
     parser = argparse.ArgumentParser(description="Suite2P motion correction")
 
     parser.add_argument(
-        "-i", "--input-filename", type=str, help="Path to raw movie", default="/data/Other_667826_2023-04-10_16-08-00/Other/ophys/planes/70/70um.h5"
+        "-i", "--input-filename", type=str, help="Path to raw movie",
+        default="/data/Other_667826_2023-04-10_16-08-00/Other/ophys/planes/70/70um.h5"
     )
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="/results/"
     )
 
-    parser.add_argument("--tmp_dir", type=str, default="/scratch",
-                        help="Directory into which to write temporary files produced by Suite2P (default: /scratch)",
-                        )
+    parser.add_argument(
+        "--tmp_dir", type=str, default="/scratch",
+        help="Directory into which to write temporary files "
+             "produced by Suite2P (default: /scratch)",
+    )
 
     parser.add_argument(
         "--force_refImg",
@@ -1145,73 +1150,73 @@ if __name__ == "__main__":  # pragma: nocover
         help="Force the use of an external reference image (default: True)",
     )
 
-    parser.add_argument("--outlier_detrend_window", type=float, default=3.0,
-                        help=(
-                            "for outlier rejection in the xoff/yoff outputs "
-                            "of suite2p, the offsets are first de-trended "
-                            "with a median filter of this duration [seconds]. "
-                            "This value is ~30 or 90 samples in size for 11 and 31"
-                            "Hz sampling rates respectively."
-                        )
-                        )
+    parser.add_argument(
+        "--outlier_detrend_window", type=float, default=3.0,
+        help="for outlier rejection in the xoff/yoff outputs "
+        "of suite2p, the offsets are first de-trended "
+        "with a median filter of this duration [seconds]. "
+        "This value is ~30 or 90 samples in size for 11 and 31"
+        "Hz sampling rates respectively."
+    )
 
-    parser.add_argument("--outlier_maxregshift", type=float, default=0.05,
-                        help=(
-                            "units [fraction FOV dim]. After median-filter "
-                            "detrending, outliers more than this value are "
-                            "clipped to this value in x and y offset, independently."
-                            "This is similar to Suite2P's internal maxregshift, but"
-                            "allows for low-frequency drift. Default value of 0.05 "
-                            "is typically clipping outliers to 512 * 0.05 = 25 "
-                            "pixels above or below the median trend."
-                        )
-                        )
+    parser.add_argument(
+        "--outlier_maxregshift", type=float, default=0.05,
+        help="units [fraction FOV dim]. After median-filter "
+        "detrending, outliers more than this value are "
+        "clipped to this value in x and y offset, independently."
+        "This is similar to Suite2P's internal maxregshift, but"
+        "allows for low-frequency drift. Default value of 0.05 "
+        "is typically clipping outliers to 512 * 0.05 = 25 "
+        "pixels above or below the median trend."
+    )
 
-    parser.add_argument("--clip_negative", action="store_true", default=False,
-                        help=(
-                            "Whether or not to clip negative pixel "
-                            "values in output. Because the pixel values "
-                            "in the raw  movies are set by the current "
-                            "coming off a photomultiplier tube, there can "
-                            "be pixels with negative values (current has a "
-                            "sign), possibly due to noise in the rig. "
-                            "Some segmentation algorithms cannot handle "
-                            "negative values in the movie, so we have this "
-                            "option to artificially set those pixels to zero."
-                        )
-                        )
+    parser.add_argument(
+        "--clip_negative", action="store_true", default=False,
+        help="Whether or not to clip negative pixel "
+        "values in output. Because the pixel values "
+        "in the raw  movies are set by the current "
+        "coming off a photomultiplier tube, there can "
+        "be pixels with negative values (current has a "
+        "sign), possibly due to noise in the rig. "
+        "Some segmentation algorithms cannot handle "
+        "negative values in the movie, so we have this "
+        "option to artificially set those pixels to zero."
+    )
 
-    parser.add_argument("--max_reference_iterations", type=int, default=8,
-                        help="Maximum number of iterations for creating a reference image (default: 8)",
-                        )
+    parser.add_argument(
+        "--max_reference_iterations", type=int, default=8,
+        help="Maximum number of iterations for creating "
+             "a reference image (default: 8)",
+    )
 
-    parser.add_argument("--auto_remove_empty_frames", action="store_true",
-                        default=True,
-                        help=("Automatically detect empty noise frames at the start and "
-                              "end of the movie. Overrides values set in "
-                              "trim_frames_start and trim_frames_end. Some movies "
-                              "arrive with otherwise quality data but contain a set of "
-                              "frames that are empty and contain pure noise. When "
-                              "processed, these frames tend to receive "
-                              "large random shifts that throw off motion border "
-                              "calculation. Turning on this setting automatically "
-                              "detects these frames before processing and removes them "
-                              "from reference image creation,  automated smoothing "
-                              "parameter searches, and finally the motion border "
-                              "calculation. The frames are still written however any "
-                              "shift estimated is removed and their shift is set to 0 "
-                              "to avoid large motion borders."
-                              )
-                        )
+    parser.add_argument(
+        "--auto_remove_empty_frames", action="store_true",
+        default=True,
+        help="Automatically detect empty noise frames at the start and "
+        "end of the movie. Overrides values set in "
+        "trim_frames_start and trim_frames_end. Some movies "
+        "arrive with otherwise quality data but contain a set of "
+        "frames that are empty and contain pure noise. When "
+        "processed, these frames tend to receive "
+        "large random shifts that throw off motion border "
+        "calculation. Turning on this setting automatically "
+        "detects these frames before processing and removes them "
+        "from reference image creation,  automated smoothing "
+        "parameter searches, and finally the motion border "
+        "calculation. The frames are still written however any "
+        "shift estimated is removed and their shift is set to 0 "
+        "to avoid large motion borders."
+    )
 
-    parser.add_argument("--trim_frames_start", type=int, default=0,
-                        help="Number of frames to remove from the start of the movie "
-                        "if known. Removes frames from motion border calculation "
-                        "and resets the frame shifts found. Frames are still "
-                        "written to motion correction. Raises an error if "
-                        "auto_remove_empty_frames is set and "
-                        "trim_frames_start > 0"
-                        )
+    parser.add_argument(
+        "--trim_frames_start", type=int, default=0,
+        help="Number of frames to remove from the start of the movie "
+        "if known. Removes frames from motion border calculation "
+        "and resets the frame shifts found. Frames are still "
+        "written to motion correction. Raises an error if "
+        "auto_remove_empty_frames is set and "
+        "trim_frames_start > 0"
+    )
 
     parser.add_argument(
         "--trim_frames_end",
@@ -1225,14 +1230,15 @@ if __name__ == "__main__":  # pragma: nocover
         "trim_frames_start > 0"
     )
 
-    parser.add_argument("--do_optimize_motion_params", action="store_true",
-                        default=False,
-                        help="Do a search for best parameters of smooth_sigma and "
-                        "smooth_sigma_time. Adds significant runtime cost to "
-                        "motion correction and should only be run once per "
-                        "experiment with the resulting parameters being stored "
-                        "for later use."
-                        )
+    parser.add_argument(
+        "--do_optimize_motion_params", action="store_true",
+        default=False,
+        help="Do a search for best parameters of smooth_sigma and "
+        "smooth_sigma_time. Adds significant runtime cost to "
+        "motion correction and should only be run once per "
+        "experiment with the resulting parameters being stored "
+        "for later use."
+    )
 
     parser.add_argument(
         "--use_ave_image_as_reference",
@@ -1298,7 +1304,8 @@ if __name__ == "__main__":  # pragma: nocover
     # The preview movie will playback at this factor times real-time.
     args["preview_playback_factor"] = 10.0
 
-    # Number of batches to load from the movie for smoothing parameter testing. Batches are evenly spaced throughout the movie.
+    # Number of batches to load from the movie for smoothing parameter testing.
+    # Batches are evenly spaced throughout the movie.
     args["n_batches"] = 20
     # Minimum value of the parameter search for smooth_sigma.
     args["smooth_sigma_min"] = 0.65
@@ -1335,7 +1342,7 @@ if __name__ == "__main__":  # pragma: nocover
     # These parameters are at the same value as suite2p default. This is just here
     # to make it clear we need those parameters to be at the same value as
     # suite2p default but those lines could be deleted.
-    suite2p_args["maxregshiftNR"] = 0.5  # Maximum shift allowed in pixels for a block in rigid registration.
+    suite2p_args["maxregshiftNR"] = 5.  # Maximum shift allowed in pixels for a block in rigid registration.
     suite2p_args["batch_size"] = 500  # Number of frames to process at once
     suite2p_args["h5py_key"] = 'data'  # h5 path in the file.
     suite2p_args["smooth_sigma"] = 1.15  # Standard deviation in pixels of the gaussian used to smooth the phase correlation.
@@ -1346,6 +1353,7 @@ if __name__ == "__main__":  # pragma: nocover
 
     # This is to overwrite image reference creation.
     suite2p_args["refImg"] = args["refImg"]
+    suite2p_args["force_refImg"] = args["force_refImg"]
 
     # if data is in a S3 bucket, copy it to /scratch for faster access
     if is_S3(suite2p_args["h5py"]):
@@ -1362,7 +1370,7 @@ if __name__ == "__main__":  # pragma: nocover
 
     if args["auto_remove_empty_frames"]:
         logger.info(
-            "Attempting to find empty frames at the start " "and end of the movie."
+            "Attempting to find empty frames at the start and end of the movie."
         )
         lowside, highside = find_movie_start_end_empty_frames(
             h5py_name=suite2p_args["h5py"],
@@ -1372,7 +1380,7 @@ if __name__ == "__main__":  # pragma: nocover
         args["trim_frames_start"] = lowside
         args["trim_frames_end"] = highside
         logger.info(
-            f"Found ({lowside}, {highside}) at the " "start/end of the movie."
+            f"Found ({lowside}, {highside}) at the start/end of the movie."
         )
 
     if suite2p_args["force_refImg"] and len(suite2p_args["refImg"]) == 0:
@@ -1392,7 +1400,7 @@ if __name__ == "__main__":  # pragma: nocover
 
         if args["do_optimize_motion_params"]:
             logger.info(
-                "Attempting to optimize registration " "parameters Using:"
+                "Attempting to optimize registration parameters Using:"
             )
             logger.info(
                 "\tsmooth_sigma range: "
