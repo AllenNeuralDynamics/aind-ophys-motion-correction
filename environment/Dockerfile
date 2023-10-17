@@ -13,13 +13,7 @@ RUN pip3 install -U --no-cache-dir \
     torch --index-url https://download.pytorch.org/whl/cpu
 WORKDIR /
 RUN pip3 install -U --no-cache-dir \
-    aind-ophys-utils \
-    argschema \
-    h5py \
-    imageio-ffmpeg \
-    numpy \
-    pandas \
-    sbxreader \
-    suite2p==0.13.1 \
     aind-data-schema \
-    pytz
+    aind-ophys-utils \
+    sbxreader \
+    suite2p==0.13.1
