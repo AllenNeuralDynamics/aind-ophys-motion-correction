@@ -905,19 +905,22 @@ if __name__ == "__main__":
         data_dir = data_dir[0]
     # Try and grab an ophys experiment since some versions of acquisition have the sync file named the same as the uncorrected movie
     experiment_folders = list(data_dir.glob("mpophys/ophys_experiment*"))
-    platform_json = [i for i in data_dir.glob("*")if "platform" in str(i)][0]
-    with open(platform_json) as f:
-        data = json.load(f)
+    
     if not experiment_folders:
+        platform_json = list(data_dir.glob("*platform.json"))[0]
+        with open(platform_json) as f:
+            data = json.load(f)
         experiment_id = [i for i in data_dir.glob("*") if "ophys_experiment" in str(i)][0].name.split("_")[-1]
-        h5_file = [i for i in list(data_dir.glob("*/*")) if f"{experiment_id}.h5" in str(i)][0]
+        h5_file = [i for i in data_dir.glob("*/*") if f"{experiment_id}.h5" in str(i)][0]
         sync_file = [i for i in list(data_dir.glob(data['sync_file']))][0]
         print(f"----Summary----\nExperimentID: {experiment_id}\nH5 File: {h5_file}\nSync File: {sync_file}\n-----")
     else:
         experiment_id = str(experiment_folders[0]).split("_")[-1]
         h5_file = find_file(str(data_dir), f"{experiment_id}.h5")
         sync_file = list(data_dir.glob("mpophys/*.h5"))[0]
-    
+        platform_json = list(data_dir.glob("*platform.json"))[0]
+        with open(platform_json) as f:
+            data = json.load(f)
     file_splitting_json = find_file(str(data_dir), "MESOSCOPE_FILE_SPLITTING")
     output_dir = make_output_directory(output_dir,experiment_id)
     shutil.copy(file_splitting_json, output_dir)
