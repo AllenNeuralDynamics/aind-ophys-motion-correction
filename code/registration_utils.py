@@ -905,7 +905,7 @@ if __name__ == "__main__":
         data_dir = data_dir[0]
     # Try and grab an ophys experiment since some versions of acquisition have the sync file named the same as the uncorrected movie
     experiment_folders = list(data_dir.glob("mpophys/ophys_experiment*"))
-    platform_json = find_file(str(data_dir), "platform.json")
+    platform_json = [i for i in data_dir.glob("*")if "platform" in str(i)][0]
     with open(platform_json) as f:
         data = json.load(f)
     if not experiment_folders:
