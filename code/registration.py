@@ -1297,7 +1297,7 @@ if __name__ == "__main__":  # pragma: nocover
     suite2p_args["do_registration"] = 1
     suite2p_args["data_path"]=[] # TODO: remove this if not needed by suite2p
     suite2p_args["reg_tif"]= False # We save our own outputs here
-    suite2p_args["nimg_init"]= 5000 # Nb of images to compute reference. This value is a bit high. Suite2p has it at 300 normally
+    suite2p_args["nimg_init"]= 500 # Nb of images to compute reference. This value is a bit high. Suite2p has it at 300 normally
     suite2p_args["maxregshift"]= 0.2 # Max allowed registration shift as a fraction of frame max(width and height)
 
     # These parameters are at the same value as suite2p default. This is just here
