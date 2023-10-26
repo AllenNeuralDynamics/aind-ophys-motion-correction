@@ -1096,7 +1096,7 @@ if __name__ == "__main__":  # pragma: nocover
     parser = argparse.ArgumentParser(description="Suite2P motion correction")
 
     parser.add_argument(
-        "-i", "--input-filename", type=str, help="Path to raw movie", default="/data/Other_667826_2023-04-10_16-08-00/Other/ophys/planes/70/70um.h5"
+        "-i", "--input", type=str, help="File or directory where h5 file is stored", default="../data/"
     )
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="/results/"
