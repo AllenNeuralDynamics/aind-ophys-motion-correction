@@ -1087,6 +1087,39 @@ def flow_png(output_path: Path, dst_path: str, iPC: int = 0):
             dst_path + f"_PC{iPC}rof.png", format="png", dpi=300, bbox_inches="tight"
         )
 
+
+def get_frame_rate_from_sync(sync_file, platform_data) -> float:
+    """ Calculate frame rate from sync file
+    Parameters
+    ----------
+    sync_file: str
+        path to sync file
+    platform_data: dict
+        platform data from platform.json
+    Returns
+    ------- 
+    frame_rate_hz: float
+        frame rate in Hz
+    """
+    labels = ["vsync_2p", "2p_vsync"]  # older versions of sync may 2p_vsync label
+    imaging_groups = len(
+        platform_data["imaging_plane_groups"]
+    )  # Number of imaging plane groups for frequency calculation
+    frame_rate_hz = None
+    for i in labels:
+        sync_data = Sync(sync_file)
+        try:
+            rising_edges = sync_data.get_rising_edges(i, units="seconds")
+            image_freq = 1 / (np.mean(np.diff(rising_edges)))
+            frame_rate_hz = image_freq / imaging_groups
+            
+        except ValueError:
+            pass
+    sync_data.close()
+    if not frame_rate_hz:
+        raise ValueError(f"Frame rate no acquired, line labels: {sync_data.line_labels}")
+    return frame_rate_hz
+
 if __name__ == "__main__":  # pragma: nocover
     # Set the log level and name the logger
     logger = logging.getLogger('Suite2P motion correction')
@@ -1100,6 +1133,10 @@ if __name__ == "__main__":  # pragma: nocover
     )
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="/results/"
+    )
+
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Run with only first 500 frames"
     )
 
     parser.add_argument("--tmp_dir", type=str, default="/scratch",
@@ -1219,23 +1256,39 @@ if __name__ == "__main__":  # pragma: nocover
     # Parse command-line arguments
     args = parser.parse_args()
     # General settings
+    h5_input = Path(args.input)
 
-    h5_file = args.input_filename
-
-    # if not plane:
+    if h5_input.is_file():
+        h5_file = h5_input
+        session_dir = h5_file.parent.parent
+    else:
+        h5_file = [i for i in h5_input.glob("*.h5") if re.fullmatch("\d{9}.h5", str(i)).string][0]
+        session_dir = h5_input
+    experiment_id = h5_file.name.split(".")[0]
+    platform_json = session_dir.glob("*platform.json")
+    # this file is required for paired plane registration but not for single plane
+    # in the future, we should make this file accessible to the pipeline through channel connections
+    # instead of needing to copy it from here
+    file_splitting_json = session_dir.glob("MESOSCOPE_FILE_*")
+    with open(platform_json, "r") as j:
+        platform_data = json.load(j)
+    sync_file = [i for i in session_dir.glob(platform_data['sync_file'])]
+    output_dir = make_output_directory(args.output_dir, experiment_id)
+    # try to get the framerate from the platform file else use sync file
     try:
-        plane = os.path.dirname(h5_file).split("/")[-1]
-        assert plane == int
-    except AssertionError:
-        plane = None
-    output_dir = make_output_directory(args.output_dir, h5_file, plane)
-
-    # We extract the frame rate from the platform json file
-    try:
-        frame_rate_hz = get_frame_rate_platform_json(h5_file)
-    except Exception:
-        frame_rate_hz = 30.
-
+        frame_rate_hz = platform_data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
+    except KeyError:
+        frame_rate_hz = get_frame_rate_from_sync(sync_file, platform_data)
+    if args.debug:
+        logging.info(f"Running in debug mode....")
+        raw_data = h5py.File(h5_file, "r")
+        frames_6min = int(360 * float(frame_rate_hz))
+        trimmed_data = raw_data["data"][:frames_6min]
+        raw_data.close()
+        trimmed_fn = f"{session_dir.parent}/{experiment_id}.h5"
+        with h5py.File(trimmed_fn, "w") as f:
+            f.create_dataset("data", data=trimmed_data)
+        h5_file = trimmed_fn
     # We convert to dictionary
     args = vars(args)
 
