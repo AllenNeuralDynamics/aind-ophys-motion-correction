@@ -1265,11 +1265,11 @@ if __name__ == "__main__":  # pragma: nocover
         h5_file = [i for i in h5_input.glob("*.h5") if re.fullmatch("\d{9}.h5", str(i)).string][0]
         session_dir = h5_input
     experiment_id = h5_file.name.split(".")[0]
-    platform_json = session_dir.glob("*platform.json")
+    platform_json = list(session_dir.glob("*platform.json"))[0]
     # this file is required for paired plane registration but not for single plane
     # in the future, we should make this file accessible to the pipeline through channel connections
     # instead of needing to copy it from here
-    file_splitting_json = session_dir.glob("MESOSCOPE_FILE_*")
+    file_splitting_json = list(session_dir.glob("MESOSCOPE_FILE_*"))[0]
     with open(platform_json, "r") as j:
         platform_data = json.load(j)
     sync_file = [i for i in session_dir.glob(platform_data['sync_file'])]
@@ -1291,6 +1291,7 @@ if __name__ == "__main__":  # pragma: nocover
         h5_file = trimmed_fn
     # We convert to dictionary
     args = vars(args)
+    h5_file = str(h5_file)
 
     # We construct the paths to the outputs
     args["movie_frame_rate_hz"] = frame_rate_hz
