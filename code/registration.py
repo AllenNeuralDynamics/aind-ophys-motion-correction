@@ -1262,7 +1262,7 @@ if __name__ == "__main__":  # pragma: nocover
         h5_file = h5_input
         session_dir = h5_file.parent.parent
     else:
-        h5_file = [i for i in h5_input.glob("*.h5") if re.fullmatch("\d{9}.h5", str(i)).string][0]
+        h5_file = [i for i in h5_input.glob("*/*.h5") if re.fullmatch("\d{9}.h5", str(i)).string][0]
         session_dir = h5_input
     experiment_id = h5_file.name.split(".")[0]
     platform_json = list(session_dir.glob("*platform.json"))[0]
