@@ -1261,11 +1261,10 @@ if __name__ == "__main__":  # pragma: nocover
     if h5_input.is_file():
         h5_file = h5_input
         session_dir = h5_file.parent.parent
+        experiment_id = h5_file.name.split(".")[0]
     else:
-        print(h5_input.glob("*"))
-        h5_file = [i for i in h5_input.glob("*/*") if re.fullmatch("\d{10}.h5", str(i))][0]
-        session_dir = h5_input
-    experiment_id = h5_file.name.split(".")[0]
+        experiment_id = [i for i in input_dir.glob("*") if "ophys_experiment" in str(i)][0].name.split("_")[-1]
+        h5_file = [i for i in list(data_dir.glob("*/*")) if f"{experiment_id}.h5" in str(i)][0]
     platform_json = list(session_dir.glob("*platform.json"))[0]
     # this file is required for paired plane registration but not for single plane
     # in the future, we should make this file accessible to the pipeline through channel connections
