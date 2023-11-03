@@ -1132,7 +1132,7 @@ if __name__ == "__main__":  # pragma: nocover
         "-i", "--input", type=str, help="File or directory where h5 file is stored", default="../data/"
     )
     parser.add_argument(
-        "-o", "--output-dir", type=str, help="Output directory", default="/results/"
+        "-o", "--output-dir", type=str, help="Output directory", default="../results/"
     )
 
     parser.add_argument(
