@@ -1129,7 +1129,7 @@ if __name__ == "__main__":  # pragma: nocover
     parser = argparse.ArgumentParser(description="Suite2P motion correction")
 
     parser.add_argument(
-        "-i", "--input", type=str, help="File or directory where h5 file is stored", default="../data/"
+        "-i", "--input-data", type=str, help="File or directory where h5 file is stored", default="../data/"
     )
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="/results/"
@@ -1256,15 +1256,15 @@ if __name__ == "__main__":  # pragma: nocover
     # Parse command-line arguments
     args = parser.parse_args()
     # General settings
-    h5_input = Path(args.input)
+    h5_input = Path(args.input_data)
     
     if h5_input.is_file():
         h5_file = h5_input
-        session_dir = h5_file.parent.parent
         experiment_id = h5_file.name.split(".")[0]
     else:
-        experiment_id = [i for i in input_dir.glob("*") if "ophys_experiment" in str(i)][0].name.split("_")[-1]
-        h5_file = [i for i in list(data_dir.glob("*/*")) if f"{experiment_id}.h5" in str(i)][0]
+        experiment_id = [i for i in h5_input.glob("*") if "ophys_experiment" in str(i)][0].name.split("_")[-1]
+        h5_file = [i for i in list(h5_input.glob("*/*")) if f"{experiment_id}.h5" in str(i)][0]
+    session_dir = h5_file.parent.parent
     platform_json = list(session_dir.glob("*platform.json"))[0]
     # this file is required for paired plane registration but not for single plane
     # in the future, we should make this file accessible to the pipeline through channel connections
