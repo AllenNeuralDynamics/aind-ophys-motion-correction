@@ -1258,7 +1258,6 @@ if __name__ == "__main__":  # pragma: nocover
     # General settings
     h5_input = Path(args.input)
     
-    import pdb;pdb.set_trace()
     if h5_input.is_file():
         h5_file = h5_input
         session_dir = h5_file.parent.parent
