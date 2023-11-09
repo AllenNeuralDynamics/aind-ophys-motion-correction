@@ -920,6 +920,7 @@ if __name__ == "__main__":
     file_splitting_json = find_file(str(data_dir), "MESOSCOPE_FILE_SPLITTING")
     output_dir = make_output_directory(output_dir,experiment_id)
     shutil.copy(file_splitting_json, output_dir)
+    shutil.copy(h5_file, output_dir)
     shutil.copy(platform_json, output_dir)
     try:
         frame_rate_hz = data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
