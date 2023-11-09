@@ -916,7 +916,7 @@ if __name__ == "__main__":
     else:
         experiment_id = str(experiment_folders[0]).split("_")[-1]
         h5_file = find_file(str(data_dir), f"{experiment_id}.h5")
-        sync_file = list(data_dir.glob("mpophys/*.h5"))[0]
+        sync_file = list(data_dir.glob("pophys/*.h5"))[0]
     file_splitting_json = find_file(str(data_dir), "MESOSCOPE_FILE_SPLITTING")
     output_dir = make_output_directory(output_dir,experiment_id)
     shutil.copy(file_splitting_json, output_dir)
