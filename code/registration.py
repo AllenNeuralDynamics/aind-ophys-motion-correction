@@ -790,32 +790,22 @@ def now() -> str:
     current_dt = dt.now(tz=pytz.timezone("America/Los_Angeles"))
     return f"{current_dt.strftime('%Y-%m-%d')}_{current_dt.strftime('%H-%M-%S')}"
 
-def make_output_directory(output_dir: str, h5_file: str, plane: str=None) -> str:
+def make_output_directory(output_dir: str, experiment_id: str) -> str:
     """Creates the output directory if it does not exist
-    
+
     Parameters
     ----------
     output_dir: str
         output directory
-    h5_file: str 
-        h5 file path
-    plane: str
-        plane number
-    
+    experiment_id: str
+        experiment_id number
+
     Returns
     -------
     output_dir: str
         output directory
     """
-    exp_to_match = r"Other_\d{6}_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}"
-    try:
-        parent_dir = re.findall(exp_to_match, h5_file)[0] + "_processed_" + now()
-    except IndexError:
-        return output_dir
-    if plane:
-        output_dir = os.path.join(output_dir, parent_dir, plane)
-    else:
-        output_dir = os.path.join(output_dir, parent_dir)
+    output_dir = os.path.join(output_dir, experiment_id)
     os.makedirs(output_dir, exist_ok=True)
     return output_dir
 
