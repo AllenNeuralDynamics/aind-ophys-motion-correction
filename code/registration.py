@@ -1731,16 +1731,18 @@ if __name__ == "__main__":  # pragma: nocover
     )
 
     # tile into 1 movie, raw on left, motion corrected on right
-    tiled_vids = np.block(processed_vids)
+    try:
+        tiled_vids = np.block(processed_vids)
 
-    # make into a viewable artifact
-    playback_fps = args["preview_playback_factor"] \
-        / args["preview_frame_bin_seconds"]
-    encode_video(
-        tiled_vids, args["motion_correction_preview_output"], playback_fps
-    )
-    logger.info("wrote " f"{args['motion_correction_preview_output']}")
-
+        # make into a viewable artifact
+        playback_fps = args["preview_playback_factor"] \
+            / args["preview_frame_bin_seconds"]
+        encode_video(
+            tiled_vids, args["motion_correction_preview_output"], playback_fps
+        )
+        logger.info("wrote " f"{args['motion_correction_preview_output']}")
+    except:
+        logger.info("Could not write motion correction preview")
     # compute crispness of mean image using raw and registered movie
     with (
         h5py.File(h5_file) as f_raw,
