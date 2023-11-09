@@ -3,3 +3,4 @@ set -ex
 
 ls ../data
 python registration.py "$@"
+# python registration.py --input-data /data/multiplane-ophys_677594_2023-07-30_09-41-38/pophys/ophys_experiment_1286727986/1286727986.h5
