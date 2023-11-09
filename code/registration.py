@@ -1274,6 +1274,7 @@ if __name__ == "__main__":  # pragma: nocover
         platform_data = json.load(j)
     sync_file = [i for i in session_dir.glob(platform_data['sync_file'])]
     output_dir = make_output_directory(args.output_dir, experiment_id)
+    print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~{output_dir}")
     # try to get the framerate from the platform file else use sync file
     try:
         frame_rate_hz = platform_data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
