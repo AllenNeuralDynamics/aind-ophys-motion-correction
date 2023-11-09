@@ -897,7 +897,6 @@ if __name__ == "__main__":
     input_dir = Path(args.input_dir).resolve()
     output_dir = Path(args.output_dir).resolve()
     debug = args.debug
-    print("Setting debug")
     data_dir = [i for i in input_dir.glob("*") if "multiplane" in str(i)]
     if not data_dir:
         data_dir = Path("../data/").resolve()
