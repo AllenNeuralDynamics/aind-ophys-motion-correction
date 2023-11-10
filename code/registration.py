@@ -244,7 +244,7 @@ class Suite2PRegistration(argschema.ArgSchemaParser):
         is_valid[: self.args["trim_frames_start"]] = False
         is_valid[len(data) - self.args["trim_frames_end"] :] = False
         # write the hdf5
-        with h5.File(suite2p_args['h5py'], "r") as f:
+        with h5py.File(suite2p_args['h5py'], "r") as f:
             raw_shape = f['data'].shape
         try:
             assert raw_shape == data.shape
