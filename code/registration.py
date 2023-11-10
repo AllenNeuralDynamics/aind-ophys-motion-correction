@@ -208,7 +208,6 @@ class Suite2PRegistration(argschema.ArgSchemaParser):
 
         # accumulate data from Suite2P's binary file
         data = suite2p.io.BinaryFile(ops["Ly"], ops["Lx"], bin_path).data
-
         if self.args["clip_negative"]:
             data[data < 0] = 0
             data = np.uint16(data)
@@ -218,6 +217,7 @@ class Suite2PRegistration(argschema.ArgSchemaParser):
         # from clipping, for example, if Suite2P moved a frame
         # by 100 pixels, and we have clipped that to 30, this will
         # move it -70 pixels
+        
         if not suite2p_args["nonrigid"]:
             # If using non-rigid, we can't modify the output frames and have
             # the shifts make sense. Hence we don't calculate which shifts
@@ -244,6 +244,12 @@ class Suite2PRegistration(argschema.ArgSchemaParser):
         is_valid[: self.args["trim_frames_start"]] = False
         is_valid[len(data) - self.args["trim_frames_end"] :] = False
         # write the hdf5
+        with h5.File(suite2p_args['h5py'], "r") as f:
+            raw_shape = f['data'].shape
+        try:
+            assert raw_shape == data.shape
+        except AssertionError:
+            self.logger.error(f"~~~~~~~~~~~~~~~~~~~~Raw shape: {raw_shape.shape} Data shape: {data.shape}")
         with h5py.File(self.args["motion_corrected_output"], "w") as f:
             f.create_dataset("data", data=data, chunks=(1, *data.shape[1:]))
             # Sort the reference image used to register. If we do not used
