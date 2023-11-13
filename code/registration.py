@@ -851,7 +851,7 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path], motion_co
     processing = Processing(
         data_processes=[
             DataProcess(
-                name="Suite2p Motion Correction",
+                name="Other",
                 version="0.0.1",
                 start_date_time=dt.now(),  # TODO: Add actual dt
                 end_date_time=dt.now(),  # TODO: Add actual dt
