@@ -37,7 +37,7 @@ from suite2p.registration.register import (pick_initial_reference,
                                            register_frames)
 from suite2p.registration.rigid import (apply_masks, compute_masks, phasecorr,
                                         phasecorr_reference, shift_frame)
-
+from sync_dataset import Sync
 
 mpl.use("Agg")
 
