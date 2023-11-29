@@ -3,7 +3,6 @@ import copy
 import json
 import logging
 import os
-import re
 import shutil
 import subprocess
 import tempfile
@@ -22,7 +21,6 @@ import h5py
 import matplotlib as mpl
 import numpy as np
 import pandas as pd
-import pytz
 import suite2p
 from aind_data_schema import Processing
 from aind_data_schema.processing import DataProcess
@@ -802,17 +800,6 @@ def identify_and_clip_outliers(
     )
     return data, indices
 
-
-def now() -> str:
-    """Generates string with current date and time in PST
-
-    Returns
-    -------
-    str
-        YYYY-MM-DD_HH-MM-SS
-    """
-    current_dt = dt.now(tz=pytz.timezone("America/Los_Angeles"))
-    return f"{current_dt.strftime('%Y-%m-%d')}_{current_dt.strftime('%H-%M-%S')}"
 
 def make_output_directory(output_dir: str, experiment_id: str) -> str:
     """Creates the output directory if it does not exist
