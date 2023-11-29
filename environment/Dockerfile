@@ -13,19 +13,7 @@ RUN pip3 install -U --no-cache-dir \
     torch --index-url https://download.pytorch.org/whl/cpu
 WORKDIR /
 RUN pip3 install -U --no-cache-dir \
-<<<<<<< HEAD
     aind-ophys-utils \
-    argschema \
-    h5py \
-    imageio-ffmpeg \
-    numpy \
-    pandas \
     sbxreader \
     git+https://github.com/arielleleon/suite2p@bug-pull-from-defined-h5py \
     aind-data-schema==0.14.4
-=======
-    aind-data-schema \
-    aind-ophys-utils \
-    sbxreader \
-    suite2p==0.13.1
->>>>>>> 6cfefa82f695a31e3db063ff28932ecc804ee05a
