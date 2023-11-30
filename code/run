@@ -2,5 +2,5 @@
 set -ex
 
 ls ../data
-python registration.py "$@"
-# python registration.py --input-data /data/multiplane-ophys_677594_2023-07-30_09-41-38/pophys/ophys_experiment_1286727986/1286727986.h5
+# python registration.py "$@"
+python registration.py --input-data /data/multiplane-ophys_554115_2021-04-22_12-31-12/pophys/ophys_experiment_1098444828/1098444828.h5

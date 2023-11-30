@@ -1270,7 +1270,6 @@ if __name__ == "__main__":  # pragma: nocover
     args = parser.parse_args()
     # General settings
     h5_input = Path(args.input_data)
-    
     if h5_input.is_file():
         h5_file = h5_input
         experiment_id = h5_file.name.split(".")[0]
