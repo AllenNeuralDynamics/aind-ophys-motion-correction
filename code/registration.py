@@ -866,7 +866,7 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path],
         data_processes=[
             DataProcess(
                 name="Video motion correction",
-                version="0.0.1",
+                software_version="0.0.1",
                 start_date_time=dt.now(),  # TODO: Add actual dt
                 end_date_time=dt.now(),  # TODO: Add actual dt
                 input_location=raw_movie,
