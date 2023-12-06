@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 import suite2p
 from aind_data_schema import Processing
-from aind_data_schema.processing import DataProcess
+from aind_data_schema.processing import AnalysisProcess, DataProcess, PipelineProcess, ProcessName
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.video_utils import downsample_h5_video, encode_video
 from matplotlib import pyplot as plt  # noqa: E402
@@ -864,6 +864,7 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path],
     """
     processing = Processing(
         data_processes=[
+        
             DataProcess(
                 name="Video motion correction",
                 software_version="0.0.1",
@@ -1297,7 +1298,7 @@ if __name__ == "__main__":  # pragma: nocover
         frames_6min = int(360 * float(frame_rate_hz))
         trimmed_data = raw_data["data"][:frames_6min]
         raw_data.close()
-        trimmed_fn = Path("../scratch") f"{experiment_id}.h5"
+        trimmed_fn = Path("../scratch") / f"{experiment_id}.h5"
         with h5py.File(trimmed_fn, "w") as f:
             f.create_dataset("data", data=trimmed_data)
         h5_file = trimmed_fn
