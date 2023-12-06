@@ -863,20 +863,24 @@ def write_output_metadata(metadata: dict, raw_movie: Union[str, Path],
         path to motion corrected movies
     """
     processing = Processing(
-        data_processes=[
-        
-            DataProcess(
-                name="Video motion correction",
-                software_version="0.0.1",
-                start_date_time=dt.now(),  # TODO: Add actual dt
-                end_date_time=dt.now(),  # TODO: Add actual dt
-                input_location=raw_movie,
-                output_location=motion_corrected_movie,
-                code_url=("https://github.com/AllenNeuralDynamics/"
-                          "aind-ophys-motion-correction/tree/main/code"),
-                parameters=metadata,
+        PipelineProcess(
+            processor_full_name="Some Processor",
+            pipeline_url="https://codeocean.allenneuraldynamics.org/capsule/5472403/tree",
+            pipeline_version="0.1.0",
+            data_processes=[
+                DataProcess(
+                    name=ProcessName.VIDEO_MOTION_CORRECTION,
+                    software_version="0.1.0",
+                    start_date_time=dt.now(),  # TODO: Add actual dt
+                    end_date_time=dt.now(),  # TODO: Add actual dt
+                    input_location=raw_movie,
+                    output_location=motion_corrected_movie,
+                    code_url=("https://github.com/AllenNeuralDynamics/"
+                            "aind-ophys-motion-correction/tree/main/code"),
+                    parameters=metadata,
             )
         ],
+        )
     )
     processing.write_standard_file(
         output_directory=Path(os.path.dirname(motion_corrected_movie))
