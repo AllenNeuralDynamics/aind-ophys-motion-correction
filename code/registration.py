@@ -1297,7 +1297,7 @@ if __name__ == "__main__":  # pragma: nocover
         frames_6min = int(360 * float(frame_rate_hz))
         trimmed_data = raw_data["data"][:frames_6min]
         raw_data.close()
-        trimmed_fn = f"{session_dir.parent}/{experiment_id}.h5"
+        trimmed_fn = Path("../scratch") f"{experiment_id}.h5"
         with h5py.File(trimmed_fn, "w") as f:
             f.create_dataset("data", data=trimmed_data)
         h5_file = trimmed_fn
