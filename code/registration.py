@@ -868,9 +868,9 @@ def write_output_metadata(
         path to motion corrected movies
     """
     processing = Processing(
-        PipelineProcess(
-            processor_full_name="Some Processor",
-            pipeline_url="https://codeocean.allenneuraldynamics.org/capsule/5472403/tree",
+        processing_pipeline=PipelineProcess(
+            processor_full_name = "Multplane Ophys Processing Pipeline",
+            pipeline_url = "https://codeocean.allenneuraldynamics.org/capsule/5472403/tree",
             pipeline_version="0.1.0",
             data_processes=[
                 DataProcess(
@@ -886,7 +886,7 @@ def write_output_metadata(
                     ),
                     parameters=metadata,
                 )
-            ],
+            ]
         )
     )
     processing.write_standard_file(output_directory=Path(os.path.dirname(motion_corrected_movie)))
