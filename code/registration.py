@@ -893,7 +893,7 @@ def write_output_metadata(
         )
     )
     output_dir = os.path.dirname(os.path.dirname(motion_corrected_movie))
-    processing.write_standard_file(output_directory=Path(os.path.dirname(motion_corrected_movie)))
+    processing.write_standard_file(output_directory=output_dir)
 
 
 def check_trim_frames(data):
