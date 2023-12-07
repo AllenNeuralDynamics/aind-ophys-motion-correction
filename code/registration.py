@@ -805,12 +805,12 @@ def identify_and_clip_outliers(
     return data, indices
 
 
-def make_output_directory(output_dir: str, experiment_id: str) -> str:
+def make_output_directory(output_dir: Path, experiment_id: str) -> str:
     """Creates the output directory if it does not exist
 
     Parameters
     ----------
-    output_dir: str
+    output_dir: Path
         output directory
     experiment_id: str
         experiment_id number
@@ -820,8 +820,11 @@ def make_output_directory(output_dir: str, experiment_id: str) -> str:
     output_dir: str
         output directory
     """
-    output_dir = os.path.join(output_dir, experiment_id)
-    os.makedirs(output_dir, exist_ok=True)
+    output_dir = output_dir / experiment_id
+    output_dir.mkdir(exist_ok=True)
+    output_dir = output_dir / "motion_correction"
+    output_dir.mkdir(exist_ok=True)
+
     return output_dir
 
 
@@ -889,6 +892,7 @@ def write_output_metadata(
             ]
         )
     )
+    output_dir = os.path.dirname(os.path.dirname(motion_corrected_movie))
     processing.write_standard_file(output_directory=Path(os.path.dirname(motion_corrected_movie)))
 
 
@@ -1300,7 +1304,7 @@ if __name__ == "__main__":  # pragma: nocover
     with open(platform_json, "r") as j:
         platform_data = json.load(j)
     sync_file = [i for i in session_dir.glob(platform_data["sync_file"])]
-    output_dir = make_output_directory(args.output_dir, experiment_id)
+    output_dir = make_output_directory(Path(args.output_dir), experiment_id)
     # try to get the framerate from the platform file else use sync file
     try:
         frame_rate_hz = platform_data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
