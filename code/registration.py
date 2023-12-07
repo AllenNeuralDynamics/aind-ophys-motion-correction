@@ -1320,7 +1320,6 @@ if __name__ == "__main__":  # pragma: nocover
         with h5py.File(trimmed_fn, "w") as f:
             f.create_dataset("data", data=trimmed_data)
         h5_file = trimmed_fn
-    shutil.copy(h5_file, output_dir)
     shutil.copy(platform_json, output_dir)
     shutil.copy(file_splitting_json, output_dir)
     # We convert to dictionary
