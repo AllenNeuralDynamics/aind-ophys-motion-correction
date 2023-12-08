@@ -822,6 +822,7 @@ def make_output_directory(output_dir: str, experiment_id: str) -> str:
     """
     output_dir = os.path.join(output_dir, experiment_id)
     os.makedirs(output_dir, exist_ok=True)
+    output_dir
     return output_dir
 
 
@@ -1127,6 +1128,94 @@ def get_frame_rate_from_sync(sync_file, platform_data) -> float:
         raise ValueError(f"Frame rate no acquired, line labels: {sync_data.line_labels}")
     return frame_rate_hz
 
+def multiplane_motion_correction(datainput: Path, output_dir: Path):
+    """ Process multiplane data for suite2p parameters
+
+    Parameters
+    ----------
+    datainput: Path
+        path to h5 file
+    output_dir: Path
+        output directory
+
+    Returns
+    -------
+    h5_file: Path
+        path to h5 file
+    output_dir: Path
+        output directory
+    frame_rate_hz: float
+        frame rate in Hz
+    """
+    if datainput.is_file():
+        h5_file = datainput
+        experiment_id = h5_file.name.split(".")[0]
+    else:
+        experiment_id = [i for i in datainput.glob("*") if "ophys_experiment" in str(i)][
+            0
+        ].name.split("_")[-1]
+        h5_file = [i for i in datainput.glob("*/*") if f"{experiment_id}.h5" in str(i)][0]
+    session_dir = h5_file.parent.parent
+    platform_json = next(session_dir.glob("*platform.json"))
+    # this file is required for paired plane registration but not for single plane
+    # in the future, we should make this file accessible to the pipeline through channel connections
+    # instead of needing to copy it from here
+    file_splitting_json = next(session_dir.glob("MESOSCOPE_FILE_*"))
+    with open(platform_json, "r") as j:
+        platform_data = json.load(j)
+    sync_file = [i for i in session_dir.glob(platform_data["sync_file"])]
+    output_dir = make_output_directory(output_dir, experiment_id)
+    # try to get the framerate from the platform file else use sync file
+    try:
+        frame_rate_hz = platform_data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
+    except KeyError:
+        frame_rate_hz = get_frame_rate_from_sync(sync_file, platform_data)
+    if args.debug:
+        logging.info(f"Running in debug mode....")
+        raw_data = h5py.File(h5_file, "r")
+        frames_6min = int(360 * float(frame_rate_hz))
+        trimmed_data = raw_data["data"][:frames_6min]
+        raw_data.close()
+        trimmed_fn = Path("../scratch") / f"{experiment_id}.h5"
+        with h5py.File(trimmed_fn, "w") as f:
+            f.create_dataset("data", data=trimmed_data)
+        h5_file = trimmed_fn
+    shutil.copy(h5_file, output_dir)
+    shutil.copy(platform_json, output_dir)
+    shutil.copy(file_splitting_json, output_dir)
+    return h5_file, output_dir, frame_rate_hz
+
+def singleplane_motion_correction(datainput: Path, output_dir: Path):
+    """ Process single plane data for suite2p parameters
+    
+    Parameters
+    ----------
+    datainput: Path
+        path to h5 file
+    output_dir: Path
+        output directory
+    
+    Returns
+    -------
+    h5_file: Path
+        path to h5 file
+    output_dir: Path
+        output directory
+    frame_rate_hz: float
+        frame rate in Hz
+    """
+    if datainput.is_file():
+        h5_file = datainput
+    else:
+        h5_file = [i for i in datainput.glob("*/*") if "bergamo.h5" in str(i)][0]
+    session_fp = h5_file.parent / "session.json"
+    with open(session_fp, "r") as j:
+        session_data = json.load(j)
+    frame_rate_hz = session_data['data_streams']['ophys_fovs'][0]['frame_rate']
+    experiment_id = 'bergamo'
+    output_dir = make_output_directory(output_dir, experiment_id)
+    return h5_file, output_dir, frame_rate_hz
+
 
 if __name__ == "__main__":  # pragma: nocover
     # Set the log level and name the logger
@@ -1138,7 +1227,7 @@ if __name__ == "__main__":  # pragma: nocover
 
     parser.add_argument(
         "-i",
-        "--input-data",
+        "input-searchpath",
         type=str,
         help="File or directory where h5 file is stored",
         default="../data/",
@@ -1282,43 +1371,15 @@ if __name__ == "__main__":  # pragma: nocover
     # Parse command-line arguments
     args = parser.parse_args()
     # General settings
-    h5_input = Path(args.input_data)
-    if h5_input.is_file():
-        h5_file = h5_input
-        experiment_id = h5_file.name.split(".")[0]
+    datainput = Path(args.input_searchpath)
+    output_dir = Path(args.output_dir)
+    with open(datainput / "data_description.json", "r") as j:
+        data_description = json.load(j)
+    if data_description['platform'].get('abbreviation', None) == 'single-plane-ophys':
+        h5_file, output_dir, frame_rate_hz = singleplane_motion_correction(datainput, output_dir)
     else:
-        experiment_id = [i for i in h5_input.glob("*") if "ophys_experiment" in str(i)][
-            0
-        ].name.split("_")[-1]
-        h5_file = [i for i in list(h5_input.glob("*/*")) if f"{experiment_id}.h5" in str(i)][0]
-    session_dir = h5_file.parent.parent
-    platform_json = list(session_dir.glob("*platform.json"))[0]
-    # this file is required for paired plane registration but not for single plane
-    # in the future, we should make this file accessible to the pipeline through channel connections
-    # instead of needing to copy it from here
-    file_splitting_json = list(session_dir.glob("MESOSCOPE_FILE_*"))[0]
-    with open(platform_json, "r") as j:
-        platform_data = json.load(j)
-    sync_file = [i for i in session_dir.glob(platform_data["sync_file"])]
-    output_dir = make_output_directory(args.output_dir, experiment_id)
-    # try to get the framerate from the platform file else use sync file
-    try:
-        frame_rate_hz = platform_data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
-    except KeyError:
-        frame_rate_hz = get_frame_rate_from_sync(sync_file, platform_data)
-    if args.debug:
-        logging.info(f"Running in debug mode....")
-        raw_data = h5py.File(h5_file, "r")
-        frames_6min = int(360 * float(frame_rate_hz))
-        trimmed_data = raw_data["data"][:frames_6min]
-        raw_data.close()
-        trimmed_fn = Path("../scratch") / f"{experiment_id}.h5"
-        with h5py.File(trimmed_fn, "w") as f:
-            f.create_dataset("data", data=trimmed_data)
-        h5_file = trimmed_fn
-    shutil.copy(h5_file, output_dir)
-    shutil.copy(platform_json, output_dir)
-    shutil.copy(file_splitting_json, output_dir)
+        h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(datainput, output_dir)
+
     # We convert to dictionary
     args = vars(args)
     h5_file = str(h5_file)
