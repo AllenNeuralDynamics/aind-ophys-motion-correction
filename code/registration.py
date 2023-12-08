@@ -870,8 +870,8 @@ def write_output_metadata(
     """
     processing = Processing(
         processing_pipeline=PipelineProcess(
-            processor_full_name = "Multplane Ophys Processing Pipeline",
-            pipeline_url = "https://codeocean.allenneuraldynamics.org/capsule/5472403/tree",
+            processor_full_name="Multplane Ophys Processing Pipeline",
+            pipeline_url="https://codeocean.allenneuraldynamics.org/capsule/5472403/tree",
             pipeline_version="0.1.0",
             data_processes=[
                 DataProcess(
@@ -887,7 +887,7 @@ def write_output_metadata(
                     ),
                     parameters=metadata,
                 )
-            ]
+            ],
         )
     )
     processing.write_standard_file(output_directory=Path(os.path.dirname(motion_corrected_movie)))
@@ -1128,8 +1128,9 @@ def get_frame_rate_from_sync(sync_file, platform_data) -> float:
         raise ValueError(f"Frame rate no acquired, line labels: {sync_data.line_labels}")
     return frame_rate_hz
 
+
 def multiplane_motion_correction(datainput: Path, output_dir: Path):
-    """ Process multiplane data for suite2p parameters
+    """Process multiplane data for suite2p parameters
 
     Parameters
     ----------
@@ -1185,16 +1186,17 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path):
     shutil.copy(file_splitting_json, output_dir)
     return h5_file, output_dir, frame_rate_hz
 
+
 def singleplane_motion_correction(datainput: Path, output_dir: Path):
-    """ Process single plane data for suite2p parameters
-    
+    """Process single plane data for suite2p parameters
+
     Parameters
     ----------
     datainput: Path
         path to h5 file
     output_dir: Path
         output directory
-    
+
     Returns
     -------
     h5_file: Path
@@ -1211,8 +1213,8 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path):
     session_fp = h5_file.parent / "session.json"
     with open(session_fp, "r") as j:
         session_data = json.load(j)
-    frame_rate_hz = session_data['data_streams']['ophys_fovs'][0]['frame_rate']
-    experiment_id = 'bergamo'
+    frame_rate_hz = session_data["data_streams"]["ophys_fovs"][0]["frame_rate"]
+    experiment_id = "bergamo"
     output_dir = make_output_directory(output_dir, experiment_id)
     return h5_file, output_dir, frame_rate_hz
 
@@ -1375,7 +1377,7 @@ if __name__ == "__main__":  # pragma: nocover
     output_dir = Path(args.output_dir)
     with open(datainput / "data_description.json", "r") as j:
         data_description = json.load(j)
-    if data_description['platform'].get('abbreviation', None) == 'single-plane-ophys':
+    if data_description["platform"].get("abbreviation", None) == "single-plane-ophys":
         h5_file, output_dir, frame_rate_hz = singleplane_motion_correction(datainput, output_dir)
     else:
         h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(datainput, output_dir)
