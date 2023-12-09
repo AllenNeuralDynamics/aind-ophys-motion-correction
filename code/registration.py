@@ -1209,11 +1209,11 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path):
     if datainput.is_file():
         h5_file = datainput
     else:
-        h5_file = [i for i in datainput.glob("*/*") if "bergamo.h5" in str(i)][0]
-    session_fp = h5_file.parent / "session.json"
+        h5_file = next(datainput.glob("*.h5"))
+    session_fp = h5_file.parent.parent / "session.json"
     with open(session_fp, "r") as j:
         session_data = json.load(j)
-    frame_rate_hz = session_data["data_streams"]["ophys_fovs"][0]["frame_rate"]
+    frame_rate_hz = session_data["data_streams"][0]["ophys_fovs"][0]["frame_rate"]
     experiment_id = "bergamo"
     output_dir = make_output_directory(output_dir, experiment_id)
     return h5_file, output_dir, frame_rate_hz
@@ -1229,7 +1229,7 @@ if __name__ == "__main__":  # pragma: nocover
 
     parser.add_argument(
         "-i",
-        "input-searchpath",
+        "--input-searchpath",
         type=str,
         help="File or directory where h5 file is stored",
         default="../data/",
@@ -1375,7 +1375,9 @@ if __name__ == "__main__":  # pragma: nocover
     # General settings
     datainput = Path(args.input_searchpath)
     output_dir = Path(args.output_dir)
-    with open(datainput / "data_description.json", "r") as j:
+    data_dir = Path("../data")
+    data_description = next(data_dir.glob("*/data_description.json"))
+    with open(data_description, "r") as j:
         data_description = json.load(j)
     if data_description["platform"].get("abbreviation", None) == "single-plane-ophys":
         h5_file, output_dir, frame_rate_hz = singleplane_motion_correction(datainput, output_dir)
