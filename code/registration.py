@@ -806,12 +806,12 @@ def identify_and_clip_outliers(
     return data, indices
 
 
-def make_output_directory(output_dir: str, experiment_id: str) -> str:
+def make_output_directory(output_dir: Path, experiment_id: str) -> str:
     """Creates the output directory if it does not exist
 
     Parameters
     ----------
-    output_dir: str
+    output_dir: Path
         output directory
     experiment_id: str
         experiment_id number
@@ -821,8 +821,11 @@ def make_output_directory(output_dir: str, experiment_id: str) -> str:
     output_dir: str
         output directory
     """
-    output_dir = os.path.join(output_dir, experiment_id)
-    os.makedirs(output_dir, exist_ok=True)
+    output_dir = output_dir / experiment_id
+    output_dir.mkdir(exist_ok=True)
+    output_dir = output_dir / "motion_correction"
+    output_dir.mkdir(exist_ok=True)
+
     return output_dir
 
 
@@ -895,7 +898,8 @@ def write_output_metadata(
             ],
         )
     )
-    processing.write_standard_file(output_directory=Path(os.path.dirname(motion_corrected_movie)))
+    output_dir = os.path.dirname(os.path.dirname(motion_corrected_movie))
+    processing.write_standard_file(output_directory=output_dir)
 
 
 def check_trim_frames(data):
@@ -1297,17 +1301,17 @@ if __name__ == "__main__":  # pragma: nocover
         experiment_id = [i for i in h5_input.glob("*") if "ophys_experiment" in str(i)][
             0
         ].name.split("_")[-1]
-        h5_file = [i for i in list(h5_input.glob("*/*")) if f"{experiment_id}.h5" in str(i)][0]
+        h5_file = [i for i in h5_input.glob("*/*") if f"{experiment_id}.h5" in str(i)][0]
     session_dir = h5_file.parent.parent
-    platform_json = list(session_dir.glob("*platform.json"))[0]
+    platform_json = next(session_dir.glob("*platform.json"))
     # this file is required for paired plane registration but not for single plane
     # in the future, we should make this file accessible to the pipeline through channel connections
     # instead of needing to copy it from here
-    file_splitting_json = list(session_dir.glob("MESOSCOPE_FILE_*"))[0]
+    file_splitting_json = next(session_dir.glob("MESOSCOPE_FILE_*"))
     with open(platform_json, "r") as j:
         platform_data = json.load(j)
     sync_file = [i for i in session_dir.glob(platform_data["sync_file"])]
-    output_dir = make_output_directory(args.output_dir, experiment_id)
+    output_dir = make_output_directory(Path(args.output_dir), experiment_id)
     # try to get the framerate from the platform file else use sync file
     try:
         frame_rate_hz = platform_data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
@@ -1323,9 +1327,12 @@ if __name__ == "__main__":  # pragma: nocover
         with h5py.File(trimmed_fn, "w") as f:
             f.create_dataset("data", data=trimmed_data)
         h5_file = trimmed_fn
-    shutil.copy(h5_file, output_dir)
     shutil.copy(platform_json, output_dir)
     shutil.copy(file_splitting_json, output_dir)
+    shutil.copy(session_dir.parent / "data_description.json", output_dir.parent)
+    shutil.copy(session_dir.parent / "procedures.json", output_dir.parent)
+    shutil.copy(session_dir.parent / "metadata.nd.json", output_dir.parent)
+    shutil.copy(session_dir.parent / "subject.json", output_dir.parent)
     # We convert to dictionary
     args = vars(args)
     h5_file = str(h5_file)
