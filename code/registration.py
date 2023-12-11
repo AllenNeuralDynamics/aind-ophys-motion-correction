@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import warnings
 from datetime import datetime as dt
+from datetime import timezone as tz
 from functools import partial
 from glob import glob
 from itertools import product
