@@ -882,8 +882,8 @@ def write_output_metadata(
                 DataProcess(
                     name=ProcessName.VIDEO_MOTION_CORRECTION,
                     software_version="0.1.0",
-                    start_date_time=start_date_time,  # TODO: Add actual dt
-                    end_date_time=dt.now(tz.utc),  # TODO: Add actual dt
+                    start_date_time=start_date_time,
+                    end_date_time=dt.now(tz.utc),
                     input_location=raw_movie,
                     output_location=motion_corrected_movie,
                     code_url=(
