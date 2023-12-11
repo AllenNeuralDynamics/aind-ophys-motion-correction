@@ -855,7 +855,10 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
 
 
 def write_output_metadata(
-    metadata: dict, raw_movie: Union[str, Path], motion_corrected_movie: Union[str, Path]
+    metadata: dict,
+    raw_movie: Union[str, Path],
+    motion_corrected_movie: Union[str, Path],
+    start_date_time: dt,
 ) -> None:
     """Writes output metadata to plane processing.json
 
@@ -867,18 +870,20 @@ def write_output_metadata(
         path to raw movies
     motion_corrected_movie: str
         path to motion corrected movies
+    start_date_time: dt
+        start date time of processing, utc
     """
     processing = Processing(
         processing_pipeline=PipelineProcess(
-            processor_full_name = "Multplane Ophys Processing Pipeline",
-            pipeline_url = "https://codeocean.allenneuraldynamics.org/capsule/5472403/tree",
+            processor_full_name="Multplane Ophys Processing Pipeline",
+            pipeline_url="https://codeocean.allenneuraldynamics.org/capsule/5472403/tree",
             pipeline_version="0.1.0",
             data_processes=[
                 DataProcess(
                     name=ProcessName.VIDEO_MOTION_CORRECTION,
                     software_version="0.1.0",
-                    start_date_time=dt.now(),  # TODO: Add actual dt
-                    end_date_time=dt.now(),  # TODO: Add actual dt
+                    start_date_time=start_date_time,  # TODO: Add actual dt
+                    end_date_time=dt.now(tz.utc),  # TODO: Add actual dt
                     input_location=raw_movie,
                     output_location=motion_corrected_movie,
                     code_url=(
@@ -887,10 +892,11 @@ def write_output_metadata(
                     ),
                     parameters=metadata,
                 )
-            ]
+            ],
         )
     )
     processing.write_standard_file(output_directory=Path(os.path.dirname(motion_corrected_movie)))
+
 
 
 def check_trim_frames(data):
