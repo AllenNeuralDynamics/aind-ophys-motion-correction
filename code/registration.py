@@ -898,7 +898,6 @@ def write_output_metadata(
     processing.write_standard_file(output_directory=Path(os.path.dirname(motion_corrected_movie)))
 
 
-
 def check_trim_frames(data):
     """Make sure that if the user sets auto_remove_empty_frames
     and timing frames is already requested, raise an error.
@@ -1139,6 +1138,7 @@ if __name__ == "__main__":  # pragma: nocover
     # Set the log level and name the logger
     logger = logging.getLogger("Suite2P motion correction")
     logger.setLevel(logging.INFO)
+    start_time = dt.now(tz.utc)
 
     # Create an ArgumentParser object
     parser = argparse.ArgumentParser(description="Suite2P motion correction")
@@ -1629,7 +1629,9 @@ if __name__ == "__main__":  # pragma: nocover
     # make projections
     mx_proj = projection_process(data, projection="max")
     av_proj = projection_process(data, projection="avg")
-    write_output_metadata(args_copy, suite2p_args["h5py"], args["motion_corrected_output"])
+    write_output_metadata(
+        args_copy, suite2p_args["h5py"], args["motion_corrected_output"], start_time
+    )
     # TODO: normalize here, if desired
     # save projections
     for im, dst_path in zip(
