@@ -1331,6 +1331,7 @@ if __name__ == "__main__":  # pragma: nocover
     shutil.copy(platform_json, output_dir)
     shutil.copy(file_splitting_json, output_dir)
     meta_jsons = list(session_dir.glob("*.json"))
+    shutil.copy(h5_file, output_dir)
     if not meta_jsons:
         shutil.copy(session_dir.parent / "data_description.json", output_dir.parent)
         shutil.copy(session_dir.parent / "procedures.json", output_dir.parent)
