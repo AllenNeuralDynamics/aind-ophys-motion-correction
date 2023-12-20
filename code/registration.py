@@ -1226,6 +1226,7 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path):
         epochs = {k:v for k, v in epochs.items() if k in good_epochs}
         data = f['data'][()]
         data = [data[epochs[k][0]:epochs[k][1]] for k in epochs.keys()]
+        print(data)
     with h5py.File(Path(output_dir) / "bergamo.h5", "w") as f:
         f.create_dataset("data", data=np.concatenate(data))
     h5_file = output_dir / "bergamo.h5"
