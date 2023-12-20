@@ -8,7 +8,6 @@ import subprocess
 import tempfile
 import warnings
 from datetime import datetime as dt
-from datetime import timezone as tz
 from functools import partial
 from glob import glob
 from itertools import product
@@ -856,10 +855,7 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
 
 
 def write_output_metadata(
-    metadata: dict,
-    raw_movie: Union[str, Path],
-    motion_corrected_movie: Union[str, Path],
-    start_date_time: dt,
+    metadata: dict, raw_movie: Union[str, Path], motion_corrected_movie: Union[str, Path]
 ) -> None:
     """Writes output metadata to plane processing.json
 
@@ -871,8 +867,6 @@ def write_output_metadata(
         path to raw movies
     motion_corrected_movie: str
         path to motion corrected movies
-    start_date_time: dt
-        start date time of processing, utc
     """
     processing = Processing(
         processing_pipeline=PipelineProcess(
@@ -883,8 +877,8 @@ def write_output_metadata(
                 DataProcess(
                     name=ProcessName.VIDEO_MOTION_CORRECTION,
                     software_version="0.1.0",
-                    start_date_time=start_date_time,  # TODO: Add actual dt
-                    end_date_time=dt.now(tz.utc),  # TODO: Add actual dt
+                    start_date_time=dt.now(),  # TODO: Add actual dt
+                    end_date_time=dt.now(),  # TODO: Add actual dt
                     input_location=raw_movie,
                     output_location=motion_corrected_movie,
                     code_url=(
@@ -1222,13 +1216,13 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path):
     frame_rate_hz = session_data["data_streams"][0]["ophys_fovs"][0]["frame_rate"]
     experiment_id = "bergamo"
     output_dir = make_output_directory(output_dir, experiment_id)
-    good_epochs = ["pair1_neuron246vs20_boostis2", "spont3"]
+    good_epochs = ['pair1_neuron246vs20_boostis2', 'spont3']
     with h5py.File(h5_file, "r") as f:
-        epochs = f["epoch_slice_location"][()]
+        epochs = f['epoch_slice_location'][()]
         epochs = json.loads(epochs)
-        epochs = {k: v for k, v in epochs.items() if k in good_epochs}
-        data = f["data"][()]
-        data = [data[epochs[k][0] : epochs[k][1]] for k in epochs.keys()]
+        epochs = {k:v for k, v in epochs.items() if k in good_epochs}
+        data = f['data'][()]
+        data = [data[epochs[k][0]:epochs[k][1]] for k in epochs.keys()]
     with h5py.File(output_dir / "bergamo.h5", "w") as f:
         f.create_dataset("data", data=np.concatenate(data))
     h5_file = output_dir / "bergamo.h5"
@@ -1239,7 +1233,6 @@ if __name__ == "__main__":  # pragma: nocover
     # Set the log level and name the logger
     logger = logging.getLogger("Suite2P motion correction")
     logger.setLevel(logging.INFO)
-    start_time = dt.now(tz.utc)
 
     # Create an ArgumentParser object
     parser = argparse.ArgumentParser(description="Suite2P motion correction")
@@ -1704,9 +1697,7 @@ if __name__ == "__main__":  # pragma: nocover
     # make projections
     mx_proj = projection_process(data, projection="max")
     av_proj = projection_process(data, projection="avg")
-    write_output_metadata(
-        args_copy, suite2p_args["h5py"], args["motion_corrected_output"], start_time
-    )
+    write_output_metadata(args_copy, suite2p_args["h5py"], args["motion_corrected_output"])
     # TODO: normalize here, if desired
     # save projections
     for im, dst_path in zip(
