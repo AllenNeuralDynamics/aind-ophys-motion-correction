@@ -1209,7 +1209,7 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path):
     if datainput.is_file():
         h5_file = datainput
     else:
-        h5_file = next(datainput.glob("*.h5"))
+        h5_file = next(datainput.glob("*/*/*.h5"))
 
     session_fp = h5_file.parent / "session.json"
     with open(session_fp, "r") as j:
@@ -1217,10 +1217,10 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path):
     frame_rate_hz = session_data["data_streams"][0]["ophys_fovs"][0]["frame_rate"]
     experiment_id = "bergamo"
     output_dir = make_output_directory(output_dir, experiment_id)
-    good_epochs = ['pair_neuron6_and_7_10xmult', 'spont', 'pair_neuron6_and_7':]
+    good_epochs = ['spont', 'pair_neuron6_and_7_10xmult', 'pair_neuron6_and_7']
     with h5py.File(h5_file, "r") as f:
         epochs = f['epoch_slice_location'][()]
-        epochs = json.loads(epochs)
+        epochs = json.loads(epochs[0])
         epochs = {k:v for k, v in epochs.items() if k in good_epochs}
         data = f['data'][()]
         data = [data[epochs[k][0]:epochs[k][1]] for k in epochs.keys()]
