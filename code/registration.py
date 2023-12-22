@@ -805,24 +805,25 @@ def identify_and_clip_outliers(
     return data, indices
 
 
-def make_output_directory(output_dir: str, experiment_id: str) -> str:
+def make_output_directory(output_dir: Path, experiment_id: str) -> str:
     """Creates the output directory if it does not exist
 
     Parameters
     ----------
-    output_dir: str
+    output_dir: Path
         output directory
     experiment_id: str
         experiment_id number
 
     Returns
     -------
-    output_dir: str
+    output_dir: Path
         output directory
     """
-    output_dir = os.path.join(output_dir, experiment_id)
-    os.makedirs(output_dir, exist_ok=True)
-    output_dir
+    output_dir = output_dir / experiment_id
+    output_dir.mkdir(exist_ok=True)
+    output_dir = output_dir / "motion_corrected"
+    output_dir.mkdir(exist_ok=True)
     return output_dir
 
 
@@ -1129,7 +1130,7 @@ def get_frame_rate_from_sync(sync_file, platform_data) -> float:
     return frame_rate_hz
 
 
-def multiplane_motion_correction(datainput: Path, output_dir: Path):
+def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool = False):
     """Process multiplane data for suite2p parameters
 
     Parameters
@@ -1171,7 +1172,7 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path):
         frame_rate_hz = platform_data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
     except KeyError:
         frame_rate_hz = get_frame_rate_from_sync(sync_file, platform_data)
-    if args.debug:
+    if debug:
         logging.info(f"Running in debug mode....")
         raw_data = h5py.File(h5_file, "r")
         frames_6min = int(360 * float(frame_rate_hz))
@@ -1187,7 +1188,7 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path):
     return h5_file, output_dir, frame_rate_hz
 
 
-def singleplane_motion_correction(datainput: Path, output_dir: Path):
+def singleplane_motion_correction(datainput: Path, output_dir: Path, debug: bool = False):
     """Process single plane data for suite2p parameters
 
     Parameters
@@ -1196,6 +1197,7 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path):
         path to h5 file
     output_dir: Path
         output directory
+    debug: bool
 
     Returns
     -------
@@ -1236,12 +1238,16 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path):
         for k in epochs.keys():
             start_index = epochs[k][0]
             end_index = epochs[k][1]
+            if debug:
+                end_index = min(end_index, 3000)
             slice_add = end_index - start_index
             print(start_index, end_index)
             with h5py.File(output_h5_file, "a") as output_file:
                 output_file["data"].resize(frame_no + slice_add, axis=0)
                 output_file["data"][start_index:end_index] = f["data"][start_index:end_index]
                 frame_no += slice_add
+            if debug:
+                break
 
     assert image_shape[0] == end_index
     return output_h5_file, output_dir, frame_rate_hz
