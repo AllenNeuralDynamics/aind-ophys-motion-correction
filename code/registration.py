@@ -1216,26 +1216,39 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path):
         session_data = json.load(j)
     frame_rate_hz = session_data["data_streams"][0]["ophys_fovs"][0]["frame_rate"]
     experiment_id = "bergamo"
-    output_dir = make_output_directory(output_dir, experiment_id)
+    output_dir = make_output_directory(Path(output_dir), experiment_id)
     good_epochs = ['spont', 'pair_neuron6_and_7_10xmult', 'pair_neuron6_and_7']
+    output_h5_file = output_dir / "bergamo.h5"
     with h5py.File(h5_file, "r") as f:
         epochs = f['epoch_slice_location'][()]
         epochs = json.loads(epochs[0])
         epochs = {k:v[0] for k, v in epochs.items() if k in good_epochs}
         epochs = {k:v for k, v in sorted(epochs.items(), key= lambda item: item[1])}
+        image_shape = f['data'].shape
+        xdim = image_shape[1]
+        ydim = image_shape[2]
         last_key = list(epochs.keys())[-1]
-        data = np.zeros_like((epochs[last_key][-1], 800,800))
-        #import pdb;pdb.set_trace()
+        frame_no = 0
+        with h5py.File(output_h5_file, "w") as output_file:
+            output_file.create_dataset(
+            "data", 
+            (0, xdim, ydim),
+            chunks=True, 
+            maxshape = (None, xdim, ydim)
+            )
+        print(f"DATA SHAPE: {data.shape}")
         for k in epochs.keys(): 
             start_index = epochs[k][0]
             end_index = epochs[k][1]
-            #import pdb;pdb.set_trace()
-            data[start_index:end_index] = f['data'][start_index:end_index]
+            slice_add = end_index - start_index
             print(start_index, end_index)
-    with h5py.File(output_dir / "bergamo.h5", "w") as f:
-        f.create_dataset("data", data=data)
-    h5_file = output_dir / "bergamo.h5"
-    return h5_file, output_dir, frame_rate_hz
+            with h5py.File(output_h5_file, "a") as output_file:
+                output_file['data'].resize(frame_no + slice_add, axis = 0)
+                output_file['data'][start_index:end_index] = f['data'][start_index:end_index]
+                frame_no += slice_add
+                
+    assert image_shape[0] == end_index
+    return output_h5_file, output_dir, frame_rate_hz
 
 
 if __name__ == "__main__":  # pragma: nocover
