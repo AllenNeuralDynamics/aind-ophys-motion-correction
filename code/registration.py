@@ -1221,11 +1221,19 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path):
     with h5py.File(h5_file, "r") as f:
         epochs = f['epoch_slice_location'][()]
         epochs = json.loads(epochs[0])
-        epochs = {k:v for k, v in epochs.items() if k in good_epochs}
-        data = f['data'][()]
-        data = [data[epochs[k][0]:epochs[k][1]] for k in epochs.keys()]
+        epochs = {k:v[0] for k, v in epochs.items() if k in good_epochs}
+        epochs = {k:v for k, v in sorted(epochs.items(), key= lambda item: item[1])}
+        last_key = list(epochs.keys())[-1]
+        data = np.zeros_like((epochs[last_key][-1], 800,800))
+        #import pdb;pdb.set_trace()
+        for k in epochs.keys(): 
+            start_index = epochs[k][0]
+            end_index = epochs[k][1]
+            #import pdb;pdb.set_trace()
+            data[start_index:end_index] = f['data'][start_index:end_index]
+            print(start_index, end_index)
     with h5py.File(output_dir / "bergamo.h5", "w") as f:
-        f.create_dataset("data", data=np.concatenate(data))
+        f.create_dataset("data", data=data)
     h5_file = output_dir / "bergamo.h5"
     return h5_file, output_dir, frame_rate_hz
 
