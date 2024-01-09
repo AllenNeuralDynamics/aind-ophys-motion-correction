@@ -805,24 +805,25 @@ def identify_and_clip_outliers(
     return data, indices
 
 
-def make_output_directory(output_dir: str, experiment_id: str) -> str:
+def make_output_directory(output_dir: Path, experiment_id: str) -> str:
     """Creates the output directory if it does not exist
 
     Parameters
     ----------
-    output_dir: str
+    output_dir: Path
         output directory
     experiment_id: str
         experiment_id number
 
     Returns
     -------
-    output_dir: str
+    output_dir: Path
         output directory
     """
-    output_dir = os.path.join(output_dir, experiment_id)
-    os.makedirs(output_dir, exist_ok=True)
-    output_dir
+    output_dir = output_dir / experiment_id
+    output_dir.mkdir(exist_ok=True)
+    output_dir = output_dir / "motion_corrected"
+    output_dir.mkdir(exist_ok=True)
     return output_dir
 
 
@@ -871,7 +872,7 @@ def write_output_metadata(
     processing = Processing(
         processing_pipeline=PipelineProcess(
             processor_full_name="Multplane Ophys Processing Pipeline",
-            pipeline_url="https://codeocean.allenneuraldynamics.org/capsule/5472403/tree",
+            pipeline_url="https://codeocean.allenneuraldynamics.org/capsule/4030161/tree",
             pipeline_version="0.1.0",
             data_processes=[
                 DataProcess(
@@ -1129,7 +1130,7 @@ def get_frame_rate_from_sync(sync_file, platform_data) -> float:
     return frame_rate_hz
 
 
-def multiplane_motion_correction(datainput: Path, output_dir: Path):
+def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool = False):
     """Process multiplane data for suite2p parameters
 
     Parameters
@@ -1171,7 +1172,7 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path):
         frame_rate_hz = platform_data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
     except KeyError:
         frame_rate_hz = get_frame_rate_from_sync(sync_file, platform_data)
-    if args.debug:
+    if debug:
         logging.info(f"Running in debug mode....")
         raw_data = h5py.File(h5_file, "r")
         frames_6min = int(360 * float(frame_rate_hz))
@@ -1187,7 +1188,7 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path):
     return h5_file, output_dir, frame_rate_hz
 
 
-def singleplane_motion_correction(datainput: Path, output_dir: Path):
+def singleplane_motion_correction(datainput: Path, output_dir: Path, debug: bool = False):
     """Process single plane data for suite2p parameters
 
     Parameters
@@ -1196,6 +1197,7 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path):
         path to h5 file
     output_dir: Path
         output directory
+    debug: bool
 
     Returns
     -------
@@ -1209,28 +1211,46 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path):
     if datainput.is_file():
         h5_file = datainput
     else:
-        h5_file = next(datainput.glob("*/*/*/*.h5"))
-    session_fp = h5_file.parent.parent / "session.json"
+        h5_file = next(datainput.glob("*/*/*.h5"))
+
+    session_fp = h5_file.parent / "session.json"
     with open(session_fp, "r") as j:
         session_data = json.load(j)
     frame_rate_hz = session_data["data_streams"][0]["ophys_fovs"][0]["frame_rate"]
     experiment_id = "bergamo"
     output_dir = make_output_directory(output_dir, experiment_id)
-    good_epochs = ['pair1_neuron246vs20_boostis2', 'spont3']
+    good_epochs = ["spont", "pair_neuron6_and_7_10xmult", "pair_neuron6_and_7"]
+    output_h5_file = Path(output_dir) / "bergamo.h5"
     with h5py.File(h5_file, "r") as f:
-        epochs = f['epoch_slice_location'][()][0]
-        print(epochs)
-        print(type(epochs))
-        print("~~~~~~~~~~~~~")
-        epochs = json.loads(epochs)
-        epochs = {k:v for k, v in epochs.items() if k in good_epochs}
-        data = f['data'][()]
-        data = [data[epochs[k][0]:epochs[k][1]] for k in epochs.keys()]
-        print(data)
-    with h5py.File(Path(output_dir) / "bergamo.h5", "w") as f:
-        f.create_dataset("data", data=np.concatenate(data))
-    h5_file = output_dir / "bergamo.h5"
-    return h5_file, output_dir, frame_rate_hz
+        epochs = f["epoch_slice_location"][()]
+        epochs = json.loads(epochs[0])
+        epochs = {k: v[0] for k, v in epochs.items() if k in good_epochs}
+        epochs = {k: v for k, v in sorted(epochs.items(), key=lambda item: item[1])}
+        image_shape = f["data"].shape
+        xdim = image_shape[1]
+        ydim = image_shape[2]
+        last_key = list(epochs.keys())[-1]
+        frame_no = 0
+        with h5py.File(output_h5_file, "w") as output_file:
+            output_file.create_dataset(
+                "data", (0, xdim, ydim), chunks=True, maxshape=(None, xdim, ydim)
+            )
+        for k in epochs.keys():
+            start_index = epochs[k][0]
+            end_index = epochs[k][1]
+            if debug:
+                end_index = min(end_index, 3000)
+            slice_add = end_index - start_index
+            print(start_index, end_index)
+            with h5py.File(output_h5_file, "a") as output_file:
+                output_file["data"].resize(frame_no + slice_add, axis=0)
+                output_file["data"][frame_no:slice_add] = f["data"][start_index:end_index]
+                frame_no += slice_add
+            if debug:
+                break
+
+    assert image_shape[0] == end_index
+    return output_h5_file, output_dir, frame_rate_hz
 
 
 if __name__ == "__main__":  # pragma: nocover
