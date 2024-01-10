@@ -880,8 +880,8 @@ def write_output_metadata(
                     software_version="0.1.0",
                     start_date_time=dt.now(),  # TODO: Add actual dt
                     end_date_time=dt.now(),  # TODO: Add actual dt
-                    input_location=raw_movie,
-                    output_location=motion_corrected_movie,
+                    input_location=str(raw_movie),
+                    output_location=str(motion_corrected_movie),
                     code_url=(
                         "https://github.com/AllenNeuralDynamics/"
                         "aind-ophys-motion-correction/tree/main/code"
@@ -891,7 +891,7 @@ def write_output_metadata(
             ],
         )
     )
-    processing.write_standard_file(output_directory=Path(os.path.dirname(motion_corrected_movie)))
+    processing.write_standard_file(output_directory=motion_corrected_movie.parent.parent)
 
 
 def check_trim_frames(data):
@@ -1417,6 +1417,9 @@ if __name__ == "__main__":  # pragma: nocover
         h5_file, output_dir, frame_rate_hz = singleplane_motion_correction(datainput, output_dir)
     else:
         h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(datainput, output_dir)
+    meta_jsons = list(data_dir.glob("*/*.json"))
+    for i in meta_jsons:
+        shutil.copy(i, output_dir.parent)
 
     # We convert to dictionary
     args = vars(args)
@@ -1721,7 +1724,7 @@ if __name__ == "__main__":  # pragma: nocover
     # make projections
     mx_proj = projection_process(data, projection="max")
     av_proj = projection_process(data, projection="avg")
-    write_output_metadata(args_copy, suite2p_args["h5py"], args["motion_corrected_output"])
+    write_output_metadata(args_copy, Path(suite2p_args["h5py"]), args["motion_corrected_output"])
     # TODO: normalize here, if desired
     # save projections
     for im, dst_path in zip(
