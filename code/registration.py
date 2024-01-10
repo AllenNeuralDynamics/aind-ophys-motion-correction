@@ -891,7 +891,7 @@ def write_output_metadata(
             ],
         )
     )
-    processing.write_standard_file(output_directory=motion_corrected_movie.parent.parent)
+    processing.write_standard_file(output_directory=Path(motion_corrected_movie).parent.parent)
 
 
 def check_trim_frames(data):
