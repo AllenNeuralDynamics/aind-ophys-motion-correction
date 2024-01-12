@@ -1210,10 +1210,11 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path, debug: bool
     """
     try:
         h5_file = next(datainput.glob("*.h5"))
+        session_fp = "session.json"
     except:
         h5_file = next(datainput.glob("*/*/*.h5"))
-
-    session_fp = h5_file.parent / "session.json"
+        session_fp = h5_file.parent / "session.json"
+    
     with open(session_fp, "r") as j:
         session_data = json.load(j)
     frame_rate_hz = session_data["data_streams"][0]["ophys_fovs"][0]["frame_rate"]
