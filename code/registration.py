@@ -1210,7 +1210,7 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path, debug: bool
     """
     try:
         h5_file = next(datainput.glob("*.h5"))
-    else:
+    except:
         h5_file = next(datainput.glob("*/*/*.h5"))
 
     session_fp = h5_file.parent / "session.json"
