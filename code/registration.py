@@ -1208,8 +1208,8 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path, debug: bool
     frame_rate_hz: float
         frame rate in Hz
     """
-    if datainput.is_file():
-        h5_file = datainput
+    try:
+        h5_file = next(datainput.glob("*.h5"))
     else:
         h5_file = next(datainput.glob("*/*/*.h5"))
 
