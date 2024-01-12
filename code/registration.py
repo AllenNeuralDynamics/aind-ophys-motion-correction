@@ -1410,7 +1410,10 @@ if __name__ == "__main__":  # pragma: nocover
     datainput = Path(args.input_searchpath)
     output_dir = Path(args.output_dir)
     data_dir = Path("../data")
-    data_description = next(data_dir.glob("*/data_description.json"))
+    try:
+        data_description = next(data_dir.glob("*/data_description.json"))
+    except:
+        data_description = next(data_dir.glob("data_description.json"))
     with open(data_description, "r") as j:
         data_description = json.load(j)
     if data_description["platform"].get("abbreviation", None) == "single-plane-ophys":
