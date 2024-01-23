@@ -1720,9 +1720,6 @@ if __name__ == "__main__":  # pragma: nocover
         args_copy["suite2p_args"] = suite_args_copy
         f.create_dataset(name="metadata", data=json.dumps(args_copy).encode("utf-8"))
         # save Suite2p registration metrics
-        import pprint
-        print("----------OPS----------")
-        pprint.pprint(ops)
         f.create_group("reg_metrics")
         f.create_dataset("reg_metrics/regDX", data=ops.get("regDX", []))
         f.create_dataset("reg_metrics/regPC", data=ops.get("regPC", []))
