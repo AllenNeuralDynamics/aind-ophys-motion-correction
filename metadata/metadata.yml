@@ -1,4 +1,4 @@
 metadata_version: 1
-name: aind-ophys-motion-correction-bergamo
+name: aind-ophys-motion-correction
 description: This capsule performs motion correction using Suite2p. The default is
   piece-wise rigid motion correction as in NoRMCorre.
