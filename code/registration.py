@@ -1182,9 +1182,6 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
         with h5py.File(trimmed_fn, "w") as f:
             f.create_dataset("data", data=trimmed_data)
         h5_file = trimmed_fn
-    shutil.copy(h5_file, output_dir)
-    shutil.copy(platform_json, output_dir)
-    shutil.copy(file_splitting_json, output_dir)
     return h5_file, output_dir, frame_rate_hz
 
 
