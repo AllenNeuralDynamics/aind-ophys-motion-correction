@@ -1165,7 +1165,7 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
     file_splitting_json = next(session_dir.glob("MESOSCOPE_FILE_*"))
     with open(platform_json, "r") as j:
         platform_data = json.load(j)
-    sync_file = [i for i in session_dir.glob(platform_data["sync_file"])]
+    sync_file = [i for i in session_dir.glob(platform_data["sync_file"])][0]
     output_dir = make_output_directory(output_dir, experiment_id)
     # try to get the framerate from the platform file else use sync file
     try:
