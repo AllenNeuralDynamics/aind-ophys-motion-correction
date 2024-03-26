@@ -1876,7 +1876,6 @@ if __name__ == "__main__":  # pragma: nocover
         logger.info("computed crispness of mean image before and after registration")
 
         # compute residual optical flow using Farneback method
-        import pdb;pdb.set_trace()
         if f["reg_metrics/regPC"][:]:
             regPC = f["reg_metrics/regPC"]
             flows = np.zeros(regPC.shape[1:] + (2,), np.float32)
