@@ -1409,6 +1409,7 @@ if __name__ == "__main__":  # pragma: nocover
     # General settings
     datainput = Path(args.input_searchpath)
     output_dir = Path(args.output_dir)
+    debug = args.debug
     data_dir = Path("../data")
     try:
         data_description = next(data_dir.glob("*/data_description.json"))
@@ -1417,9 +1418,9 @@ if __name__ == "__main__":  # pragma: nocover
     with open(data_description, "r") as j:
         data_description = json.load(j)
     if data_description["platform"].get("abbreviation", None) == "single-plane-ophys":
-        h5_file, output_dir, frame_rate_hz = singleplane_motion_correction(datainput, output_dir)
+        h5_file, output_dir, frame_rate_hz = singleplane_motion_correction(datainput, output_dir, debug=debug)
     else:
-        h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(datainput, output_dir)
+        h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(datainput, output_dir, debug=debug)
     meta_jsons = list(data_dir.glob("*/*.json"))
     for i in meta_jsons:
         shutil.copy(i, output_dir.parent)
