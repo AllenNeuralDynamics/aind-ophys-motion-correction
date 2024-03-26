@@ -1493,7 +1493,7 @@ if __name__ == "__main__":  # pragma: nocover
     suite2p_args[
         "maxregshift"
     ] = 0.2  # Max allowed registration shift as a fraction of frame max(width and height)
-
+    import pdb;pdb.set_trace()
     # These parameters are at the same value as suite2p default. This is just here
     # to make it clear we need those parameters to be at the same value as
     # suite2p default but those lines could be deleted.
