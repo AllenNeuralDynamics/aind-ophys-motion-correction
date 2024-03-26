@@ -1410,6 +1410,7 @@ if __name__ == "__main__":  # pragma: nocover
     datainput = Path(args.input_searchpath)
     output_dir = Path(args.output_dir)
     data_dir = Path("../data")
+    import pdb;pdb.set_trace()
     try:
         data_description = next(data_dir.glob("*/data_description.json"))
     except:
