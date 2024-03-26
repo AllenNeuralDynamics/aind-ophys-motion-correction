@@ -1409,7 +1409,10 @@ if __name__ == "__main__":  # pragma: nocover
     # General settings
     datainput = Path(args.input_searchpath)
     output_dir = Path(args.output_dir)
-    debug = args.debug
+    if args.debug:
+        debug = True
+    else:
+        debug = False
     data_dir = Path("../data")
     try:
         data_description = next(data_dir.glob("*/data_description.json"))
