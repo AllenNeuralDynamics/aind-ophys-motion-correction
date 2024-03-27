@@ -822,7 +822,7 @@ def make_output_directory(output_dir: Path, experiment_id: str) -> str:
     """
     output_dir = output_dir / experiment_id
     output_dir.mkdir(exist_ok=True)
-    output_dir = output_dir / "motion_corrected"
+    output_dir = output_dir / "motion_correction"
     output_dir.mkdir(exist_ok=True)
     with open(output_dir / experiment_id, "w") as f:
         f.write(experiment_id)
