@@ -23,7 +23,12 @@ import numpy as np
 import pandas as pd
 import suite2p
 from aind_data_schema import Processing
-from aind_data_schema.processing import AnalysisProcess, DataProcess, PipelineProcess, ProcessName
+from aind_data_schema.processing import (
+    AnalysisProcess,
+    DataProcess,
+    PipelineProcess,
+    ProcessName,
+)
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.video_utils import downsample_h5_video, encode_video
 from matplotlib import pyplot as plt  # noqa: E402
@@ -91,7 +96,9 @@ def load_initial_frames(
         frame_window = hdf5_file[h5py_key][trim_frames_start:max_frame]
         # Total number of frames in the movie.
         tot_frames = frame_window.shape[0]
-        requested_frames = np.linspace(0, tot_frames, 1 + min(n_frames, tot_frames), dtype=int)[:-1]
+        requested_frames = np.linspace(
+            0, tot_frames, 1 + min(n_frames, tot_frames), dtype=int
+        )[:-1]
         frames = frame_window[requested_frames]
     return frames
 
@@ -250,7 +257,9 @@ def remove_extrema_frames(input_frames: np.ndarray, n_sigma: float = 3) -> np.nd
     """
     frame_means = np.mean(input_frames, axis=(1, 2))
     _, low_cut, high_cut = sigmaclip(frame_means, low=n_sigma, high=n_sigma)
-    trimmed_frames = input_frames[np.logical_and(frame_means > low_cut, frame_means < high_cut)]
+    trimmed_frames = input_frames[
+        np.logical_and(frame_means > low_cut, frame_means < high_cut)
+    ]
     return trimmed_frames
 
 
@@ -669,7 +678,9 @@ def find_movie_start_end_empty_frames(
         np.argwhere(means[:midpoint] < mean_of_frames - n_sigma * std_est)
     ).flatten()
     end_idxs = (
-        np.sort(np.argwhere(means[midpoint:] < mean_of_frames - n_sigma * std_est)).flatten()
+        np.sort(
+            np.argwhere(means[midpoint:] < mean_of_frames - n_sigma * std_est)
+        ).flatten()
         + midpoint
     )
 
@@ -856,7 +867,10 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
 
 
 def write_output_metadata(
-    metadata: dict, raw_movie: Union[str, Path], motion_corrected_movie: Union[str, Path]
+    metadata: dict,
+    raw_movie: Union[str, Path],
+    motion_corrected_movie: Union[str, Path],
+    output_dir: Union[str, Path],
 ) -> None:
     """Writes output metadata to plane processing.json
 
@@ -891,7 +905,7 @@ def write_output_metadata(
             ],
         )
     )
-    processing.write_standard_file(output_directory=Path(motion_corrected_movie).parent.parent)
+    processing.write_standard_file(output_directory=output_dir)
 
 
 def check_trim_frames(data):
@@ -912,7 +926,9 @@ def check_trim_frames(data):
     return data
 
 
-def make_png(max_proj_path: Path, avg_proj_path: Path, summary_df: pd.DataFrame, dst_path: Path):
+def make_png(
+    max_proj_path: Path, avg_proj_path: Path, summary_df: pd.DataFrame, dst_path: Path
+):
     """ """
     xo = np.abs(summary_df["x"]).max()
     yo = np.abs(summary_df["y"]).max()
@@ -959,7 +975,9 @@ def make_nonrigid_png(
     """ """
     nonrigid_y = np.array(list(map(eval, summary_df["nonrigid_y"])), dtype=np.float32)
     nonrigid_x = np.array(list(map(eval, summary_df["nonrigid_x"])), dtype=np.float32)
-    nonrigid_corr = np.array(list(map(eval, summary_df["nonrigid_corr"])), dtype=np.float32)
+    nonrigid_corr = np.array(
+        list(map(eval, summary_df["nonrigid_corr"])), dtype=np.float32
+    )
     ops = json.loads(h5py.File(output_path)["metadata"][()].decode())["suite2p_args"]
     with Image.open(avg_proj_path) as im:
         Ly, Lx = im.size
@@ -1073,7 +1091,9 @@ def flow_png(output_path: Path, dst_path: str, iPC: int = 0):
                 np.sort(inds[isort[-nlowhigh:, iPC] if k else isort[:nlowhigh, iPC]]),
                 50,
             )
-            a[0].set_title("averaged frames for " + ("$PC_{high}$" if k else "$PC_{low}$"))
+            a[0].set_title(
+                "averaged frames for " + ("$PC_{high}$" if k else "$PC_{low}$")
+            )
             a[1].set_position([0, 0, 1, 0.9])
             vmin = np.min(regPC[1 if k else 0, iPC])
             vmax = 5 * np.median(regPC[1 if k else 0, iPC]) - 4 * vmin
@@ -1094,7 +1114,9 @@ def flow_png(output_path: Path, dst_path: str, iPC: int = 0):
         a[1].axis("off")
         plt.colorbar(im, cax=a[0], location="bottom")
         a[0].set_title("residual optical flow")
-        plt.savefig(dst_path + f"_PC{iPC}rof.png", format="png", dpi=300, bbox_inches="tight")
+        plt.savefig(
+            dst_path + f"_PC{iPC}rof.png", format="png", dpi=300, bbox_inches="tight"
+        )
 
 
 def get_frame_rate_from_sync(sync_file, platform_data) -> float:
@@ -1169,7 +1191,9 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
     output_dir = make_output_directory(output_dir, experiment_id)
     # try to get the framerate from the platform file else use sync file
     try:
-        frame_rate_hz = platform_data["imaging_plane_groups"][0]["acquisition_framerate_Hz"]
+        frame_rate_hz = platform_data["imaging_plane_groups"][0][
+            "acquisition_framerate_Hz"
+        ]
     except KeyError:
         frame_rate_hz = get_frame_rate_from_sync(sync_file, platform_data)
     if debug:
@@ -1210,7 +1234,7 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path, debug: bool
         h5_file = next(datainput.glob("*.h5"))
     except:
         h5_file = next(datainput.glob("*/*/*.h5"))
-        
+
     session_fp = h5_file.parent / "session.json"
     print(f"SESSION PATH!! {session_fp}")
     with open(session_fp, "r") as j:
@@ -1271,7 +1295,9 @@ if __name__ == "__main__":  # pragma: nocover
         "-o", "--output-dir", type=str, help="Output directory", default="../results/"
     )
 
-    parser.add_argument("-d", "--debug", action="store_true", help="Run with only first 500 frames")
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Run with only first 500 frames"
+    )
 
     parser.add_argument(
         "--tmp_dir",
@@ -1331,7 +1357,8 @@ if __name__ == "__main__":  # pragma: nocover
         "--max_reference_iterations",
         type=int,
         default=8,
-        help="Maximum number of iterations for creating " "a reference image (default: 8)",
+        help="Maximum number of iterations for creating "
+        "a reference image (default: 8)",
     )
 
     parser.add_argument(
@@ -1416,12 +1443,14 @@ if __name__ == "__main__":  # pragma: nocover
     with open(data_description, "r") as j:
         data_description = json.load(j)
     if data_description["platform"].get("abbreviation", None) == "single-plane-ophys":
-        h5_file, output_dir, frame_rate_hz = singleplane_motion_correction(datainput, output_dir, debug=args.debug)
+        h5_file, output_dir, frame_rate_hz = singleplane_motion_correction(
+            datainput, output_dir, debug=args.debug
+        )
     else:
-        h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(datainput, output_dir, debug=args.debug)
+        h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
+            datainput, output_dir, debug=args.debug
+        )
     meta_jsons = list(data_dir.glob("*/*.json"))
-    for i in meta_jsons:
-        shutil.copy(i, output_dir.parent)
 
     # We convert to dictionary
     args = vars(args)
@@ -1543,7 +1572,9 @@ if __name__ == "__main__":  # pragma: nocover
     if suite2p_args["force_refImg"] and len(suite2p_args["refImg"]) == 0:
         # Use our own version of compute_reference to create the initial
         # reference image used by suite2p.
-        logger.info(f'Loading {suite2p_args["nimg_init"]} frames ' "for reference image creation.")
+        logger.info(
+            f'Loading {suite2p_args["nimg_init"]} frames ' "for reference image creation."
+        )
         initial_frames = load_initial_frames(
             file_path=suite2p_args["h5py"],
             h5py_key=suite2p_args["h5py_key"],
@@ -1655,8 +1686,12 @@ if __name__ == "__main__":  # pragma: nocover
         "offsets exceed (x,y) limits of "
         f"({xlimit},{ylimit}) [pixels]"
     )
-    delta_x, x_clipped = identify_and_clip_outliers(np.array(ops["xoff"]), detrend_size, xlimit)
-    delta_y, y_clipped = identify_and_clip_outliers(np.array(ops["yoff"]), detrend_size, ylimit)
+    delta_x, x_clipped = identify_and_clip_outliers(
+        np.array(ops["xoff"]), detrend_size, xlimit
+    )
+    delta_y, y_clipped = identify_and_clip_outliers(
+        np.array(ops["yoff"]), detrend_size, ylimit
+    )
     clipped_indices = list(set(x_clipped).union(set(y_clipped)))
     logger.info(f"{len(x_clipped)} frames clipped in x")
     logger.info(f"{len(y_clipped)} frames clipped in y")
@@ -1681,7 +1716,9 @@ if __name__ == "__main__":  # pragma: nocover
         for frame_index in clipped_indices:
             dx = delta_x[frame_index] - ops["xoff"][frame_index]
             dy = delta_y[frame_index] - ops["yoff"][frame_index]
-            data[frame_index] = suite2p.registration.rigid.shift_frame(data[frame_index], dy, dx)
+            data[frame_index] = suite2p.registration.rigid.shift_frame(
+                data[frame_index], dy, dx
+            )
 
     # If we found frames that are empty at the end and beginning of the
     # movie, we reset their motion shift and set their shifts to 0.
@@ -1725,7 +1762,9 @@ if __name__ == "__main__":  # pragma: nocover
     # make projections
     mx_proj = projection_process(data, projection="max")
     av_proj = projection_process(data, projection="avg")
-    write_output_metadata(args_copy, Path(suite2p_args["h5py"]), args["motion_corrected_output"])
+    write_output_metadata(
+        args_copy, Path(suite2p_args["h5py"]), args["motion_corrected_output"], output_dir
+    )
     # TODO: normalize here, if desired
     # save projections
     for im, dst_path in zip(
@@ -1869,7 +1908,8 @@ if __name__ == "__main__":  # pragma: nocover
         mov_raw = f_raw["data"]
         mov = f["data"]
         crispness = [
-            np.sqrt(np.sum(np.array(np.gradient(np.mean(m, 0))) ** 2)) for m in (mov_raw, mov)
+            np.sqrt(np.sum(np.array(np.gradient(np.mean(m, 0))) ** 2))
+            for m in (mov_raw, mov)
         ]
         logger.info("computed crispness of mean image before and after registration")
 
@@ -1896,9 +1936,12 @@ if __name__ == "__main__":  # pragma: nocover
             f.create_dataset("reg_metrics/crispness", data=crispness)
             f.create_dataset("reg_metrics/farnebackROF", data=flows)
             f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
-            logger.info("computed residual optical flow of top PCs using Farneback method")
             logger.info(
-                "appended additional registration metrics to" f"{args['motion_corrected_output']}"
+                "computed residual optical flow of top PCs using Farneback method"
+            )
+            logger.info(
+                "appended additional registration metrics to"
+                f"{args['motion_corrected_output']}"
             )
 
         # create image of PC_low, PC_high, and the residual optical flow between them
