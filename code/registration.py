@@ -1177,9 +1177,14 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
         h5_file = datainput
         experiment_id = h5_file.name.split(".")[0]
     else:
-        experiment_id = [i for i in datainput.glob("*") if "ophys_experiment" in str(i)][
+        try:
+            experiment_id = [i for i in datainput.glob("*") if "ophys_experiment" in str(i)][
             0
-        ].name.split("_")[-1]
+            ].name.split("_")[-1]
+        except IndexError:
+            experiment_id = [i for i in datainput.glob("*") if i.is_dir()][
+            0
+            ]
         h5_file = [i for i in datainput.glob("*/*") if f"{experiment_id}.h5" in str(i)][0]
     session_dir = h5_file.parent.parent
     platform_json = next(session_dir.glob("*platform.json"))
