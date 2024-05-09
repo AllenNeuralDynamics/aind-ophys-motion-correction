@@ -907,7 +907,7 @@ def write_output_metadata(
     )
     if isinstance(output_dir, str):
         output_dir = Path(output_dir)
-    processing.write_standard_file(output_directory=output_dir.parent)
+    processing.write_standard_file(output_directory=output_dir)
 
 
 def check_trim_frames(data):
