@@ -1185,10 +1185,6 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
             experiment_id = [i for i in datainput.glob("*") if i.is_dir()][
             0
             ].name
-        try:
-            sync_file = [i for i in session_dir.glob(platform_data["sync_file"])][0]
-        except IndexError:
-            sync_file = next(datainput.glob(platform_data["sync_file"]))
     session_dir = h5_file.parent.parent
     platform_json = next(session_dir.glob("*platform.json"))
     # this file is required for paired plane registration but not for single plane
