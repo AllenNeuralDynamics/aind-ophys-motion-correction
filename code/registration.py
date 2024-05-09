@@ -1196,9 +1196,7 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
     try:
         sync_file = [i for i in session_dir.glob(platform_data["sync_file"])][0]
     except IndexError:
-        print(f'`````````````````{list(datainput.glob("*"))}')
-        print(f"~~~~~~~~~~~~~~~~~~~~~~{platform_data['sync_file']}")
-        sync_file = [i for i in datainput.glob("*") if platform_data["sync_file"] in str(i)][0]
+        sync_file = next(datainput.glob("*.h5"))
     output_dir = make_output_directory(output_dir, experiment_id)
     # try to get the framerate from the platform file else use sync file
     try:
