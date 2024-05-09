@@ -1193,7 +1193,10 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
     # instead of needing to copy it from here
     with open(platform_json, "r") as j:
         platform_data = json.load(j)
-    sync_file = [i for i in session_dir.glob(platform_data["sync_file"])][0]
+    try:
+        sync_file = [i for i in session_dir.glob(platform_data["sync_file"])][0]
+    except IndexError:
+        sync_file = next(datainput.glob(platform_data["sync_file"]))
     output_dir = make_output_directory(output_dir, experiment_id)
     # try to get the framerate from the platform file else use sync file
     try:
