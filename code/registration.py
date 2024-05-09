@@ -1184,7 +1184,7 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
         except IndexError:
             experiment_id = [i for i in datainput.glob("*") if i.is_dir()][
             0
-            ]
+            ].
         print(f"~~~~~~~~~~~~~~~~~~~{experiment_id}")
         h5_file = [i for i in datainput.glob("*/*") if f"{experiment_id}.h5" in str(i)][0]
     session_dir = h5_file.parent.parent
@@ -1192,7 +1192,6 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
     # this file is required for paired plane registration but not for single plane
     # in the future, we should make this file accessible to the pipeline through channel connections
     # instead of needing to copy it from here
-    file_splitting_json = next(session_dir.glob("MESOSCOPE_FILE_*"))
     with open(platform_json, "r") as j:
         platform_data = json.load(j)
     sync_file = [i for i in session_dir.glob(platform_data["sync_file"])][0]
