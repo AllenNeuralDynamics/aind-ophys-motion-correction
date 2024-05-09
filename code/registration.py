@@ -1185,6 +1185,7 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
             experiment_id = [i for i in datainput.glob("*") if i.is_dir()][
             0
             ].name
+    
     session_dir = h5_file.parent.parent
     platform_json = next(session_dir.glob("*platform.json"))
     # this file is required for paired plane registration but not for single plane
@@ -1195,7 +1196,8 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
     try:
         sync_file = [i for i in session_dir.glob(platform_data["sync_file"])][0]
     except IndexError:
-        sync_file = next(datainput.glob(platform_data["sync_file"]))
+        print(f'`````````````````{list(datainput.glob("*"))}')
+        sync_file = [i for i in datainput.glob("*") if platform_data["sync_file"] in str(i)][0]
     output_dir = make_output_directory(output_dir, experiment_id)
     # try to get the framerate from the platform file else use sync file
     try:
