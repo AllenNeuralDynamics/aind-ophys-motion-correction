@@ -1182,9 +1182,13 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
             0
             ].name.split("_")[-1]
         except IndexError:
-            experiment_id = [i for i in datainput.glob("*") if i.is_dir()][
-            0
-            ].name
+            try:
+                experiment_id = [i for i in datainput.glob("*") if i.is_dir()][
+                0
+                ].name
+            except IndexError:
+                print("Could not find split directory")
+                sys.exit()
             h5_file = [i for i in datainput.glob("*/*") if f"{experiment_id}.h5" in str(i)][0]
     session_dir = h5_file.parent.parent
     platform_json = next(session_dir.glob("*platform.json"))
