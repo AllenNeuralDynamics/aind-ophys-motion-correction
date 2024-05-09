@@ -1182,7 +1182,7 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
             0
             ].name.split("_")[-1]
         except IndexError:
-            try:
+            try: # This is not optimal - find a better way to determine full field images"
                 experiment_id = [i for i in datainput.glob("*") if i.is_dir()][
                 0
                 ].name
