@@ -5,7 +5,6 @@ import logging
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
 import warnings
 from datetime import datetime as dt
@@ -832,10 +831,8 @@ def make_output_directory(output_dir: Path, experiment_id: str) -> str:
     output_dir: Path
         output directory
     """
-    output_dir = output_dir / experiment_id
-    output_dir.mkdir(exist_ok=True)
-    output_dir = output_dir / "motion_correction"
-    output_dir.mkdir(exist_ok=True)
+    output_dir = output_dir / experiment_id / "motion_correction"
+    output_dir.mkdir(parent=Tru, exist_ok=True)
     return output_dir
 
 
@@ -908,6 +905,7 @@ def write_output_metadata(
     )
     if isinstance(output_dir, str):
         output_dir = Path(output_dir)
+    print(f"~~~~~~~~~~~~~~Writing output: {output_dir}")
     processing.write_standard_file(output_directory=output_dir)
 
 
@@ -1183,13 +1181,9 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
             0
             ].name.split("_")[-1]
         except IndexError:
-            try: # This is not optimal - find a better way to determine full field images"
-                experiment_id = [i for i in datainput.glob("*") if i.is_dir()][
-                0
-                ].name
-            except IndexError:
-                print("Could not find split directory")
-                sys.exit()
+            experiment_id = [i for i in datainput.glob("*") if i.is_dir()][
+            0
+            ].name
             h5_file = [i for i in datainput.glob("*/*") if f"{experiment_id}.h5" in str(i)][0]
     session_dir = h5_file.parent.parent
     platform_json = next(session_dir.glob("*platform.json"))
