@@ -37,9 +37,15 @@ class Sync(object):
     def meta_data(self):
         if not self._meta_data:
             self._meta_data = eval(self._data["meta"][()])
-            self.meta_data["start_time"] = datetime.datetime.fromisoformat(self.meta_data["start_time"])
-            self.meta_data["stop_time"] = datetime.datetime.fromisoformat(self.meta_data["stop_time"])
-            self.meta_data["duration_s"] = (self.meta_data["stop_time"] - self.meta_data["start_time"]).total_seconds()
+            self.meta_data["start_time"] = datetime.datetime.fromisoformat(
+                self.meta_data["start_time"]
+            )
+            self.meta_data["stop_time"] = datetime.datetime.fromisoformat(
+                self.meta_data["stop_time"]
+            )
+            self.meta_data["duration_s"] = (
+                self.meta_data["stop_time"] - self.meta_data["start_time"]
+            ).total_seconds()
         return self._meta_data
 
     @property
@@ -269,8 +275,12 @@ class Sync(object):
             units (str): "indices"
 
         """
-        source_edges = getattr(self, "get_{}_edges".format(source_edge.lower()))(source.lower(), units="samples")
-        target_edges = getattr(self, "get_{}_edges".format(target_edge.lower()))(target.lower(), units="samples")
+        source_edges = getattr(self, "get_{}_edges".format(source_edge.lower()))(
+            source.lower(), units="samples"
+        )
+        target_edges = getattr(self, "get_{}_edges".format(target_edge.lower()))(
+            target.lower(), units="samples"
+        )
         indices = np.searchsorted(target_edges, source_edges, side="right")
         if direction.lower() == "previous":
             indices[np.where(indices != 0)] -= 1
@@ -445,7 +455,9 @@ class Sync(object):
             high = falling - rising
         else:
             # line starts high
-            high = np.concatenate(falling, self.get_all_events()[-1, 0]) - np.concatenate(0, rising)
+            high = np.concatenate(falling, self.get_all_events()[-1, 0]) - np.concatenate(
+                0, rising
+            )
 
         total_high_time = np.sum(high)
         all_events = self.get_events_by_bit(bit)
