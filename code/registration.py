@@ -831,10 +831,8 @@ def make_output_directory(output_dir: Path, experiment_id: str) -> str:
     output_dir: Path
         output directory
     """
-    output_dir = output_dir / experiment_id
-    output_dir.mkdir(exist_ok=True)
-    output_dir = output_dir / "motion_correction"
-    output_dir.mkdir(exist_ok=True)
+    output_dir = output_dir / experiment_id / "motion_correction"
+    output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
 
 
@@ -907,6 +905,7 @@ def write_output_metadata(
     )
     if isinstance(output_dir, str):
         output_dir = Path(output_dir)
+    print(f"~~~~~~~~~~~~~~Writing output: {output_dir}")
     processing.write_standard_file(output_directory=output_dir)
 
 

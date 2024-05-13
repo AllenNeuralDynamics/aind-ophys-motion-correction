@@ -16,4 +16,4 @@ RUN pip3 install -U --no-cache-dir \
     aind-ophys-utils \
     sbxreader \
     suite2p==0.14.0 \
-    aind-data-schema==0.18.0
+    aind-data-schema==0.22.0
