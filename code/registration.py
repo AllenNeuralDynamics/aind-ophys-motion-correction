@@ -1139,7 +1139,7 @@ def get_frame_rate_from_sync(sync_file, platform_data) -> float:
     frame_rate_hz = None
     for i in labels:
         print(f"````````````SYNC FILE: {sync_file}''''''")
-        sync_data = Sync(sync_file[0])
+        sync_data = Sync(sync_file)
         try:
             rising_edges = sync_data.get_rising_edges(i, units="seconds")
             image_freq = 1 / (np.mean(np.diff(rising_edges)))
