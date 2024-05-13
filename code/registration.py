@@ -22,9 +22,8 @@ import matplotlib as mpl
 import numpy as np
 import pandas as pd
 import suite2p
-from aind_data_schema import Processing
-from aind_data_schema.processing import (
-    AnalysisProcess,
+from aind_data_schema.core.processing import (
+    Processing,
     DataProcess,
     PipelineProcess,
     ProcessName,
