@@ -1694,6 +1694,11 @@ if __name__ == "__main__":  # pragma: nocover
         "offsets exceed (x,y) limits of "
         f"({xlimit},{ylimit}) [pixels]"
     )
+    print(f"X OFFSET: {len(ops['xoff'])}")
+    print(f"X OFFSET1: {len(ops['xoff1'])}")
+    print(f"Lx {ops['Lx']}")
+    print(f"DETREND SIZE {detrend_size}")
+    print(f"XLIMIT: {xlimit}")
     delta_x, x_clipped = identify_and_clip_outliers(
         np.array(ops["xoff"]), detrend_size, xlimit
     )
