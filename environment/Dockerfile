@@ -15,5 +15,5 @@ WORKDIR /
 RUN pip3 install -U --no-cache-dir \
     aind-ophys-utils \
     sbxreader \
-    suite2p==0.14.0 \
+    git+https://github.com/arielleleon/suite2p@bug-pull-from-defined-h5py \
     aind-data-schema==0.22.0

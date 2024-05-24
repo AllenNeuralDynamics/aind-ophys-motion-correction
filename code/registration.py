@@ -1138,7 +1138,7 @@ def get_frame_rate_from_sync(sync_file, platform_data) -> float:
     )  # Number of imaging plane groups for frequency calculation
     frame_rate_hz = None
     for i in labels:
-        print(f"````````````SYNC FILE: {sync_file}''''''")
+        logging.info(f"Pulling framerate from sync file: {sync_file}")
         sync_data = Sync(sync_file)
         try:
             rising_edges = sync_data.get_rising_edges(i, units="seconds")
@@ -1244,7 +1244,6 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path, debug: bool
         h5_file = next(datainput.glob("*/*/*.h5"))
 
     session_fp = h5_file.parent / "session.json"
-    print(f"SESSION PATH!! {session_fp}")
     with open(session_fp, "r") as j:
         session_data = json.load(j)
     frame_rate_hz = session_data["data_streams"][0]["ophys_fovs"][0]["frame_rate"]
@@ -1272,7 +1271,6 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path, debug: bool
             if debug:
                 end_index = min(end_index, 3000)
             slice_add = end_index - start_index
-            print(start_index, end_index)
             with h5py.File(output_h5_file, "a") as output_file:
                 output_file["data"].resize(frame_no + slice_add, axis=0)
                 output_file["data"][frame_no:slice_add] = f["data"][start_index:end_index]
@@ -1694,11 +1692,6 @@ if __name__ == "__main__":  # pragma: nocover
         "offsets exceed (x,y) limits of "
         f"({xlimit},{ylimit}) [pixels]"
     )
-    print(f"X OFFSET: {len(ops['xoff'])}")
-    print(f"X OFFSET1: {len(ops['xoff1'])}")
-    print(f"Lx {ops['Lx']}")
-    print(f"DETREND SIZE {detrend_size}")
-    print(f"XLIMIT: {xlimit}")
     delta_x, x_clipped = identify_and_clip_outliers(
         np.array(ops["xoff"]), detrend_size, xlimit
     )
