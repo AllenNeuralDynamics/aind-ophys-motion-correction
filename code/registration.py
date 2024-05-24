@@ -1180,6 +1180,7 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
             experiment_id = [i for i in datainput.glob("*") if "ophys_experiment" in str(i)][
             0
             ].name.split("_")[-1]
+            h5_file = [i for i in datainput.glob("*/*") if f"{experiment_id}.h5" in str(i)][0]
         except IndexError:
             experiment_id = [i for i in datainput.glob("*") if i.is_dir()][
             0
