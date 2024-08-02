@@ -1219,12 +1219,12 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
     return h5_file, output_dir, frame_rate_hz
 
 
-def singleplane_motion_correction(datainput: Path, output_dir: Path, debug: bool = False):
+def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool = False):
     """Process single plane data for suite2p parameters
 
     Parameters
     ----------
-    datainput: Path
+    h5_file: Path
         path to h5 file
     output_dir: Path
         output directory
@@ -1239,18 +1239,12 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path, debug: bool
     frame_rate_hz: float
         frame rate in Hz
     """
-    try:
-        h5_file = next(datainput.glob("*.h5"))
-    except:
-        h5_file = next(datainput.glob("*/*/*.h5"))
-
-    session_fp = h5_file.parent / "session.json"
-    with open(session_fp, "r") as j:
-        session_data = json.load(j)
-    frame_rate_hz = session_data["data_streams"][0]["ophys_fovs"][0]["frame_rate"]
+    if not h5_file.is_file():
+        h5_file = next(h5_file.glob("*/*/*.h5"))
+    
     experiment_id = "bergamo"
     output_dir = make_output_directory(output_dir, experiment_id)
-    good_epochs = ["spont", "pair_neuron6_and_7_10xmult", "pair_neuron6_and_7"]
+    epochs = ["spont", "pair_neuron6_and_7_10xmult", "pair_neuron6_and_7"]
     output_h5_file = Path(output_dir) / "bergamo.h5"
     with h5py.File(h5_file, "r") as f:
         epochs = f["epoch_slice_location"][()]
@@ -1280,7 +1274,7 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path, debug: bool
                 break
 
     assert image_shape[0] == end_index
-    return output_h5_file, output_dir, frame_rate_hz
+    return output_h5_file, output_dir
 
 
 if __name__ == "__main__":  # pragma: nocover
@@ -1443,14 +1437,15 @@ if __name__ == "__main__":  # pragma: nocover
     datainput = Path(args.input_searchpath)
     output_dir = Path(args.output_dir)
     data_dir = Path("../data")
-    try:
-        data_description = next(data_dir.glob("*/data_description.json"))
-    except:
-        data_description = next(data_dir.glob("data_description.json"))
-    with open(data_description, "r") as j:
+    session_fp = next(data_dir.rglob("session.json"))
+    description_fp = next(data_dir.rglob("data_description.json"))
+    with open(session_fp, "r") as j:
+        session = json.load(j)
+    with open(description_fp, "r") as j:
         data_description = json.load(j)
+    frame_rate_hz = session["data_streams"][0]["ophys_fovs"][0]["frame_rate"]
     if data_description["platform"].get("abbreviation", None) == "single-plane-ophys":
-        h5_file, output_dir, frame_rate_hz = singleplane_motion_correction(
+        h5_file, output_dir = singleplane_motion_correction(
             datainput, output_dir, debug=args.debug
         )
     else:
