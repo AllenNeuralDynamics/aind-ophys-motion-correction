@@ -1219,7 +1219,7 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
     return h5_file, output_dir, frame_rate_hz
 
 
-def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool = False):
+def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, debug: bool = False):
     """Process single plane data for suite2p parameters
 
     Parameters
@@ -1228,6 +1228,8 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool =
         path to h5 file
     output_dir: Path
         output directory
+    session: dict
+        session data
     debug: bool
 
     Returns
@@ -1242,7 +1244,6 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool =
     if not h5_file.is_file():
         h5_file = next(h5_file.glob("*/*/*.h5"))
     
-    experiment_id = "bergamo"
     output_dir = make_output_directory(output_dir, experiment_id)
     epochs = ["spont", "pair_neuron6_and_7_10xmult", "pair_neuron6_and_7"]
     output_h5_file = Path(output_dir) / "bergamo.h5"
@@ -1287,7 +1288,7 @@ if __name__ == "__main__":  # pragma: nocover
 
     parser.add_argument(
         "-i",
-        "--input-searchpath",
+        "--input",
         type=str,
         help="File or directory where h5 file is stored",
         default="../data/",
@@ -1434,19 +1435,22 @@ if __name__ == "__main__":  # pragma: nocover
     # Parse command-line arguments
     args = parser.parse_args()
     # General settings
-    datainput = Path(args.input_searchpath)
+    datainput = Path(args.input)
     output_dir = Path(args.output_dir)
     data_dir = Path("../data")
-    session_fp = next(data_dir.rglob("session.json"))
+    #session_fp = next(data_dir.rglob("session.json"))
+    session_fp = "/data/single-plane-ophys_686681_2024-06-28_12-26-36/session.json"
     description_fp = next(data_dir.rglob("data_description.json"))
     with open(session_fp, "r") as j:
         session = json.load(j)
     with open(description_fp, "r") as j:
         data_description = json.load(j)
     frame_rate_hz = session["data_streams"][0]["ophys_fovs"][0]["frame_rate"]
+    if "Bergamo" in session["rig_id"]:
+        pass
     if data_description["platform"].get("abbreviation", None) == "single-plane-ophys":
         h5_file, output_dir = singleplane_motion_correction(
-            datainput, output_dir, debug=args.debug
+            datainput, output_dir, session, debug=args.debug
         )
     else:
         h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
