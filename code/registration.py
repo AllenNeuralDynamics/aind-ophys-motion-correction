@@ -650,19 +650,21 @@ def find_movie_start_end_empty_frames(
         movie as (n_trim_start, n_trim_end).
     """
     # Find the midpoint of the movie.
-    n_frames = h5py.File(h5py_name, "r")[h5py_key].shape[0]
-    midpoint = n_frames // 2
-    # We discover empty or extrema frames by comparing the mean of each frames
-    # to the mean of the full movie.
-    if n_jobs == 1 or n_frames < 2000:
-        means = h5py.File(h5py_name, "r")[h5py_key][:].mean(axis=(1, 2))
-    else:
-        means = np.concatenate(
-            Pool(n_jobs).starmap(
-                _mean_of_batch, product(range(0, n_frames, 1000), [h5py_name], [h5py_key])
+    with h5py.File(h5py_name, "r") as f:
+
+        n_frames = f[h5py_key].shape[0]
+        midpoint = n_frames // 2
+        # We discover empty or extrema frames by comparing the mean of each frames
+        # to the mean of the full movie.
+        if n_jobs == 1 or n_frames < 2000:
+            means = f[h5py_key][:].mean(axis=(1, 2))
+        else:
+            means = np.concatenate(
+                Pool(n_jobs).starmap(
+                    _mean_of_batch, product(range(0, n_frames, 1000), [h5py_name], [h5py_key])
+                )
             )
-        )
-    mean_of_frames = means.mean()
+        mean_of_frames = means.mean()
 
     # Compute a robust standard deviation that is not sensitive to the
     # outliers we are attempting to find.
@@ -1219,7 +1221,7 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
     return h5_file, output_dir, frame_rate_hz
 
 
-def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, debug: bool = False):
+def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool = False):
     """Process single plane data for suite2p parameters
 
     Parameters
@@ -1228,8 +1230,6 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, debu
         path to h5 file
     output_dir: Path
         output directory
-    session: dict
-        session data
     debug: bool
 
     Returns
@@ -1238,44 +1238,20 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, debu
         path to h5 file
     output_dir: Path
         output directory
-    frame_rate_hz: float
-        frame rate in Hz
     """
-    if not h5_file.is_file():
-        h5_file = next(h5_file.glob("*/*/*.h5"))
     
+    if not h5_file.is_file():
+        h5_list = [f for f in h5_file.glob("*/*.h5")]
+    for f in h5_list:
+        if "VDS" in str(f):
+            h5_file = f
+            break
+        if "VDS" not in str(f) and "reference" not in str(f):
+            h5_file = f
+        
+    experiment_id = "626974_2022-07-01_10-00-31"
     output_dir = make_output_directory(output_dir, experiment_id)
-    epochs = ["spont", "pair_neuron6_and_7_10xmult", "pair_neuron6_and_7"]
-    output_h5_file = Path(output_dir) / "bergamo.h5"
-    with h5py.File(h5_file, "r") as f:
-        epochs = f["epoch_slice_location"][()]
-        epochs = json.loads(epochs[0])
-        epochs = {k: v[0] for k, v in epochs.items() if k in good_epochs}
-        epochs = {k: v for k, v in sorted(epochs.items(), key=lambda item: item[1])}
-        image_shape = f["data"].shape
-        xdim = image_shape[1]
-        ydim = image_shape[2]
-        last_key = list(epochs.keys())[-1]
-        frame_no = 0
-        with h5py.File(output_h5_file, "w") as output_file:
-            output_file.create_dataset(
-                "data", (0, xdim, ydim), chunks=True, maxshape=(None, xdim, ydim)
-            )
-        for k in epochs.keys():
-            start_index = epochs[k][0]
-            end_index = epochs[k][1]
-            if debug:
-                end_index = min(end_index, 3000)
-            slice_add = end_index - start_index
-            with h5py.File(output_h5_file, "a") as output_file:
-                output_file["data"].resize(frame_no + slice_add, axis=0)
-                output_file["data"][frame_no:slice_add] = f["data"][start_index:end_index]
-                frame_no += slice_add
-            if debug:
-                break
-
-    assert image_shape[0] == end_index
-    return output_h5_file, output_dir
+    return h5_file, output_dir
 
 
 if __name__ == "__main__":  # pragma: nocover
@@ -1438,29 +1414,36 @@ if __name__ == "__main__":  # pragma: nocover
     datainput = Path(args.input)
     output_dir = Path(args.output_dir)
     data_dir = Path("../data")
-    #session_fp = next(data_dir.rglob("session.json"))
-    session_fp = "/data/single-plane-ophys_686681_2024-06-28_12-26-36/session.json"
+    session_fp = next(data_dir.rglob("session.json"))
     description_fp = next(data_dir.rglob("data_description.json"))
     with open(session_fp, "r") as j:
         session = json.load(j)
     with open(description_fp, "r") as j:
         data_description = json.load(j)
-    frame_rate_hz = session["data_streams"][0]["ophys_fovs"][0]["frame_rate"]
+    for i in session['data_streams']:
+        frame_rate_hz = [j['frame_rate'] for j in i['ophys_fovs']]
+    frame_rate_hz = frame_rate_hz[0]
     if "Bergamo" in session["rig_id"]:
-        pass
-    if data_description["platform"].get("abbreviation", None) == "single-plane-ophys":
         h5_file, output_dir = singleplane_motion_correction(
-            datainput, output_dir, session, debug=args.debug
+            data_dir, output_dir, debug=args.debug
         )
     else:
         h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
             datainput, output_dir, debug=args.debug
         )
-    meta_jsons = list(data_dir.glob("*/*.json"))
-
+    
     # We convert to dictionary
     args = vars(args)
     h5_file = str(h5_file)
+    reference_image = None
+    meta_jsons = list(data_dir.glob("*/*.json"))
+    args["refImg"] = []
+    reference_image_fp = ""
+    reference_image_fp = next(Path("../data").rglob("reference_image.h5"), "")
+    if reference_image_fp:
+        with h5py.File(reference_image_fp, "r") as f:
+            reference_image = f["data"][:500]
+            args["refImg"] = reference_image
 
     # We construct the paths to the outputs
     args["movie_frame_rate_hz"] = frame_rate_hz
@@ -1508,7 +1491,8 @@ if __name__ == "__main__":  # pragma: nocover
 
     # This is part of a complex scheme to pass an image that is a bit too
     # complicated. Will remove when tested.
-    args["refImg"] = []
+    #if not args.get("refImg", ""):
+    #args["refImg"] = []
 
     # Set suite2p args.
     suite2p_args = suite2p.default_ops()
