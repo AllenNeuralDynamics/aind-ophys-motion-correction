@@ -1248,7 +1248,13 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool =
             break
         if "VDS" not in str(f) and "reference" not in str(f):
             h5_file = f
-        
+    if debug: 
+        stem = h5_file.stem
+        h5_file = h5_file.parent / f"{stem}_debug.h5"
+        with h5py.File(h5_file, "w") as f:
+            data = f["data"][:3000]
+            f.create_dataset("data", data=data)
+
     experiment_id = "626974_2022-07-01_10-00-31"
     output_dir = make_output_directory(output_dir, experiment_id)
     return h5_file, output_dir
@@ -1559,7 +1565,7 @@ if __name__ == "__main__":  # pragma: nocover
         args["trim_frames_end"] = highside
         logger.info(f"Found ({lowside}, {highside}) at the start/end of the movie.")
 
-    if suite2p_args["force_refImg"] and len(suite2p_args["refImg"]) == 0:
+    if suite2p_args["force_refImg"] and len(suite2p_args["refImg"]) <= 1:
         # Use our own version of compute_reference to create the initial
         # reference image used by suite2p.
         logger.info(
