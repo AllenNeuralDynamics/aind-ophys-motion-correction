@@ -91,14 +91,17 @@ def load_initial_frames(
     with h5py.File(file_path, "r") as hdf5_file:
         # Load all frames as fancy indexing is slower than loading the full
         # data.
-        max_frame = hdf5_file[h5py_key].shape[0] - trim_frames_end
-        frame_window = hdf5_file[h5py_key][trim_frames_start:max_frame]
-        # Total number of frames in the movie.
-        tot_frames = frame_window.shape[0]
-        requested_frames = np.linspace(
-            0, tot_frames, 1 + min(n_frames, tot_frames), dtype=int
-        )[:-1]
-        frames = frame_window[requested_frames]
+        del_trim_frames = trim_frames_start + trim_frames_end
+        if del_trim_frames >= n_frames:
+            frame_window = hdf5_file[h5py_key][trim_frames_start:trim_frames_end]
+            tot_frames = frame_window.shape[0]
+            requested_frames = np.linspace(0, tot_frames, min(n_frames,tot_frames), dtype=int)
+            frames = frame_window[requested_frames]
+            logging.info("Frame window %s", frame_window.shape)
+            logging.info("Shape of frames %s", frames.shape)
+        else:
+            frames = hdf5_file[h5py_key][trim_frames_start:trim_frames_end]
+            logging.warning("Requested number of frames is greater than the number of frames in the movie. Returning all valid frames.")
     return frames
 
 
@@ -1527,9 +1530,7 @@ if __name__ == "__main__":  # pragma: nocover
     reference_image_fp = ""
     reference_image_fp = next(Path("../data").rglob("reference_image.h5"), "")
     if reference_image_fp:
-        with h5py.File(reference_image_fp, "r") as f:
-            reference_image = f["data"][:500]
-            args["refImg"] = reference_image
+        args["refImg"] = reference_image_fp
 
     # We construct the paths to the outputs
     args["movie_frame_rate_hz"] = frame_rate_hz
@@ -1650,10 +1651,11 @@ if __name__ == "__main__":  # pragma: nocover
             suite2p_args,
             args,
         )
-    if reference_image:
+    if reference_image_fp:
         suite2p_args, args = update_suite2p_args_reference_image(
             suite2p_args,
             args,
+            reference_image=reference_image_fp
         )
 
     # register with Suite2P
