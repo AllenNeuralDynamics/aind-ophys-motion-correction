@@ -91,6 +91,7 @@ def load_initial_frames(
     with h5py.File(file_path, "r") as hdf5_file:
         # Load all frames as fancy indexing is slower than loading the full
         # data.
+        import pdb;pdb.set_trace()
         max_frame = hdf5_file[h5py_key].shape[0] - trim_frames_end
         frame_window = hdf5_file[h5py_key][trim_frames_start:max_frame]
         # Total number of frames in the movie.
@@ -1446,7 +1447,7 @@ if __name__ == "__main__":  # pragma: nocover
     reference_image = None
     meta_jsons = list(data_dir.glob("*/*.json"))
     args["refImg"] = []
-    reference_image_fp = ""
+    #reference_image_fp = ""
     #reference_image_fp = next(Path("../data").rglob("reference_image.h5"), "")
     #if reference_image_fp:
         #with h5py.File(reference_image_fp, "r") as f:
@@ -1566,8 +1567,7 @@ if __name__ == "__main__":  # pragma: nocover
         args["trim_frames_start"] = lowside
         args["trim_frames_end"] = highside
         logger.info(f"Found ({lowside}, {highside}) at the start/end of the movie.")
-
-    if suite2p_args["force_refImg"] and len(suite2p_args["refImg"]) <= 1:
+    if suite2p_args["force_refImg"] and len(suite2p_args["refImg"]) == 0:
         # Use our own version of compute_reference to create the initial
         # reference image used by suite2p.
         logger.info(
