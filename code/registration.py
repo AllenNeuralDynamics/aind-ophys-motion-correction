@@ -1221,6 +1221,84 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
     shutil.copy(h5_file, output_dir)
     return h5_file, output_dir, frame_rate_hz
 
+def update_suite2p_args_reference_image(suite2p_args: dict, args: dict, reference_image=None):
+    # Use our own version of compute_reference to create the initial
+    # reference image used by suite2p.
+    logger.info(
+            f'Loading {suite2p_args["nimg_init"]} frames ' "for reference image creation."
+        )
+    if reference_image:
+        initial_frames = reference_image
+
+    else:
+        initial_frames = load_initial_frames(
+            file_path=suite2p_args["h5py"],
+            h5py_key=suite2p_args["h5py_key"],
+            n_frames=suite2p_args["nimg_init"],
+            trim_frames_start=args["trim_frames_start"],
+            trim_frames_end=args["trim_frames_end"],
+        )
+
+    if args["do_optimize_motion_params"]:
+        logger.info("Attempting to optimize registration parameters Using:")
+        logger.info(
+            "\tsmooth_sigma range: "
+            f'{args["smooth_sigma_min"]} - '
+            f'{args["smooth_sigma_max"]}, '
+            f'steps: {args["smooth_sigma_steps"]}'
+        )
+        logger.info(
+            "\tsmooth_sigma_time range: "
+            f'{args["smooth_sigma_time_min"]} - '
+            f'{args["smooth_sigma_time_max"]}, '
+            f'steps: {args["smooth_sigma_time_steps"]}'
+        )
+
+        # Create linear spaced arrays for the range of smooth
+        # parameters to try.
+        smooth_sigmas = np.linspace(
+            args["smooth_sigma_min"],
+            args["smooth_sigma_max"],
+            args["smooth_sigma_steps"],
+        )
+        smooth_sigma_times = np.linspace(
+            args["smooth_sigma_time_min"],
+            args["smooth_sigma_time_max"],
+            args["smooth_sigma_time_steps"],
+        )
+
+        optimize_result = optimize_motion_parameters(
+            initial_frames=initial_frames,
+            smooth_sigmas=smooth_sigmas,
+            smooth_sigma_times=smooth_sigma_times,
+            suite2p_args=suite2p_args,
+            trim_frames_start=args["trim_frames_start"],
+            trim_frames_end=args["trim_frames_end"],
+            n_batches=args["n_batches"],
+            logger=logger.info,
+        )
+        if args["use_ave_image_as_reference"]:
+            suite2p_args["refImg"] = optimize_result["ave_image"]
+        else:
+            suite2p_args["refImg"] = optimize_result["ref_image"]
+        suite2p_args["smooth_sigma"] = optimize_result["smooth_sigma"]
+        suite2p_args["smooth_sigma_time"] = optimize_result["smooth_sigma_time"]
+    else:
+        # Create the initial reference image and store it in the
+        # suite2p_args dictionary. 8 iterations is the current default
+        # in suite2p.
+        tic = -time()
+        logger.info("Creating custom reference image...")
+        suite2p_args["refImg"] = compute_reference(
+            input_frames=initial_frames,
+            niter=args["max_reference_iterations"],
+            maxregshift=suite2p_args["maxregshift"],
+            smooth_sigma=suite2p_args["smooth_sigma"],
+            smooth_sigma_time=suite2p_args["smooth_sigma_time"],
+        )
+        tic += time()
+        logger.info(f"took {tic}s")
+    return suite2p_args, args
 
 def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool = False):
     """Process single plane data for suite2p parameters
@@ -1447,12 +1525,12 @@ if __name__ == "__main__":  # pragma: nocover
     reference_image = None
     meta_jsons = list(data_dir.glob("*/*.json"))
     args["refImg"] = []
-    #reference_image_fp = ""
-    #reference_image_fp = next(Path("../data").rglob("reference_image.h5"), "")
-    #if reference_image_fp:
-        #with h5py.File(reference_image_fp, "r") as f:
-            #reference_image = f["data"][:500]
-            #args["refImg"] = reference_image
+    reference_image_fp = ""
+    reference_image_fp = next(Path("../data").rglob("reference_image.h5"), "")
+    if reference_image_fp:
+        with h5py.File(reference_image_fp, "r") as f:
+            reference_image = f["data"][:500]
+            args["refImg"] = reference_image
 
     # We construct the paths to the outputs
     args["movie_frame_rate_hz"] = frame_rate_hz
@@ -1567,79 +1645,17 @@ if __name__ == "__main__":  # pragma: nocover
         args["trim_frames_start"] = lowside
         args["trim_frames_end"] = highside
         logger.info(f"Found ({lowside}, {highside}) at the start/end of the movie.")
+    
     if suite2p_args["force_refImg"] and len(suite2p_args["refImg"]) == 0:
-        # Use our own version of compute_reference to create the initial
-        # reference image used by suite2p.
-        logger.info(
-            f'Loading {suite2p_args["nimg_init"]} frames ' "for reference image creation."
+        suite2p_args, args = update_suite2p_args_reference_image(
+            suite2p_args,
+            args,
         )
-        initial_frames = load_initial_frames(
-            file_path=suite2p_args["h5py"],
-            h5py_key=suite2p_args["h5py_key"],
-            n_frames=suite2p_args["nimg_init"],
-            trim_frames_start=args["trim_frames_start"],
-            trim_frames_end=args["trim_frames_end"],
+    if reference_image:
+        suite2p_args, args = update_suite2p_args_reference_image(
+            suite2p_args,
+            args,
         )
-
-        if args["do_optimize_motion_params"]:
-            logger.info("Attempting to optimize registration parameters Using:")
-            logger.info(
-                "\tsmooth_sigma range: "
-                f'{args["smooth_sigma_min"]} - '
-                f'{args["smooth_sigma_max"]}, '
-                f'steps: {args["smooth_sigma_steps"]}'
-            )
-            logger.info(
-                "\tsmooth_sigma_time range: "
-                f'{args["smooth_sigma_time_min"]} - '
-                f'{args["smooth_sigma_time_max"]}, '
-                f'steps: {args["smooth_sigma_time_steps"]}'
-            )
-
-            # Create linear spaced arrays for the range of smooth
-            # parameters to try.
-            smooth_sigmas = np.linspace(
-                args["smooth_sigma_min"],
-                args["smooth_sigma_max"],
-                args["smooth_sigma_steps"],
-            )
-            smooth_sigma_times = np.linspace(
-                args["smooth_sigma_time_min"],
-                args["smooth_sigma_time_max"],
-                args["smooth_sigma_time_steps"],
-            )
-
-            optimize_result = optimize_motion_parameters(
-                initial_frames=initial_frames,
-                smooth_sigmas=smooth_sigmas,
-                smooth_sigma_times=smooth_sigma_times,
-                suite2p_args=suite2p_args,
-                trim_frames_start=args["trim_frames_start"],
-                trim_frames_end=args["trim_frames_end"],
-                n_batches=args["n_batches"],
-                logger=logger.info,
-            )
-            if args["use_ave_image_as_reference"]:
-                suite2p_args["refImg"] = optimize_result["ave_image"]
-            else:
-                suite2p_args["refImg"] = optimize_result["ref_image"]
-            suite2p_args["smooth_sigma"] = optimize_result["smooth_sigma"]
-            suite2p_args["smooth_sigma_time"] = optimize_result["smooth_sigma_time"]
-        else:
-            # Create the initial reference image and store it in the
-            # suite2p_args dictionary. 8 iterations is the current default
-            # in suite2p.
-            tic = -time()
-            logger.info("Creating custom reference image...")
-            suite2p_args["refImg"] = compute_reference(
-                input_frames=initial_frames,
-                niter=args["max_reference_iterations"],
-                maxregshift=suite2p_args["maxregshift"],
-                smooth_sigma=suite2p_args["smooth_sigma"],
-                smooth_sigma_time=suite2p_args["smooth_sigma_time"],
-            )
-            tic += time()
-            logger.info(f"took {tic}s")
 
     # register with Suite2P
     logger.info(f"attempting to motion correct {suite2p_args['h5py']}")
