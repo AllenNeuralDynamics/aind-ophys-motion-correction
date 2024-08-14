@@ -92,15 +92,13 @@ def load_initial_frames(
         # Load all frames as fancy indexing is slower than loading the full
         # data.
         del_trim_frames = trim_frames_start + trim_frames_end
-        if del_trim_frames >= n_frames:
-            frame_window = hdf5_file[h5py_key][trim_frames_start:trim_frames_end]
-            tot_frames = frame_window.shape[0]
-            requested_frames = np.linspace(0, tot_frames, min(n_frames,tot_frames), dtype=int)
-            frames = frame_window[requested_frames]
-            logging.info("Frame window %s", frame_window.shape)
+        tot_frames = hdf5_file[h5py_key].shape[0]
+        if (tot_frames - del_trim_frames) >= n_frames:
+            requested_frames = np.linspace(trim_frames_start, tot_frames - trim_frames_end, n_frames, dtype=int)
+            frames = hdf5_file[h5py_key][requested_frames]
             logging.info("Shape of frames %s", frames.shape)
         else:
-            frames = hdf5_file[h5py_key][trim_frames_start:trim_frames_end]
+            frames = hdf5_file[h5py_key][trim_frames_start:-trim_frames_end]
             logging.warning("Requested number of frames is greater than the number of frames in the movie. Returning all valid frames.")
     return frames
 
