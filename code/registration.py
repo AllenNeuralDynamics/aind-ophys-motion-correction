@@ -91,7 +91,6 @@ def load_initial_frames(
     with h5py.File(file_path, "r") as hdf5_file:
         # Load all frames as fancy indexing is slower than loading the full
         # data.
-        import pdb;pdb.set_trace()
         max_frame = hdf5_file[h5py_key].shape[0] - trim_frames_end
         frame_window = hdf5_file[h5py_key][trim_frames_start:max_frame]
         # Total number of frames in the movie.
@@ -1331,7 +1330,7 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool =
         stem = h5_file.stem
         debug_file = h5_file.parent / f"{stem}_debug.h5"
         with h5py.File(h5_file, "r") as f:
-            data = f["data"][:3000]
+            data = f["data"][:30000]
         with h5py.File(debug_file, "a") as f:
             f.create_dataset("data", data=data)
         h5_file = debug_file
