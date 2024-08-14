@@ -1250,10 +1250,12 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool =
             h5_file = f
     if debug: 
         stem = h5_file.stem
-        h5_file = h5_file.parent / f"{stem}_debug.h5"
-        with h5py.File(h5_file, "w") as f:
+        debug_file = h5_file.parent / f"{stem}_debug.h5"
+        with h5py.File(h5_file, "r") as f:
             data = f["data"][:3000]
+        with h5py.File(debug_file, "a") as f:
             f.create_dataset("data", data=data)
+        h5_file = debug_file
 
     experiment_id = "626974_2022-07-01_10-00-31"
     output_dir = make_output_directory(output_dir, experiment_id)
@@ -1445,11 +1447,11 @@ if __name__ == "__main__":  # pragma: nocover
     meta_jsons = list(data_dir.glob("*/*.json"))
     args["refImg"] = []
     reference_image_fp = ""
-    reference_image_fp = next(Path("../data").rglob("reference_image.h5"), "")
-    if reference_image_fp:
-        with h5py.File(reference_image_fp, "r") as f:
-            reference_image = f["data"][:500]
-            args["refImg"] = reference_image
+    #reference_image_fp = next(Path("../data").rglob("reference_image.h5"), "")
+    #if reference_image_fp:
+        #with h5py.File(reference_image_fp, "r") as f:
+            #reference_image = f["data"][:500]
+            #args["refImg"] = reference_image
 
     # We construct the paths to the outputs
     args["movie_frame_rate_hz"] = frame_rate_hz
