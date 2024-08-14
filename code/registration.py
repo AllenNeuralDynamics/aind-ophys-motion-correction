@@ -1221,14 +1221,20 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
     shutil.copy(h5_file, output_dir)
     return h5_file, output_dir, frame_rate_hz
 
-def update_suite2p_args_reference_image(suite2p_args: dict, args: dict, reference_image=None):
+def update_suite2p_args_reference_image(suite2p_args: dict, args: dict, reference_image_fp=None):
     # Use our own version of compute_reference to create the initial
     # reference image used by suite2p.
     logger.info(
             f'Loading {suite2p_args["nimg_init"]} frames ' "for reference image creation."
         )
     if reference_image:
-        initial_frames = reference_image
+        initial_frames = load_initial_frames(
+            file_path=reference_image_fp,
+            h5py_key=suite2p_args["h5py_key"],
+            n_frames=suite2p_args["nimg_init"],
+            trim_frames_start=args["trim_frames_start"],
+            trim_frames_end=args["trim_frames_end"],
+        )
 
     else:
         initial_frames = load_initial_frames(
@@ -1528,7 +1534,7 @@ if __name__ == "__main__":  # pragma: nocover
     reference_image_fp = ""
     reference_image_fp = next(Path("../data").rglob("reference_image.h5"), "")
     if reference_image_fp:
-        args["refImg"] = reference_image_fp
+        args["refImg"] = [reference_image_fp]
 
     # We construct the paths to the outputs
     args["movie_frame_rate_hz"] = frame_rate_hz
@@ -1653,7 +1659,7 @@ if __name__ == "__main__":  # pragma: nocover
         suite2p_args, args = update_suite2p_args_reference_image(
             suite2p_args,
             args,
-            reference_image=reference_image_fp
+            reference_image_fp=reference_image_fp
         )
 
     # register with Suite2P
