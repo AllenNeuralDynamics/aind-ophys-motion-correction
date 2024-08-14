@@ -91,15 +91,14 @@ def load_initial_frames(
     with h5py.File(file_path, "r") as hdf5_file:
         # Load all frames as fancy indexing is slower than loading the full
         # data.
-        del_trim_frames = trim_frames_start + trim_frames_end
-        tot_frames = hdf5_file[h5py_key].shape[0]
-        if (tot_frames - del_trim_frames) >= n_frames:
-            requested_frames = np.linspace(trim_frames_start, tot_frames - trim_frames_end, n_frames, dtype=int)
-            frames = hdf5_file[h5py_key][requested_frames]
-            logging.info("Shape of frames %s", frames.shape)
-        else:
-            frames = hdf5_file[h5py_key][trim_frames_start:-trim_frames_end]
-            logging.warning("Requested number of frames is greater than the number of frames in the movie. Returning all valid frames.")
+        max_frame = hdf5_file[h5py_key].shape[0] - trim_frames_end
+        frame_window = hdf5_file[h5py_key][trim_frames_start:max_frame]
+        # Total number of frames in the movie.
+        tot_frames = frame_window.shape[0]
+        requested_frames = np.linspace(
+            0, tot_frames, 1 + min(n_frames, tot_frames), dtype=int
+            )[:-1]
+        frames = frame_window[requested_frames]
     return frames
 
 
@@ -148,7 +147,6 @@ def compute_reference(
     # Get the dtype of the input frames to properly cast the final reference
     # image as the same type.
     frames_dtype = input_frames.dtype
-
     # Get initial reference image from suite2p.
     frames = remove_extrema_frames(input_frames)
     ref_image = pick_initial_reference(frames)
@@ -1335,7 +1333,7 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool =
             h5_file = f
     if debug: 
         stem = h5_file.stem
-        debug_file = h5_file.parent / f"{stem}_debug.h5"
+        debug_file = Path("../scratch") / f"{stem}_debug.h5"
         with h5py.File(h5_file, "r") as f:
             data = f["data"][:30000]
         with h5py.File(debug_file, "a") as f:
