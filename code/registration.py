@@ -1310,13 +1310,15 @@ def update_suite2p_args_reference_image(
     return suite2p_args, args
 
 
-def generate_bergamo_movies(fp: Path) -> Path:
+def generate_bergamo_movies(fp: Path, output_dir: Path) -> Path:
     """Generate virtual movies for Bergamo data
 
     Parameters
     ----------
     fp: Path
         path to h5 file
+    output_dir: Path
+        output directory
 
     Returns
     -------
@@ -1325,7 +1327,6 @@ def generate_bergamo_movies(fp: Path) -> Path:
     """
     with h5py.File(fp, "r") as f:
         data = f["data"][:]
-        shape = data.shape
         dims = data.shape[1:]
         dtype = data.dtype
         # take the first bci epoch to save out reference image TODO
@@ -1338,9 +1339,9 @@ def generate_bergamo_movies(fp: Path) -> Path:
                 "data", data=data[bci_epoch_loc[0] : bci_epoch_loc[1], :, :], dtype=dtype
             )
             # Create a new file to store the virtual dataset
-        with h5py.File("virtual_file.h5", "w") as vf:
-            epoch_location = json.loads(f["epoch_location"][:][0])
-            T = 0
+        epoch_location = json.loads(f["epoch_location"][:][0])
+        T = 0
+        try:
             del epoch_location["2p photostimulation"]
             for _, location in epoch_location.items():
                 T += location[1] - location[0] + 1
@@ -1352,11 +1353,16 @@ def generate_bergamo_movies(fp: Path) -> Path:
                 size = location[1] - location[0] + 1
                 layout[count : count + size - 1] = vsource[location[0] : location[1]]
                 count += size
-        with (Path("../scratch") / "virtual_file.h5").open("w") as f:
-            # Create the virtual dataset
-            vf.create_virtual_dataset("data", layout, dtype=dtype)
+            with (output_dir / "virtual_file.h5").open("w") as vf:
+                # Create the virtual dataset
+                vf.create_virtual_dataset("data", layout, dtype=dtype)
+            h5_file = output_dir / "virtual_file.h5"
+        except KeyError:
+            logging.info("No 2p photostimulation epoch")
+            h5_file = fp
+        
 
-    return Path("../scratch/reference_image.h5")
+    return Path("../scratch/reference_image.h5"), h5_file
 
 
 def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool = False):
@@ -1376,23 +1382,26 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool =
         path to h5 file
     output_dir: Path
         output directory
+    reference_image_fp: Path
+        path to reference image
     """
 
     if not h5_file.is_file():
         h5_file = [f for f in h5_file.glob("*/*.h5")][0]
     print(f"Running h5 file: {h5_file}")
-    reference_image_fp = generate_bergamo_movies(h5_file)
+    experiment_id = "626974_2022-07-01_10-00-31"
+    output_dir = make_output_directory(output_dir, experiment_id)
+    reference_image_fp, h5_file = generate_bergamo_movies(h5_file, output_dir)
     if debug:
         stem = h5_file.stem
         debug_file = Path("../scratch") / f"{stem}_debug.h5"
         with h5py.File(h5_file, "r") as f:
-            data = f["data"][:30000]
+            data = f["data"][:5000]
         with h5py.File(debug_file, "a") as f:
             f.create_dataset("data", data=data)
         h5_file = debug_file
 
-    experiment_id = "626974_2022-07-01_10-00-31"
-    output_dir = make_output_directory(output_dir, experiment_id)
+    
     return h5_file, output_dir, reference_image_fp
 
 
