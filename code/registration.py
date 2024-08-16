@@ -97,7 +97,7 @@ def load_initial_frames(
         tot_frames = frame_window.shape[0]
         requested_frames = np.linspace(
             0, tot_frames, 1 + min(n_frames, tot_frames), dtype=int
-            )[:-1]
+        )[:-1]
         frames = frame_window[requested_frames]
     return frames
 
@@ -650,7 +650,6 @@ def find_movie_start_end_empty_frames(
     """
     # Find the midpoint of the movie.
     with h5py.File(h5py_name, "r") as f:
-
         n_frames = f[h5py_key].shape[0]
         midpoint = n_frames // 2
         # We discover empty or extrema frames by comparing the mean of each frames
@@ -660,7 +659,8 @@ def find_movie_start_end_empty_frames(
         else:
             means = np.concatenate(
                 Pool(n_jobs).starmap(
-                    _mean_of_batch, product(range(0, n_frames, 1000), [h5py_name], [h5py_key])
+                    _mean_of_batch,
+                    product(range(0, n_frames, 1000), [h5py_name], [h5py_key]),
                 )
             )
         mean_of_frames = means.mean()
@@ -1178,15 +1178,17 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
         experiment_id = h5_file.name.split(".")[0]
     else:
         try:
-            experiment_id = [i for i in datainput.glob("*") if "ophys_experiment" in str(i)][
-            0
-            ].name.split("_")[-1]
-            h5_file = [i for i in datainput.glob("*/*") if f"{experiment_id}.h5" in str(i)][0]
+            experiment_id = [
+                i for i in datainput.glob("*") if "ophys_experiment" in str(i)
+            ][0].name.split("_")[-1]
+            h5_file = [
+                i for i in datainput.glob("*/*") if f"{experiment_id}.h5" in str(i)
+            ][0]
         except IndexError:
-            experiment_id = [i for i in datainput.glob("*/*") if i.is_dir()][
-            0
-            ].name
-            h5_file = [i for i in datainput.glob("*/*") if f"{experiment_id}.h5" in str(i)][0]
+            experiment_id = [i for i in datainput.glob("*/*") if i.is_dir()][0].name
+            h5_file = [
+                i for i in datainput.glob("*/*") if f"{experiment_id}.h5" in str(i)
+            ][0]
     session_dir = h5_file.parent.parent
     platform_json = next(session_dir.glob("*platform.json"))
     # this file is required for paired plane registration but not for single plane
@@ -1219,12 +1221,15 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
     shutil.copy(h5_file, output_dir)
     return h5_file, output_dir, frame_rate_hz
 
-def update_suite2p_args_reference_image(suite2p_args: dict, args: dict, reference_image_fp=None):
+
+def update_suite2p_args_reference_image(
+    suite2p_args: dict, args: dict, reference_image_fp=None
+):
     # Use our own version of compute_reference to create the initial
     # reference image used by suite2p.
     logger.info(
-            f'Loading {suite2p_args["nimg_init"]} frames ' "for reference image creation."
-        )
+        f'Loading {suite2p_args["nimg_init"]} frames ' "for reference image creation."
+    )
     if reference_image:
         initial_frames = load_initial_frames(
             file_path=reference_image_fp,
@@ -1304,18 +1309,55 @@ def update_suite2p_args_reference_image(suite2p_args: dict, args: dict, referenc
         logger.info(f"took {tic}s")
     return suite2p_args, args
 
-def _get_bergamo_reference_image(fp: Path) -> Path:
 
+def generate_bergamo_movies(fp: Path) -> Path:
+    """Generate virtual movies for Bergamo data
+
+    Parameters
+    ----------
+    fp: Path
+        path to h5 file
+
+    Returns
+    -------
+    Path
+        path to reference image
+    """
     with h5py.File(fp, "r") as f:
         data = f["data"][:]
+        shape = data.shape
         dims = data.shape[1:]
         dtype = data.dtype
         # take the first bci epoch to save out reference image TODO
-        bci_epoch = json.loads(f["epoch_mapping"][:][0])["single neuron BCI conditioning"][0]
+        bci_epoch = json.loads(f["epoch_mapping"][:][0])[
+            "single neuron BCI conditioning"
+        ][0]
         bci_epoch_loc = json.loads(f["tiff_stem_location"][:][0])[bci_epoch]
         with h5py.File("../scratch/reference_image.h5", "w") as f:
-            f.create_dataset("data", data=data[bci_epoch_loc[0]: bci_epoch_loc[1],:, :], dtype=dtype)
+            f.create_dataset(
+                "data", data=data[bci_epoch_loc[0] : bci_epoch_loc[1], :, :], dtype=dtype
+            )
+            # Create a new file to store the virtual dataset
+        with h5py.File("virtual_file.h5", "w") as vf:
+            epoch_location = json.loads(f["epoch_location"][:][0])
+            T = 0
+            del epoch_location["2p photostimulation"]
+            for _, location in epoch_location.items():
+                T += location[1] - location[0] + 1
+            # Create a virtual layout
+            layout = h5py.VirtualLayout(shape=(T,) + dims, dtype=data.dtype)
+            count = 0
+            for _, location in epoch_location.items():
+                vsource = h5py.VirtualSource(data)
+                size = location[1] - location[0] + 1
+                layout[count : count + size - 1] = vsource[location[0] : location[1]]
+                count += size
+        with (Path("../scratch") / "virtual_file.h5").open("w") as f:
+            # Create the virtual dataset
+            vf.create_virtual_dataset("data", layout, dtype=dtype)
+
     return Path("../scratch/reference_image.h5")
+
 
 def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool = False):
     """Process single plane data for suite2p parameters
@@ -1335,12 +1377,12 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool =
     output_dir: Path
         output directory
     """
-    
+
     if not h5_file.is_file():
         h5_file = [f for f in h5_file.glob("*/*.h5")][0]
     print(f"Running h5 file: {h5_file}")
-    reference_image_fp = _get_bergamo_reference_image(h5_file)
-    if debug: 
+    reference_image_fp = generate_bergamo_movies(h5_file)
+    if debug:
         stem = h5_file.stem
         debug_file = Path("../scratch") / f"{stem}_debug.h5"
         with h5py.File(h5_file, "r") as f:
@@ -1520,8 +1562,8 @@ if __name__ == "__main__":  # pragma: nocover
         session = json.load(j)
     with open(description_fp, "r") as j:
         data_description = json.load(j)
-    for i in session['data_streams']:
-        frame_rate_hz = [j['frame_rate'] for j in i['ophys_fovs']]
+    for i in session["data_streams"]:
+        frame_rate_hz = [j["frame_rate"] for j in i["ophys_fovs"]]
         if frame_rate_hz:
             break
 
@@ -1537,7 +1579,7 @@ if __name__ == "__main__":  # pragma: nocover
         h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
             datainput, output_dir, debug=args.debug
         )
-    
+
     # We convert to dictionary
     args = vars(args)
     h5_file = str(h5_file)
@@ -1593,8 +1635,8 @@ if __name__ == "__main__":  # pragma: nocover
 
     # This is part of a complex scheme to pass an image that is a bit too
     # complicated. Will remove when tested.
-    #if not args.get("refImg", ""):
-    #args["refImg"] = []
+    # if not args.get("refImg", ""):
+    # args["refImg"] = []
 
     # Set suite2p args.
     suite2p_args = suite2p.default_ops()
@@ -1660,7 +1702,7 @@ if __name__ == "__main__":  # pragma: nocover
         args["trim_frames_start"] = lowside
         args["trim_frames_end"] = highside
         logger.info(f"Found ({lowside}, {highside}) at the start/end of the movie.")
-    
+
     if suite2p_args["force_refImg"] and len(suite2p_args["refImg"]) == 0:
         suite2p_args, args = update_suite2p_args_reference_image(
             suite2p_args,
@@ -1668,9 +1710,7 @@ if __name__ == "__main__":  # pragma: nocover
         )
     if reference_image_fp:
         suite2p_args, args = update_suite2p_args_reference_image(
-            suite2p_args,
-            args,
-            reference_image_fp=reference_image_fp
+            suite2p_args, args, reference_image_fp=reference_image_fp
         )
 
     # register with Suite2P
