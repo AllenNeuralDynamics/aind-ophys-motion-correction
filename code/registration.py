@@ -1328,14 +1328,15 @@ def generate_bergamo_movies(fp: Path, output_dir: Path) -> Path:
     with h5py.File(fp, "r") as f:
         data = f["data"][:]
         dims = data.shape[1:]
+        shape = data.shape
         dtype = data.dtype
         # take the first bci epoch to save out reference image TODO
         bci_epoch = json.loads(f["epoch_mapping"][:][0])[
             "single neuron BCI conditioning"
         ][0]
         bci_epoch_loc = json.loads(f["tiff_stem_location"][:][0])[bci_epoch]
-        with h5py.File("../scratch/reference_image.h5", "w") as f:
-            f.create_dataset(
+        with h5py.File("../scratch/reference_image.h5", "w") as ref:
+            ref.create_dataset(
                 "data", data=data[bci_epoch_loc[0] : bci_epoch_loc[1], :, :], dtype=dtype
             )
             # Create a new file to store the virtual dataset
@@ -1349,7 +1350,7 @@ def generate_bergamo_movies(fp: Path, output_dir: Path) -> Path:
             layout = h5py.VirtualLayout(shape=(T,) + dims, dtype=data.dtype)
             count = 0
             for _, location in epoch_location.items():
-                vsource = h5py.VirtualSource(data)
+                vsource = h5py.VirtualSource(data, "data", shape=shape, dtype=dtype)
                 size = location[1] - location[0] + 1
                 layout[count : count + size - 1] = vsource[location[0] : location[1]]
                 count += size
