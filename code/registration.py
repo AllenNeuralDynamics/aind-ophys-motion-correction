@@ -1344,7 +1344,7 @@ def generate_bergamo_movies(fp: Path) -> Path:
         #         T += location[1] - location[0] + 1
         #     # Create a virtual layout
         #     layout = h5py.VirtualLayout(shape=(T,) + dims, dtype=data.dtype)
-        #     count = 0
+        #    f count = 0
         #     for _, location in epoch_location.items():
         #         vsource = h5py.VirtualSource(data, "data", shape=shape, dtype=dtype)
         #         size = location[1] - location[0] + 1
@@ -1388,7 +1388,7 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool =
     print(f"Running h5 file: {h5_file}")
     experiment_id = "626974_2022-07-01_10-00-31"
     output_dir = make_output_directory(output_dir, experiment_id)
-    reference_image_fp = generate_bergamo_movies(h5_file, output_dir)
+    reference_image_fp = generate_bergamo_movies(h5_file)
     if debug:
         stem = h5_file.stem
         debug_file = Path("../scratch") / f"{stem}_debug.h5"
