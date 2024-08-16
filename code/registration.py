@@ -1183,7 +1183,7 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
             ].name.split("_")[-1]
             h5_file = [i for i in datainput.glob("*/*") if f"{experiment_id}.h5" in str(i)][0]
         except IndexError:
-            experiment_id = [i for i in datainput.glob("*") if i.is_dir()][
+            experiment_id = [i for i in datainput.glob("*/*") if i.is_dir()][
             0
             ].name
             h5_file = [i for i in datainput.glob("*/*") if f"{experiment_id}.h5" in str(i)][0]
@@ -1304,6 +1304,19 @@ def update_suite2p_args_reference_image(suite2p_args: dict, args: dict, referenc
         logger.info(f"took {tic}s")
     return suite2p_args, args
 
+def _get_bergamo_reference_image(fp: Path) -> Path:
+
+    with h5py.File(fp, "r") as f:
+        data = f["data"][:]
+        dims = data.shape[1:]
+        dtype = data.dtype
+        # take the first bci epoch to save out reference image TODO
+        bci_epoch = json.loads(f["epoch_mapping"][:][0])["single neuron BCI conditioning"][0]
+        bci_epoch_loc = json.loads(f["tiff_stem_location"][:][0])[bci_epoch]
+        with h5py.File("../scratch/reference_image.h5", "w") as f:
+            f.create_dataset("data", data=data[bci_epoch_loc[0]: bci_epoch_loc[1],:, :], dtype=dtype)
+    return Path("../scratch/reference_image.h5")
+
 def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool = False):
     """Process single plane data for suite2p parameters
 
@@ -1324,13 +1337,9 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool =
     """
     
     if not h5_file.is_file():
-        h5_list = [f for f in h5_file.glob("*/*.h5")]
-    for f in h5_list:
-        if "VDS" in str(f):
-            h5_file = f
-            break
-        if "VDS" not in str(f) and "reference" not in str(f):
-            h5_file = f
+        h5_file = [f for f in h5_file.glob("*/*.h5")][0]
+    print(f"Running h5 file: {h5_file}")
+    reference_image_fp = _get_bergamo_reference_image(h5_file)
     if debug: 
         stem = h5_file.stem
         debug_file = Path("../scratch") / f"{stem}_debug.h5"
@@ -1342,7 +1351,7 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool =
 
     experiment_id = "626974_2022-07-01_10-00-31"
     output_dir = make_output_directory(output_dir, experiment_id)
-    return h5_file, output_dir
+    return h5_file, output_dir, reference_image_fp
 
 
 if __name__ == "__main__":  # pragma: nocover
@@ -1365,7 +1374,7 @@ if __name__ == "__main__":  # pragma: nocover
     )
 
     parser.add_argument(
-        "-d", "--debug", action="store_true", help="Run with only first 500 frames"
+        "-d", "--debug", action="store_true", help="Run with only partial dset"
     )
 
     parser.add_argument(
@@ -1513,9 +1522,15 @@ if __name__ == "__main__":  # pragma: nocover
         data_description = json.load(j)
     for i in session['data_streams']:
         frame_rate_hz = [j['frame_rate'] for j in i['ophys_fovs']]
+        if frame_rate_hz:
+            break
+
     frame_rate_hz = frame_rate_hz[0]
+    if isinstance(frame_rate_hz, str):
+        frame_rate_hz = float(frame_rate_hz)
+    reference_image_fp = ""
     if "Bergamo" in session["rig_id"]:
-        h5_file, output_dir = singleplane_motion_correction(
+        h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
             data_dir, output_dir, debug=args.debug
         )
     else:
@@ -1529,8 +1544,6 @@ if __name__ == "__main__":  # pragma: nocover
     reference_image = None
     meta_jsons = list(data_dir.glob("*/*.json"))
     args["refImg"] = []
-    reference_image_fp = ""
-    reference_image_fp = next(Path("../data").rglob("reference_image.h5"), "")
     if reference_image_fp:
         args["refImg"] = [reference_image_fp]
 
