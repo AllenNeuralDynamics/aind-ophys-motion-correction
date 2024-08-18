@@ -1327,9 +1327,6 @@ def generate_bergamo_movies(fp: Path) -> Path:
         data = f["data"][:]
         dtype = data.dtype
         # take the first bci epoch to save out reference image TODO
-        bci_epoch = json.loads(f["epoch_mapping"][:][0])[
-            "single neuron BCI conditioning"
-        ][0]
         bci_epoch_loc = json.loads(f["tiff_stem_location"][:][0])[bci_epoch]
         with h5py.File("../scratch/reference_image.h5", "w") as ref:
             ref.create_dataset(
