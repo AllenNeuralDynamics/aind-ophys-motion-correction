@@ -1364,7 +1364,6 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool =
 
     experiment_id = h5_file.stem.split(".")[0]
     print(f"Running h5 file: {h5_file}")
-    experiment_id = "626974_2022-07-01_10-00-31"
     output_dir = make_output_directory(output_dir, experiment_id)
     reference_image_fp = generate_bergamo_movies(h5_file)
     if debug:
