@@ -1333,7 +1333,7 @@ def generate_bergamo_movies(fp: Path, session) -> Path:
         bci_epoch_loc = [i["output_parameters"]["tiff_stem"] for i in bci_epochs][0]
         with h5py.File("../scratch/reference_image.h5", "w") as ref:
             ref.create_dataset(
-                "data", data=data[bci_epoch_loc[0] : bci_epoch_loc[1], :, :], dtype=dtype
+                "data", data=data[tiff_stems[0] : tiff_stems[1], :, :], dtype=dtype
             )
     return Path("../scratch/reference_image.h5")
 
