@@ -1154,7 +1154,7 @@ def get_frame_rate_from_sync(sync_file, platform_data) -> float:
     return frame_rate_hz
 
 
-def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool = False):
+def multiplane_motion_correction(datainput: Path, output_dir: Path, unique_id: str, debug: bool = False):
     """Process multiplane data for suite2p parameters
 
     Parameters
@@ -1163,7 +1163,8 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
         path to h5 file
     output_dir: Path
         output directory
-
+    unique_id: str
+        experiment id from data_description
     Returns
     -------
     h5_file: Path
@@ -1175,19 +1176,15 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
     """
     if datainput.is_file():
         h5_file = datainput
-        experiment_id = h5_file.name.split(".")[0]
     else:
         try:
-            experiment_id = [
-                i for i in datainput.glob("*") if "ophys_experiment" in str(i)
-            ][0].name.split("_")[-1]
             h5_file = [
-                i for i in datainput.glob("*/*") if f"{experiment_id}.h5" in str(i)
+                i for i in datainput.glob("*/*") if f"{unique_id}.h5" in str(i)
             ][0]
         except IndexError:
-            experiment_id = [i for i in datainput.glob("*/*") if i.is_dir()][0].name
+            unique_id = [i for i in datainput.glob("*/*") if i.is_dir()][0].name
             h5_file = [
-                i for i in datainput.glob("*/*") if f"{experiment_id}.h5" in str(i)
+                i for i in datainput.glob("*/*") if f"{unique_id}.h5" in str(i)
             ][0]
     session_dir = h5_file.parent.parent
     platform_json = next(session_dir.glob("*platform.json"))
@@ -1196,7 +1193,7 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
     # instead of needing to copy it from here
     with open(platform_json, "r") as j:
         platform_data = json.load(j)
-    output_dir = make_output_directory(output_dir, experiment_id)
+    output_dir = make_output_directory(output_dir, unique_id)
     # try to get the framerate from the platform file else use sync file
     try:
         frame_rate_hz = platform_data["imaging_plane_groups"][0][
@@ -1214,7 +1211,7 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
         frames_6min = int(360 * float(frame_rate_hz))
         trimmed_data = raw_data["data"][:frames_6min]
         raw_data.close()
-        trimmed_fn = Path("../scratch") / f"{experiment_id}.h5"
+        trimmed_fn = Path("../scratch") / f"{unique_id}.h5"
         with h5py.File(trimmed_fn, "w") as f:
             f.create_dataset("data", data=trimmed_data)
         h5_file = trimmed_fn
@@ -1338,7 +1335,7 @@ def generate_bergamo_movies(fp: Path, session) -> Path:
     return Path("../scratch/reference_image.h5")
 
 
-def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, debug: bool = False):
+def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, unique_id: str, debug: bool = False):
     """Process single plane data for suite2p parameters
 
     Parameters
@@ -1347,6 +1344,8 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, debu
         path to h5 file
     output_dir: Path
         output directory
+    unique_id: str
+        experiment id from data description
     session: dict
         session metadata
     debug: bool
@@ -1362,11 +1361,9 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, debu
     """
 
     if not h5_file.is_file():
-        h5_file = [f for f in h5_file.glob("*/*.h5")][0]
-
-    experiment_id = h5_file.stem.split(".")[0]
+       h5_file = [f for f in h5_file.rglob("{unique_id}.h5")][0]
     print(f"Running h5 file: {h5_file}")
-    output_dir = make_output_directory(output_dir, experiment_id)
+    output_dir = make_output_directory(output_dir, unique_id)
     reference_image_fp = generate_bergamo_movies(h5_file, session)
     if debug:
         stem = h5_file.stem
@@ -1550,6 +1547,7 @@ if __name__ == "__main__":  # pragma: nocover
         session = json.load(j)
     with open(description_fp, "r") as j:
         data_description = json.load(j)
+    unique_id = "_".join(str(unique_id["name"]).split("_")[-3:])
     for i in session["data_streams"]:
         frame_rate_hz = [j["frame_rate"] for j in i["ophys_fovs"]]
         if frame_rate_hz:
@@ -1561,11 +1559,11 @@ if __name__ == "__main__":  # pragma: nocover
     reference_image_fp = ""
     if "Bergamo" in session["rig_id"]:
         h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
-            data_dir, output_dir, session, debug=args.debug
+            data_dir, output_dir, session, unique_id debug=args.debug
         )
     else:
         h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
-            datainput, output_dir, debug=args.debug
+            datainput, output_dir, unique_id, debug=args.debug
         )
 
     # We convert to dictionary
