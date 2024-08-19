@@ -1376,7 +1376,9 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, debu
         with h5py.File(debug_file, "a") as f:
             f.create_dataset("data", data=data)
         h5_file = debug_file
-
+    with h5.File(h5_file, "r") as f:
+        tiff_stems = f["tiff_stem_location"][:][0]
+    json.dumps(tiff_stems, output_dir / "tiff_stem_locations.json")
     
     return h5_file, output_dir, reference_image_fp
 
