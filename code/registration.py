@@ -1547,7 +1547,7 @@ if __name__ == "__main__":  # pragma: nocover
         session = json.load(j)
     with open(description_fp, "r") as j:
         data_description = json.load(j)
-    unique_id = "_".join(str(unique_id["name"]).split("_")[-3:])
+    unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
     for i in session["data_streams"]:
         frame_rate_hz = [j["frame_rate"] for j in i["ophys_fovs"]]
         if frame_rate_hz:
