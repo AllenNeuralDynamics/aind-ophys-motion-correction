@@ -1359,9 +1359,9 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, uniq
     reference_image_fp: Path
         path to reference image
     """
-
     if not h5_file.is_file():
-       h5_file = [f for f in h5_file.rglob("{unique_id}.h5")][0]
+       h5_file = [f for f in h5_file.rglob("*.h5") if unique_id in str(f)][0]
+    
     print(f"Running h5 file: {h5_file}")
     output_dir = make_output_directory(output_dir, unique_id)
     reference_image_fp = generate_bergamo_movies(h5_file, session)
