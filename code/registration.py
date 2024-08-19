@@ -1335,29 +1335,6 @@ def generate_bergamo_movies(fp: Path) -> Path:
             ref.create_dataset(
                 "data", data=data[bci_epoch_loc[0] : bci_epoch_loc[1], :, :], dtype=dtype
             )
-            # Create a new file to store the virtual dataset
-        # epoch_location = json.loads(f["epoch_location"][:][0])
-        # T = 0
-        # try:
-        #     del epoch_location["2p photostimulation"]
-        #     for _, location in epoch_location.items():
-        #         T += location[1] - location[0] + 1
-        #     # Create a virtual layout
-        #     layout = h5py.VirtualLayout(shape=(T,) + dims, dtype=data.dtype)
-        #     count = 0
-        #     for _, location in epoch_location.items():
-        #         vsource = h5py.VirtualSource(data, "data", shape=shape, dtype=dtype)
-        #         size = location[1] - location[0] + 1
-        #         layout[count : count + size - 1] = vsource[location[0] : location[1]]
-        #         count += size
-        #     with (output_dir / "virtual_file.h5").open("w") as vf:
-        #         # Create the virtual dataset
-        #         vf.create_virtual_dataset("data", layout, dtype=dtype)
-        #     h5_file = output_dir / "virtual_file.h5"
-        # except KeyError:
-        #     logging.info("No 2p photostimulation epoch")
-        #     h5_file = fp
-        
 
     return Path("../scratch/reference_image.h5")
 
