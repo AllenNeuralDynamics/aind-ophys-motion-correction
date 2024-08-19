@@ -1310,14 +1310,15 @@ def update_suite2p_args_reference_image(
     return suite2p_args, args
 
 
-def generate_bergamo_movies(fp: Path) -> Path:
+def generate_bergamo_movies(fp: Path, session) -> Path:
     """Generate virtual movies for Bergamo data
 
     Parameters
     ----------
     fp: Path
         path to h5 file
-
+    session: dict   
+        session metadata
     Returns
     -------
     Path
@@ -1327,19 +1328,17 @@ def generate_bergamo_movies(fp: Path) -> Path:
         data = f["data"][:]
         dtype = data.dtype
         # take the first bci epoch to save out reference image TODO
-        bci_epoch = json.loads(f["epoch_mapping"][:][0])[
-            "single neuron BCI conditioning"
-        ][0]
-        bci_epoch_loc = json.loads(f["tiff_stem_location"][:][0])[bci_epoch]
+        tiff_stems = json.loads(f["tiff_stem_location"][:][0])
+        bci_epochs = [i for i in session["stimulus_epochs"] if i["stimulus_name"] == "single neuron BCI conditioning"]
+        bci_epoch_loc = [i["output_parameters"]["tiff_stem"] for i in bci_epochs][0]
         with h5py.File("../scratch/reference_image.h5", "w") as ref:
             ref.create_dataset(
-                "data", data=data[bci_epoch_loc[0] : bci_epoch_loc[1], :, :], dtype=dtype
+                "data", data=data[tiff_stems[bci_epoch_loc][0] : tiff_stems[bci_epoch_loc][1], :, :], dtype=dtype
             )
-
     return Path("../scratch/reference_image.h5")
 
 
-def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool = False):
+def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, debug: bool = False):
     """Process single plane data for suite2p parameters
 
     Parameters
@@ -1348,6 +1347,8 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool =
         path to h5 file
     output_dir: Path
         output directory
+    session: dict
+        session metadata
     debug: bool
 
     Returns
@@ -1362,10 +1363,11 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool =
 
     if not h5_file.is_file():
         h5_file = [f for f in h5_file.glob("*/*.h5")][0]
+
+    experiment_id = h5_file.stem.split(".")[0]
     print(f"Running h5 file: {h5_file}")
-    experiment_id = "626974_2022-07-01_10-00-31"
     output_dir = make_output_directory(output_dir, experiment_id)
-    reference_image_fp = generate_bergamo_movies(h5_file, output_dir)
+    reference_image_fp = generate_bergamo_movies(h5_file, session)
     if debug:
         stem = h5_file.stem
         debug_file = Path("../scratch") / f"{stem}_debug.h5"
@@ -1374,7 +1376,10 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, debug: bool =
         with h5py.File(debug_file, "a") as f:
             f.create_dataset("data", data=data)
         h5_file = debug_file
-
+    with h5py.File(h5_file, "r") as f:
+        tiff_stems = json.loads(f["tiff_stem_location"][:][0])
+    with open(output_dir / "tiff_stem_locations.json", "w") as j:
+        json.dump(tiff_stems, j)
     
     return h5_file, output_dir, reference_image_fp
 
@@ -1556,7 +1561,7 @@ if __name__ == "__main__":  # pragma: nocover
     reference_image_fp = ""
     if "Bergamo" in session["rig_id"]:
         h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
-            data_dir, output_dir, debug=args.debug
+            data_dir, output_dir, session, debug=args.debug
         )
     else:
         h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
