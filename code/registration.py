@@ -1559,7 +1559,7 @@ if __name__ == "__main__":  # pragma: nocover
     reference_image_fp = ""
     if "Bergamo" in session["rig_id"]:
         h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
-            data_dir, output_dir, session, unique_id debug=args.debug
+            data_dir, output_dir, session, unique_id, debug=args.debug
         )
     else:
         h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
