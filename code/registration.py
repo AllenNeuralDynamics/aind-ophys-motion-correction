@@ -1174,17 +1174,19 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, unique_id: s
     frame_rate_hz: float
         frame rate in Hz
     """
+    import pdb;pdb.set_trace()
+    print(next(datainput.rglob(f"{unique_id}.h5")))
     if datainput.is_file():
         h5_file = datainput
     else:
         try:
             h5_file = [
-                i for i in datainput.glob("*/*") if f"{unique_id}.h5" in str(i)
+                i for i in datainput.rglob("*/*") if f"{unique_id}.h5" in str(i)
             ][0]
         except IndexError:
             unique_id = [i for i in datainput.glob("*/*") if i.is_dir()][0].name
             h5_file = [
-                i for i in datainput.glob("*/*") if f"{unique_id}.h5" in str(i)
+                i for i in datainput.rglob("*/*") if f"{unique_id}.h5" in str(i)
             ][0]
     session_dir = h5_file.parent.parent
     platform_json = next(session_dir.glob("*platform.json"))
@@ -1547,21 +1549,21 @@ if __name__ == "__main__":  # pragma: nocover
         session = json.load(j)
     with open(description_fp, "r") as j:
         data_description = json.load(j)
-    unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
     for i in session["data_streams"]:
         frame_rate_hz = [j["frame_rate"] for j in i["ophys_fovs"]]
         if frame_rate_hz:
             break
-
     frame_rate_hz = frame_rate_hz[0]
     if isinstance(frame_rate_hz, str):
         frame_rate_hz = float(frame_rate_hz)
     reference_image_fp = ""
     if "Bergamo" in session["rig_id"]:
+        unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
         h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
             data_dir, output_dir, session, unique_id, debug=args.debug
         )
     else:
+        unique_id = 
         h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
             datainput, output_dir, unique_id, debug=args.debug
         )
