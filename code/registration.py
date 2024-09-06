@@ -1362,8 +1362,7 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, uniq
         path to reference image
     """
     if not h5_file.is_file():
-       h5_file = [f for f in h5_file.rglob("*.h5") if unique_id in str(f)][0]
-    
+        h5_file = [f for f in h5_file.rglob("*.h5") if unique_id in str(f)][0]
     print(f"Running h5 file: {h5_file}")
     output_dir = make_output_directory(output_dir, unique_id)
     reference_image_fp = generate_bergamo_movies(h5_file, session)
@@ -1557,13 +1556,12 @@ if __name__ == "__main__":  # pragma: nocover
     if isinstance(frame_rate_hz, str):
         frame_rate_hz = float(frame_rate_hz)
     reference_image_fp = ""
+    unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
     if "Bergamo" in session["rig_id"]:
-        unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
         h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
             data_dir, output_dir, session, unique_id, debug=args.debug
         )
     else:
-        unique_id = 
         h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
             datainput, output_dir, unique_id, debug=args.debug
         )
