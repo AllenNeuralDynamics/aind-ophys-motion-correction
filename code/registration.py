@@ -1174,7 +1174,6 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, unique_id: s
     frame_rate_hz: float
         frame rate in Hz
     """
-    import pdb;pdb.set_trace()
     print(next(datainput.rglob(f"{unique_id}.h5")))
     if datainput.is_file():
         h5_file = datainput
