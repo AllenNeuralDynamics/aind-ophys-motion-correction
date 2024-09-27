@@ -1282,14 +1282,9 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path, debug: bool
     assert image_shape[0] == end_index
     return output_h5_file, output_dir, frame_rate_hz
 
-
-if __name__ == "__main__":  # pragma: nocover
-    # Set the log level and name the logger
-    logger = logging.getLogger("Suite2P motion correction")
-    logger.setLevel(logging.INFO)
-
-    # Create an ArgumentParser object
-    parser = argparse.ArgumentParser(description="Suite2P motion correction")
+def parse_arguments():
+    """Parse command-line arguments"""
+        parser = argparse.ArgumentParser(description="Suite2P motion correction")
 
     parser.add_argument(
         "-i",
@@ -1437,8 +1432,15 @@ if __name__ == "__main__":  # pragma: nocover
         "steps=1.",
     )
 
+    return parser.parse_args()
+
+if __name__ == "__main__":  # pragma: nocover
+    # Set the log level and name the logger
+    logger = logging.getLogger("Suite2P motion correction")
+    logger.setLevel(logging.INFO)
+
     # Parse command-line arguments
-    args = parser.parse_args()
+    args = parse_arguments()
     # General settings
     datainput = Path(args.input_searchpath)
     output_dir = Path(args.output_dir)
