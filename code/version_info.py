@@ -1,25 +1,31 @@
-import subprocess
-import codeocean
 import os
+import subprocess
+from typing import Tuple
 
-def get_version_info():
+import codeocean
+
+
+def get_version_info() -> Tuple[str, str]:
     """Get version of code environment
-    
+
     Returns
     -------
     str
         The version of the code environment.
+    str
+        The URL of the code environment.
     """
     domain = os.getenv("API_KEY_2")
     token = os.getenv("API_SECRET_2")
     if domain and token:
         client = codeocean.CodeOcean(domain=domain, token=token)
-        capsule = client.capsules.get_capsule(capsule_id = os.getenv("CO_CAPSULE_ID"))
-        return capsule.version
+        capsule = client.capsules.get_capsule(capsule_id=os.getenv("CO_CAPSULE_ID"))
+        return capsule.version, capsule.cloned_from_url
     else:
-        return "No version information available"
+        return None, None
 
-def get_current_branch_and_commit():
+
+def get_current_branch_and_commit() -> Tuple[str, str]:
     """Get the current branch and commit hash of the git repository.
 
     Returns
