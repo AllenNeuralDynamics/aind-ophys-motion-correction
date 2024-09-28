@@ -28,6 +28,7 @@ from aind_data_schema.core.processing import (
     PipelineProcess,
     ProcessName,
 )
+import branch_version
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.video_utils import downsample_h5_video, encode_video
 from matplotlib import pyplot as plt  # noqa: E402
@@ -868,6 +869,7 @@ def write_output_metadata(
     raw_movie: Union[str, Path],
     motion_corrected_movie: Union[str, Path],
     output_dir: Union[str, Path],
+    repo: str,
 ) -> None:
     """Writes output metadata to plane processing.json
 
@@ -880,6 +882,8 @@ def write_output_metadata(
     motion_corrected_movie: str
         path to motion corrected movies
     """
+    current_branch, current_commit = branch_version.get_current_branch_and_commit()
+
     processing = Processing(
         processing_pipeline=PipelineProcess(
             processor_full_name="Multplane Ophys Processing Pipeline",
@@ -888,14 +892,12 @@ def write_output_metadata(
             data_processes=[
                 DataProcess(
                     name=ProcessName.VIDEO_MOTION_CORRECTION,
-                    software_version="0.1.0",
+                    software_version=current_commit,
                     start_date_time=dt.now(),  # TODO: Add actual dt
                     end_date_time=dt.now(),  # TODO: Add actual dt
                     input_location=str(raw_movie),
                     output_location=str(motion_corrected_movie),
-                    code_url=(
-                        "https://github.com/AllenNeuralDynamics/"
-                        "aind-ophys-motion-correction/tree/main/code"
+                    code_url=(f"https://api.github.com/repos/AllenNeuralDynamics/{repo}/branches/{current_branch}"
                     ),
                     parameters=metadata,
                 )
@@ -1772,7 +1774,7 @@ if __name__ == "__main__":  # pragma: nocover
     mx_proj = projection_process(data, projection="max")
     av_proj = projection_process(data, projection="avg")
     write_output_metadata(
-        args_copy, Path(suite2p_args["h5py"]), args["motion_corrected_output"], output_dir
+        args_copy, Path(suite2p_args["h5py"]), args["motion_corrected_output"], output_dir, "aind-ophys-motion_correction"
     )
     # TODO: normalize here, if desired
     # save projections
