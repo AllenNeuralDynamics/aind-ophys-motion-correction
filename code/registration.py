@@ -28,7 +28,7 @@ from aind_data_schema.core.processing import (
     PipelineProcess,
     ProcessName,
 )
-import branch_version
+import version_info
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.video_utils import downsample_h5_video, encode_video
 from matplotlib import pyplot as plt  # noqa: E402
@@ -882,13 +882,16 @@ def write_output_metadata(
     motion_corrected_movie: str
         path to motion corrected movies
     """
-    current_branch, current_commit = branch_version.get_current_branch_and_commit()
-
+    current_branch, current_commit = version_info.get_current_branch_and_commit()
+    pipeline_version, url = version_info.get_pipeline_version()
+    if not pipeline_version:
+        pipeline_version = ""
+        url = ""
     processing = Processing(
         processing_pipeline=PipelineProcess(
             processor_full_name="Multplane Ophys Processing Pipeline",
-            pipeline_url="https://codeocean.allenneuraldynamics.org/capsule/4030161/tree",
-            pipeline_version="0.1.0",
+            pipeline_url=url,
+            pipeline_version=pipeline_version,
             data_processes=[
                 DataProcess(
                     name=ProcessName.VIDEO_MOTION_CORRECTION,
