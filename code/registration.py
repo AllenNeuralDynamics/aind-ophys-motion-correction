@@ -26,8 +26,9 @@ from aind_data_schema.core.processing import (
     Processing,
     DataProcess,
     PipelineProcess,
-    ProcessName,
+
 )
+from aind_data_schema_models.process_names import ProcessName
 import version_info
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.video_utils import downsample_h5_video, encode_video
@@ -1182,10 +1183,10 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
         experiment_id = h5_file.name.split(".")[0]
     else:
         try:
-            experiment_id = [i for i in datainput.glob("*") if "ophys_experiment" in str(i)][
+            experiment_id = [i for i in datainput.rglob("*") if "ophys_experiment" in str(i)][
             0
             ].name.split("_")[-1]
-            h5_file = [i for i in datainput.glob("*/*") if f"{experiment_id}.h5" in str(i)][0]
+            h5_file = [i for i in datainput.rglob("*") if f"{experiment_id}.h5" in str(i)][0]
         except IndexError:
             experiment_id = [i for i in datainput.glob("*") if i.is_dir()][
             0
