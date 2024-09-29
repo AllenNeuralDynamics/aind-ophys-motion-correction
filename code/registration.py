@@ -1290,7 +1290,7 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path, debug: bool
 
 def parse_arguments():
     """Parse command-line arguments"""
-        parser = argparse.ArgumentParser(description="Suite2P motion correction")
+    parser = argparse.ArgumentParser(description="Suite2P motion correction")
 
     parser.add_argument(
         "-i",
