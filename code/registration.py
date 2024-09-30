@@ -1203,9 +1203,9 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
         ]
     except KeyError:
         try:
-            sync_file = next(session_dir.glob(platform_data["sync_file"]))
+            sync_file = next(data_dir.rglob(platform_data["sync_file"]))
         except:
-            sync_file = next(data_dir.glob("*.h5"))
+            sync_file = next(data_dir.rglob("*.h5"))
         frame_rate_hz = get_frame_rate_from_sync(sync_file, platform_data)
     if debug:
         logging.info(f"Running in debug mode....")
@@ -1213,7 +1213,7 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
         frames_6min = int(360 * float(frame_rate_hz))
         trimmed_data = raw_data["data"][:frames_6min]
         raw_data.close()
-        trimmed_fn = Path("scratch") / f"{experiment_id}.h5"
+        trimmed_fn = Path("../scratch") / f"{experiment_id}.h5"
         with h5py.File(trimmed_fn, "w") as f:
             f.create_dataset("data", data=trimmed_data)
         h5_file = trimmed_fn
@@ -1288,7 +1288,7 @@ def parse_arguments():
         "--input-searchpath",
         type=str,
         help="File or directory where h5 file is stored",
-        default="data/",
+        default="../data/",
     )
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="../results/"
@@ -1301,7 +1301,7 @@ def parse_arguments():
     parser.add_argument(
         "--tmp_dir",
         type=str,
-        default="scratch",
+        default="/scratch",
         help="Directory into which to write temporary files "
         "produced by Suite2P (default: /scratch)",
     )
@@ -1440,11 +1440,8 @@ if __name__ == "__main__":  # pragma: nocover
     args = parse_arguments()
     # General settings
     output_dir = Path(args.output_dir)
-    data_dir = Path("data/")
-    try:
-        data_description = next(data_dir.rglob("*/data_description.json"))
-    except:
-        data_description = next(data_dir.glob("data_description.json"))
+    data_dir = Path("../data/")
+    data_description = next(data_dir.rglob("*/data_description.json"))
     with open(data_description, "r") as j:
         data_description = json.load(j)
     if data_description["platform"].get("abbreviation", None) == "single-plane-ophys":
