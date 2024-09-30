@@ -1440,7 +1440,7 @@ if __name__ == "__main__":  # pragma: nocover
     # General settings
     output_dir = Path(args.output_dir)
     data_dir = Path("../data/")
-    data_description = next(data_dir.rglob("*/data_description.json"))
+    data_description = next(data_dir.rglob("data_description.json"))
     with open(data_description, "r") as j:
         data_description = json.load(j)
     if data_description["platform"].get("abbreviation", None) == "single-plane-ophys":
