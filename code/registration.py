@@ -887,6 +887,10 @@ def write_output_metadata(
     if not pipeline_version:
         pipeline_version = ""
         url = ""
+    print(f"Current branch {current_branch}")
+    print(f"Current commit {current_commit}")
+    print(f"Pipeline version {pipeline_version}")
+    print(f"Pipeline url {url}")
     processing = Processing(
         processing_pipeline=PipelineProcess(
             processor_full_name="Multplane Ophys Processing Pipeline",

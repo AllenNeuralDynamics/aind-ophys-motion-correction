@@ -22,7 +22,7 @@ def get_pipeline_version() -> Tuple[str, str]:
         capsule = client.capsules.get_capsule(capsule_id=os.getenv("CO_CAPSULE_ID"))
         return capsule.version, capsule.cloned_from_url
     else:
-        return "None", "None"
+        return None, None
 
 
 def get_current_branch_and_commit() -> Tuple[str, str]:
