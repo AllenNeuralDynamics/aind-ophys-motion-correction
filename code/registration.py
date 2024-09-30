@@ -1159,12 +1159,12 @@ def get_frame_rate_from_sync(sync_file, platform_data) -> float:
     return frame_rate_hz
 
 
-def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool = False):
+def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool = False):
     """Process multiplane data for suite2p parameters
 
     Parameters
     ----------
-    datainput: Path
+    data_dir: Path
         path to h5 file
     output_dir: Path
         output directory
@@ -1178,20 +1178,16 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
     frame_rate_hz: float
         frame rate in Hz
     """
-    if datainput.is_file():
-        h5_file = datainput
-        experiment_id = h5_file.name.split(".")[0]
-    else:
-        try:
-            experiment_id = [i for i in datainput.rglob("*") if "ophys_experiment" in str(i)][
-            0
-            ].name.split("_")[-1]
-            h5_file = [i for i in datainput.rglob("*") if f"{experiment_id}.h5" in str(i)][0]
-        except IndexError:
-            experiment_id = [i for i in datainput.glob("*") if i.is_dir()][
-            0
-            ].name
-            h5_file = [i for i in datainput.glob("*/*") if f"{experiment_id}.h5" in str(i)][0]
+    try:
+        experiment_id = [i for i in data_dir.rglob("*") if "ophys_experiment" in str(i)][
+        0
+        ].name.split("_")[-1]
+        h5_file = [i for i in data_dir.rglob("*") if f"{experiment_id}.h5" in str(i)][0]
+    except IndexError:
+        experiment_id = [i for i in data_dir.glob("*") if i.is_dir()][
+        0
+        ].name
+        h5_file = [i for i in data_dir.glob("*/*") if f"{experiment_id}.h5" in str(i)][0]
     session_dir = h5_file.parent.parent
     platform_json = next(session_dir.glob("*platform.json"))
     # this file is required for paired plane registration but not for single plane
@@ -1207,9 +1203,9 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
         ]
     except KeyError:
         try:
-            sync_file = [i for i in session_dir.glob(platform_data["sync_file"])][0]
-        except IndexError:
-            sync_file = next(datainput.glob("*.h5"))
+            sync_file = next(session_dir.glob(platform_data["sync_file"]))
+        except:
+            sync_file = next(data_dir.glob("*.h5"))
         frame_rate_hz = get_frame_rate_from_sync(sync_file, platform_data)
     if debug:
         logging.info(f"Running in debug mode....")
@@ -1217,20 +1213,19 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, debug: bool 
         frames_6min = int(360 * float(frame_rate_hz))
         trimmed_data = raw_data["data"][:frames_6min]
         raw_data.close()
-        trimmed_fn = Path("../scratch") / f"{experiment_id}.h5"
+        trimmed_fn = Path("scratch") / f"{experiment_id}.h5"
         with h5py.File(trimmed_fn, "w") as f:
             f.create_dataset("data", data=trimmed_data)
         h5_file = trimmed_fn
-    shutil.copy(h5_file, output_dir)
     return h5_file, output_dir, frame_rate_hz
 
 
-def singleplane_motion_correction(datainput: Path, output_dir: Path, debug: bool = False):
+def singleplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool = False):
     """Process single plane data for suite2p parameters
 
     Parameters
     ----------
-    datainput: Path
+    data_dir: Path
         path to h5 file
     output_dir: Path
         output directory
@@ -1245,11 +1240,7 @@ def singleplane_motion_correction(datainput: Path, output_dir: Path, debug: bool
     frame_rate_hz: float
         frame rate in Hz
     """
-    try:
-        h5_file = next(datainput.glob("*.h5"))
-    except:
-        h5_file = next(datainput.glob("*/*/*.h5"))
-
+    h5_file = next(data_dir.rglob("*.h5"))
     session_fp = h5_file.parent / "session.json"
     with open(session_fp, "r") as j:
         session_data = json.load(j)
@@ -1297,7 +1288,7 @@ def parse_arguments():
         "--input-searchpath",
         type=str,
         help="File or directory where h5 file is stored",
-        default="../data/",
+        default="data/",
     )
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="../results/"
@@ -1310,7 +1301,7 @@ def parse_arguments():
     parser.add_argument(
         "--tmp_dir",
         type=str,
-        default="/scratch",
+        default="scratch",
         help="Directory into which to write temporary files "
         "produced by Suite2P (default: /scratch)",
     )
@@ -1448,22 +1439,21 @@ if __name__ == "__main__":  # pragma: nocover
     # Parse command-line arguments
     args = parse_arguments()
     # General settings
-    datainput = Path(args.input_searchpath)
     output_dir = Path(args.output_dir)
-    data_dir = Path("../data")
+    data_dir = Path("data/")
     try:
-        data_description = next(data_dir.glob("*/data_description.json"))
+        data_description = next(data_dir.rglob("*/data_description.json"))
     except:
         data_description = next(data_dir.glob("data_description.json"))
     with open(data_description, "r") as j:
         data_description = json.load(j)
     if data_description["platform"].get("abbreviation", None) == "single-plane-ophys":
         h5_file, output_dir, frame_rate_hz = singleplane_motion_correction(
-            datainput, output_dir, debug=args.debug
+            data_dir, output_dir, debug=args.debug
         )
     else:
         h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
-            datainput, output_dir, debug=args.debug
+            data_dir, output_dir, debug=args.debug
         )
     meta_jsons = list(data_dir.glob("*/*.json"))
 
