@@ -5,7 +5,7 @@ from typing import Tuple
 import codeocean
 
 
-def get_version_info() -> Tuple[str, str]:
+def get_pipeline_version() -> Tuple[str, str]:
     """Get version of code environment
 
     Returns
