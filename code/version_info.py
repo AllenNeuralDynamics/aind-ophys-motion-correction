@@ -36,19 +36,27 @@ def get_current_branch_and_commit() -> Tuple[str, str]:
         The commit hash of the current branch.
     """
     try:
+        print("I AM HERE")
         branch = subprocess.run(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            capture_output=True,
+            #capture_output=True,
             text=True,
             check=True,
-        ).stdout.strip()
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        print(branch)
         commit = subprocess.run(
-            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
-        ).stdout.strip()
+            ["git", "rev-parse", "HEAD"], 
+            #capture_output=True, 
+            text=True, 
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        print("HERE IS THE STDOUT")
+        print(branch, commit)
         return branch, commit
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
+        print(e)
         return "Error: Not a git repository or git command failed", None
-
-
-# Example usage
-current_branch, current_commit = get_current_branch_and_commit()
