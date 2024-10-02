@@ -1379,19 +1379,13 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, uniq
         json.dump(tiff_stems, j)
     
     return h5_file, output_dir, reference_image_fp
-
-
-if __name__ == "__main__":  # pragma: nocover
-    # Set the log level and name the logger
-    logger = logging.getLogger("Suite2P motion correction")
-    logger.setLevel(logging.INFO)
-
-    # Create an ArgumentParser object
+def parse_arguments():
+    """Parse command-line arguments"""
     parser = argparse.ArgumentParser(description="Suite2P motion correction")
 
     parser.add_argument(
         "-i",
-        "--input",
+        "--input-searchpath",
         type=str,
         help="File or directory where h5 file is stored",
         default="../data/",
@@ -1401,7 +1395,7 @@ if __name__ == "__main__":  # pragma: nocover
     )
 
     parser.add_argument(
-        "-d", "--debug", action="store_true", help="Run with only partial dset"
+        "-d", "--debug", action="store_true", help="Run with only first 500 frames"
     )
 
     parser.add_argument(
@@ -1535,8 +1529,14 @@ if __name__ == "__main__":  # pragma: nocover
         "steps=1.",
     )
 
+    return parser.parse_args()
+
+if __name__ == "__main__":  # pragma: nocover
+    # Set the log level and name the logger
+    logger = logging.getLogger("Suite2P motion correction")
+    logger.setLevel(logging.INFO)
     # Parse command-line arguments
-    args = parser.parse_args()
+    args = parse_arguments()
     # General settings
     output_dir = Path(args.output_dir)
     data_dir = Path(args.input)
