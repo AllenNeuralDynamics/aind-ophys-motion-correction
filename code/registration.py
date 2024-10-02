@@ -1538,9 +1538,8 @@ if __name__ == "__main__":  # pragma: nocover
     # Parse command-line arguments
     args = parser.parse_args()
     # General settings
-    datainput = Path(args.input)
     output_dir = Path(args.output_dir)
-    data_dir = Path("../data")
+    data_dir = Path(args.input)
     session_fp = next(data_dir.rglob("session.json"))
     description_fp = next(data_dir.rglob("data_description.json"))
     with open(session_fp, "r") as j:
@@ -1562,7 +1561,7 @@ if __name__ == "__main__":  # pragma: nocover
         )
     else:
         h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
-            datainput, output_dir, unique_id, debug=args.debug
+            data_dir, output_dir, unique_id, debug=args.debug
         )
 
     # We convert to dictionary
