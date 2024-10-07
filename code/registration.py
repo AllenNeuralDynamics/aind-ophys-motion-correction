@@ -1154,12 +1154,12 @@ def get_frame_rate_from_sync(sync_file, platform_data) -> float:
     return frame_rate_hz
 
 
-def multiplane_motion_correction(datainput: Path, output_dir: Path, unique_id: str, debug: bool = False):
+def multiplane_motion_correction(input: Path, output_dir: Path, debug: bool = False):
     """Process multiplane data for suite2p parameters
 
     Parameters
     ----------
-    datainput: Path
+    input: Path
         path to h5 file
     output_dir: Path
         output directory
@@ -1174,19 +1174,17 @@ def multiplane_motion_correction(datainput: Path, output_dir: Path, unique_id: s
     frame_rate_hz: float
         frame rate in Hz
     """
-    print(next(datainput.rglob(f"{unique_id}.h5")))
-    if datainput.is_file():
-        h5_file = datainput
-    else:
-        try:
-            h5_file = [
-                i for i in datainput.rglob("*/*") if f"{unique_id}.h5" in str(i)
-            ][0]
-        except IndexError:
-            unique_id = [i for i in datainput.glob("*/*") if i.is_dir()][0].name
-            h5_file = [
-                i for i in datainput.rglob("*/*") if f"{unique_id}.h5" in str(i)
-            ][0]
+    try:
+        unique_id = [i for i in input.rglob("*") if "ophys_experiment" in str(i)][
+        0
+        ].name.split("_")[-1]
+        h5_file = [i for i in input.rglob("*") if f"{unique_id}.h5" in str(i)][0]
+    except IndexError:
+        
+        unique_id = [i for i in input.rglob("*") if i.is_dir()][
+        0
+        ].name
+        h5_file = [i for i in input.rglob("*") if f"{unique_id}.h5" in str(i)][0]
     session_dir = h5_file.parent.parent
     platform_json = next(session_dir.glob("*platform.json"))
     # this file is required for paired plane registration but not for single plane
@@ -1379,13 +1377,19 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, uniq
         json.dump(tiff_stems, j)
     
     return h5_file, output_dir, reference_image_fp
-def parse_arguments():
-    """Parse command-line arguments"""
+
+
+if __name__ == "__main__":  # pragma: nocover
+    # Set the log level and name the logger
+    logger = logging.getLogger("Suite2P motion correction")
+    logger.setLevel(logging.INFO)
+
+    # Create an ArgumentParser object
     parser = argparse.ArgumentParser(description="Suite2P motion correction")
 
     parser.add_argument(
         "-i",
-        "--input-searchpath",
+        "--input",
         type=str,
         help="File or directory where h5 file is stored",
         default="../data/",
@@ -1395,7 +1399,7 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "-d", "--debug", action="store_true", help="Run with only first 500 frames"
+        "-d", "--debug", action="store_true", help="Run with only partial dset"
     )
 
     parser.add_argument(
@@ -1529,17 +1533,12 @@ def parse_arguments():
         "steps=1.",
     )
 
-    return parser.parse_args()
-
-if __name__ == "__main__":  # pragma: nocover
-    # Set the log level and name the logger
-    logger = logging.getLogger("Suite2P motion correction")
-    logger.setLevel(logging.INFO)
     # Parse command-line arguments
-    args = parse_arguments()
+    args = parser.parse_args()
     # General settings
+    datainput = Path(args.input)
     output_dir = Path(args.output_dir)
-    data_dir = Path(args.input)
+    data_dir = Path("../data")
     session_fp = next(data_dir.rglob("session.json"))
     description_fp = next(data_dir.rglob("data_description.json"))
     with open(session_fp, "r") as j:
@@ -1561,7 +1560,7 @@ if __name__ == "__main__":  # pragma: nocover
         )
     else:
         h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
-            data_dir, output_dir, unique_id, debug=args.debug
+            datainput, output_dir, debug=args.debug
         )
 
     # We convert to dictionary
