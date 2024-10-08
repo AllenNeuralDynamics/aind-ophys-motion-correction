@@ -342,7 +342,7 @@ def optimize_motion_parameters(
     )
     start_time = time()
     for param_spatial, param_time in product(smooth_sigmas, smooth_sigma_times):
-        current_args = suite2p_args.copy()
+        current_args = suite2p_parser.copy()
         current_args["smooth_sigma"] = param_spatial
         current_args["smooth_sigma_time"] = param_time
 
@@ -533,13 +533,13 @@ def add_modify_required_parameters(suite2p_args: dict):
     suite2p_args : dict
         Suite2p ops dictionary with potentially missing values.
     """
-    if suite2p_args.get("1Preg") is None:
+    if suite2p_parser.get("1Preg") is None:
         suite2p_args["1Preg"] = False
-    if suite2p_args.get("bidiphase") is None:
+    if suite2p_parser.get("bidiphase") is None:
         suite2p_args["bidiphase"] = False
-    if suite2p_args.get("nonrigid") is None:
+    if suite2p_parser.get("nonrigid") is None:
         suite2p_args["nonrigid"] = False
-    if suite2p_args.get("norm_frames") is None:
+    if suite2p_parser.get("norm_frames") is None:
         suite2p_args["norm_frames"] = True
     # Don't use nonrigid for parameter search.
     suite2p_args["nonrigid"] = False
@@ -1378,6 +1378,31 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, uniq
     
     return h5_file, output_dir, reference_image_fp
 
+def get_frame_rate(session: dict) -> Tuple(float, None):
+    """ Attempt to pull frame rate from session.json
+    Returns none if frame rate not in session.json
+
+    Parameters
+    ----------
+    session: dict
+        session metadata
+    
+    Returns
+    -------
+    frame_rate: float
+        frame rate in Hz
+    """
+    frame_rate_hz = None
+    for i in session.get("data_streams", ""):
+        frame_rate_hz = [j["frame_rate"] for j in i["ophys_fovs"]]
+        frame_rate_hz = frame_rate_hz[0]
+        if frame_rate_hz:
+            break
+    if isinstance(frame_rate_hz, str):
+        frame_rate_hz = float(frame_rate_hz)
+    return frame_rate_hz
+
+
 def parse_arguments():
     """Parse command-line arguments"""
     parser = argparse.ArgumentParser(description="Suite2P motion correction")
@@ -1397,6 +1422,34 @@ def parse_arguments():
         "-d", "--debug", action="store_true", help="Run with only first 500 frames"
     )
 
+    parser.add_argument(
+        "--frame-rate",
+        type=float,
+        defualt=31.0,
+        help="Frame rate of the movie in Hz. If not provided, "
+        "the frame rate will here will be used.",
+    )
+    
+    parser.add_argument(
+        "--data-type",
+        type=str,
+        default="h5",
+        help="Specify h5 or TIFF input type"
+    )
+
+    parser.add_argument(
+        "--tiff-input",
+        type=str,
+        default=None,
+        help="Path to TIFF file if data-type is TIFF"
+    )
+    parser.add_argument(
+        "--look-one-level-down",
+        type=bool,
+        default=False,
+        help="If True, search for TIFF files in subdirectories "
+         "of the input directory",
+    )
     parser.add_argument(
         "--tmp_dir",
         type=str,
@@ -1539,38 +1592,40 @@ if __name__ == "__main__":  # pragma: nocover
     # Create an ArgumentParser object
     parser = parse_arguments()
     # General settings
-    datainput = Path(args.input)
-    output_dir = Path(args.output_dir)
-    data_dir = Path("../data")
+    data_dir = Path(parser.input)
+    output_dir = Path(parser.output_dir)
     session_fp = next(data_dir.rglob("session.json"))
     description_fp = next(data_dir.rglob("data_description.json"))
     with open(session_fp, "r") as j:
         session = json.load(j)
     with open(description_fp, "r") as j:
         data_description = json.load(j)
-    for i in session["data_streams"]:
-        frame_rate_hz = [j["frame_rate"] for j in i["ophys_fovs"]]
-        if frame_rate_hz:
-            break
-    frame_rate_hz = frame_rate_hz[0]
-    if isinstance(frame_rate_hz, str):
-        frame_rate_hz = float(frame_rate_hz)
-    reference_image_fp = ""
+    frame_rate_hz = get_frame_rate(session)
     unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
-    if "Bergamo" in session["rig_id"]:
-        h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
-            data_dir, output_dir, session, unique_id, debug=args.debug
-        )
+    reference_image_fp = ""
+    
+    if parser.data_type == "h5":
+        if "Bergamo" in session.get("rig_id", ""):
+            h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
+                data_dir, output_dir, session, unique_id, debug=parser.debug
+            )
+        else:
+            h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
+                data_dir, output_dir, debug=parser.debug
+            )
     else:
-        h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
-            datainput, output_dir, debug=args.debug
-        )
-
+        if not parser.data_type=="TIFF" and not parser.tiff_input:
+            raise(ValueError("Please provide a TIFF input file"))
+        tiff_input = parser.tiff_input
+        args["look_one_level_down"] = parser.look_one_level_down
+        
     # We convert to dictionary
-    args = vars(args)
+    args = vars(parser)
     h5_file = str(h5_file)
+    if not frame_rate_hz:
+        frame_rate_hz = parser.frame_rate
+        logging.warning("Using default frame rate of 31.0 Hz")
     reference_image = None
-    meta_jsons = list(data_dir.glob("*/*.json"))
     args["refImg"] = []
     if reference_image_fp:
         args["refImg"] = [reference_image_fp]
@@ -1621,16 +1676,19 @@ if __name__ == "__main__":  # pragma: nocover
 
     # This is part of a complex scheme to pass an image that is a bit too
     # complicated. Will remove when tested.
-    # if not args.get("refImg", ""):
+    # if not parser.get("refImg", ""):
     # args["refImg"] = []
 
-    # Set suite2p args.
+    # Set suite2p parser.
     suite2p_args = suite2p.default_ops()
 
     # Here we overwrite the parameters for suite2p that will not change in our
     # processing pipeline. These are parameters that are not exposed to
     # minimize code length. Those are not set to default.
-    suite2p_args["h5py"] = h5_file
+    if parser.data_type == "h5"
+        suite2p_args["h5py"] = h5_file
+    else:
+        suite2p_args["data_path"] = tiff_input
     suite2p_args["roidetect"] = False
     suite2p_args["do_registration"] = 1
     suite2p_args["data_path"] = []  # TODO: remove this if not needed by suite2p
@@ -1711,7 +1769,7 @@ if __name__ == "__main__":  # pragma: nocover
     # numpy.ndarray can't be serialized with json. Converting to list
     # and writing to the logger causes the output to be unreadable.
     copy_of_args = copy.deepcopy(suite2p_args)
-    copy_of_args.pop("refImg")
+    copy_of_parser.pop("refImg")
 
     msg = f"running Suite2P v{suite2p.version} with args\n"
     msg += f"{json.dumps(copy_of_args, indent=2, sort_keys=True)}\n"
