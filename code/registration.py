@@ -1176,14 +1176,12 @@ def multiplane_motion_correction(input: Path, output_dir: Path, debug: bool = Fa
     """
     try:
         unique_id = [i for i in input.rglob("*") if "ophys_experiment" in str(i)][
-        0
+            0
         ].name.split("_")[-1]
         h5_file = [i for i in input.rglob("*") if f"{unique_id}.h5" in str(i)][0]
     except IndexError:
-        
-        unique_id = [i for i in input.rglob("*") if i.is_dir()][
-        0
-        ].name
+
+        unique_id = [i for i in input.rglob("*") if i.is_dir()][0].name
         h5_file = [i for i in input.rglob("*") if f"{unique_id}.h5" in str(i)][0]
     session_dir = h5_file.parent.parent
     platform_json = next(session_dir.glob("*platform.json"))
@@ -1313,7 +1311,7 @@ def generate_bergamo_movies(fp: Path, session) -> Path:
     ----------
     fp: Path
         path to h5 file
-    session: dict   
+    session: dict
         session metadata
     Returns
     -------
@@ -1325,16 +1323,26 @@ def generate_bergamo_movies(fp: Path, session) -> Path:
         dtype = data.dtype
         # take the first bci epoch to save out reference image TODO
         tiff_stems = json.loads(f["tiff_stem_location"][:][0])
-        bci_epochs = [i for i in session["stimulus_epochs"] if i["stimulus_name"] == "single neuron BCI conditioning"]
+        bci_epochs = [
+            i
+            for i in session["stimulus_epochs"]
+            if i["stimulus_name"] == "single neuron BCI conditioning"
+        ]
         bci_epoch_loc = [i["output_parameters"]["tiff_stem"] for i in bci_epochs][0]
         with h5py.File("../scratch/reference_image.h5", "w") as ref:
             ref.create_dataset(
-                "data", data=data[tiff_stems[bci_epoch_loc][0] : tiff_stems[bci_epoch_loc][1], :, :], dtype=dtype
+                "data",
+                data=data[
+                    tiff_stems[bci_epoch_loc][0] : tiff_stems[bci_epoch_loc][1], :, :
+                ],
+                dtype=dtype,
             )
     return Path("../scratch/reference_image.h5")
 
 
-def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, unique_id: str, debug: bool = False):
+def singleplane_motion_correction(
+    h5_file: Path, output_dir: Path, session, unique_id: str, debug: bool = False
+):
     """Process single plane data for suite2p parameters
 
     Parameters
@@ -1372,14 +1380,14 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, uniq
             epoch_filenames = f["epoch_filenames"][()]
         with h5py.File(debug_file, "a") as f:
             f.create_dataset("data", data=data)
-            f.create_dataset("tiff_stem_location",data=tiff_stem_location)
+            f.create_dataset("tiff_stem_location", data=tiff_stem_location)
             f.create_dataset("epoch_filenames", data=epoch_filenames)
         h5_file = debug_file
     with h5py.File(h5_file, "r") as f:
         tiff_stems = json.loads(f["tiff_stem_location"][:][0])
     with open(output_dir / "tiff_stem_locations.json", "w") as j:
         json.dump(tiff_stems, j)
-    
+
     return h5_file, output_dir, reference_image_fp
 
 
@@ -1636,31 +1644,31 @@ if __name__ == "__main__":  # pragma: nocover
     suite2p_args["do_registration"] = 1
     suite2p_args["data_path"] = []  # TODO: remove this if not needed by suite2p
     suite2p_args["reg_tif"] = False  # We save our own outputs here
-    suite2p_args[
-        "nimg_init"
-    ] = 500  # Nb of images to compute reference. This value is a bit high. Suite2p has it at 300 normally
-    suite2p_args[
-        "maxregshift"
-    ] = 0.2  # Max allowed registration shift as a fraction of frame max(width and height)
+    suite2p_args["nimg_init"] = (
+        500  # Nb of images to compute reference. This value is a bit high. Suite2p has it at 300 normally
+    )
+    suite2p_args["maxregshift"] = (
+        0.2  # Max allowed registration shift as a fraction of frame max(width and height)
+    )
     # These parameters are at the same value as suite2p default. This is just here
     # to make it clear we need those parameters to be at the same value as
     # suite2p default but those lines could be deleted.
-    suite2p_args[
-        "maxregshiftNR"
-    ] = 5.0  # Maximum shift allowed in pixels for a block in rigid registration.
+    suite2p_args["maxregshiftNR"] = (
+        5.0  # Maximum shift allowed in pixels for a block in rigid registration.
+    )
     suite2p_args["batch_size"] = 500  # Number of frames to process at once
     suite2p_args["h5py_key"] = "data"  # h5 path in the file.
-    suite2p_args[
-        "smooth_sigma"
-    ] = 1.15  # Standard deviation in pixels of the gaussian used to smooth the phase correlation.
-    suite2p_args[
-        "smooth_sigma_time"
-    ] = 0.0  # "Standard deviation in time frames of the gaussian used to smooth the data before phase correlation is computed
+    suite2p_args["smooth_sigma"] = (
+        1.15  # Standard deviation in pixels of the gaussian used to smooth the phase correlation.
+    )
+    suite2p_args["smooth_sigma_time"] = (
+        0.0  # "Standard deviation in time frames of the gaussian used to smooth the data before phase correlation is computed
+    )
     suite2p_args["nonrigid"] = True
     suite2p_args["block_size"] = [128, 128]  # Block dimensions in y, x in pixels.
-    suite2p_args[
-        "snr_thresh"
-    ] = 1.2  # If a block is below the above snr threshold. Apply smoothing to the block.
+    suite2p_args["snr_thresh"] = (
+        1.2  # If a block is below the above snr threshold. Apply smoothing to the block.
+    )
 
     # This is to overwrite image reference creation.
     suite2p_args["refImg"] = args["refImg"]
