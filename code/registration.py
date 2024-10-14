@@ -1368,8 +1368,12 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, uniq
         debug_file = Path("../scratch") / f"{stem}_debug.h5"
         with h5py.File(h5_file, "r") as f:
             data = f["data"][:5000]
+            tiff_stem_location = f["tiff_stem_location"][()]
+            epoch_filenames = f["epoch_filenames"][()]
         with h5py.File(debug_file, "a") as f:
             f.create_dataset("data", data=data)
+            f.create_dataset("tiff_stem_location",data=tiff_stem_location)
+            f.create_dataset("epoch_filenames", data=epoch_filenames)
         h5_file = debug_file
     with h5py.File(h5_file, "r") as f:
         tiff_stems = json.loads(f["tiff_stem_location"][:][0])

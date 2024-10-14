@@ -3,4 +3,4 @@ set -ex
 
 ls ../data
 # python registration.py "$@" 
-python registration.py
+python registration.py --debug
