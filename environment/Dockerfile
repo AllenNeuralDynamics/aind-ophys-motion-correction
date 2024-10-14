@@ -3,9 +3,9 @@ FROM registry.codeocean.allenneuraldynamics.org/codeocean/jupyterlab:3.4.4-minic
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-ENV PIPELINE_URL="ALSKDFJLDKS"
-ENV PIPELINE_VERSION="SLKDFJ"
-ENV VERSION="0.0.1"
+ENV PIPELINE_URL=""
+ENV PIPELINE_VERSION=""
+ENV VERSION="6.0"
 ARG GIT_ASKPASS
 ARG GIT_ACCESS_TOKEN
 COPY git-askpass /
