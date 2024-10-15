@@ -1351,10 +1351,10 @@ def singleplane_motion_correction(
         path to h5 file
     output_dir: Path
         output directory
-    unique_id: str
-        experiment id from data description
     session: dict
         session metadata
+    unique_id: str
+        experiment id from data description
     debug: bool
 
     Returns
