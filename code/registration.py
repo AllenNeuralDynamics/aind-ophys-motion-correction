@@ -1154,12 +1154,12 @@ def get_frame_rate_from_sync(sync_file, platform_data) -> float:
     return frame_rate_hz
 
 
-def multiplane_motion_correction(input: Path, output_dir: Path, debug: bool = False):
+def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool = False):
     """Process multiplane data for suite2p parameters
 
     Parameters
     ----------
-    input: Path
+    data_dir: Path
         path to h5 file
     output_dir: Path
         output directory
@@ -1175,14 +1175,14 @@ def multiplane_motion_correction(input: Path, output_dir: Path, debug: bool = Fa
         frame rate in Hz
     """
     try:
-        unique_id = [i for i in input.rglob("*") if "ophys_experiment" in str(i)][
+        unique_id = [i for i in data_dir.rglob("*") if "ophys_experiment" in str(i)][
             0
         ].name.split("_")[-1]
-        h5_file = [i for i in input.rglob("*") if f"{unique_id}.h5" in str(i)][0]
+        h5_file = [i for i in data_dir.rglob("*") if f"{unique_id}.h5" in str(i)][0]
     except IndexError:
 
-        unique_id = [i for i in input.rglob("*") if i.is_dir()][0].name
-        h5_file = [i for i in input.rglob("*") if f"{unique_id}.h5" in str(i)][0]
+        unique_id = [i for i in data_dir.rglob("*") if i.is_dir()][0].name
+        h5_file = [i for i in data_dir.rglob("*") if f"{unique_id}.h5" in str(i)][0]
     session_dir = h5_file.parent.parent
     platform_json = next(session_dir.glob("*platform.json"))
     # this file is required for paired plane registration but not for single plane
@@ -1200,7 +1200,7 @@ def multiplane_motion_correction(input: Path, output_dir: Path, debug: bool = Fa
         try:
             sync_file = [i for i in session_dir.glob(platform_data["sync_file"])][0]
         except IndexError:
-            sync_file = next(datainput.glob("*.h5"))
+            sync_file = next(data_dir.glob("*.h5"))
         frame_rate_hz = get_frame_rate_from_sync(sync_file, platform_data)
     if debug:
         logging.info(f"Running in debug mode....")
@@ -1548,7 +1548,6 @@ if __name__ == "__main__":  # pragma: nocover
     # Parse command-line arguments
     args = parser.parse_args()
     # General settings
-    datainput = Path(args.input)
     output_dir = Path(args.output_dir)
     data_dir = Path("../data")
     session_fp = next(data_dir.rglob("session.json"))
@@ -1572,7 +1571,7 @@ if __name__ == "__main__":  # pragma: nocover
         )
     else:
         h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
-            datainput, output_dir, debug=args.debug
+            data_dir, output_dir, debug=args.debug
         )
 
     # We convert to dictionary
