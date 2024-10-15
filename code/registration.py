@@ -1330,7 +1330,7 @@ def generate_single_plane_reference(fp: Path, session) -> Path:
         frame_length = tiff_stems[bci_epoch_loc][1] - tiff_stems[bci_epoch_loc][0]
         vsource = h5py.VirtualSource(f["data"])
         layout = h5py.VirtualLayout(
-            shape=(frame_length, *f["data"].shape[1:]), dtype=dtype
+            shape=(frame_length, *f["data"].shape[1:]), dtype=f["data"].dtype
         )
         layout[0:frame_length] = vsource[
             tiff_stems[bci_epoch_loc][0] : tiff_stems[bci_epoch_loc][1]
