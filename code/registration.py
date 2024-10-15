@@ -1163,8 +1163,8 @@ def multiplane_motion_correction(input: Path, output_dir: Path, debug: bool = Fa
         path to h5 file
     output_dir: Path
         output directory
-    unique_id: str
-        experiment id from data_description
+    debug: bool
+        run in debug mode
     Returns
     -------
     h5_file: Path
