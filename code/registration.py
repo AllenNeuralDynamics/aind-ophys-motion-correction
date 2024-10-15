@@ -1224,7 +1224,7 @@ def update_suite2p_args_reference_image(
     logger.info(
         f'Loading {suite2p_args["nimg_init"]} frames ' "for reference image creation."
     )
-    if reference_image:
+    if reference_image_fp:
         initial_frames = load_initial_frames(
             file_path=reference_image_fp,
             h5py_key=suite2p_args["h5py_key"],
