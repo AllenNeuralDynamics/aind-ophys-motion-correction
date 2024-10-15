@@ -1319,8 +1319,6 @@ def generate_bergamo_movies(fp: Path, session) -> Path:
         path to reference image
     """
     with h5py.File(fp, "r") as f:
-        data = f["data"][:]
-        dtype = data.dtype
         # take the first bci epoch to save out reference image TODO
         tiff_stems = json.loads(f["tiff_stem_location"][:][0])
         bci_epochs = [
@@ -1330,12 +1328,13 @@ def generate_bergamo_movies(fp: Path, session) -> Path:
         ]
         bci_epoch_loc = [i["output_parameters"]["tiff_stem"] for i in bci_epochs][0]
         with h5py.File("../scratch/reference_image.h5", "w") as ref:
+            data = f["data"][
+                    tiff_stems[bci_epoch_loc][0] : tiff_stems[bci_epoch_loc][1], :, :
+                ]
             ref.create_dataset(
                 "data",
-                data=data[
-                    tiff_stems[bci_epoch_loc][0] : tiff_stems[bci_epoch_loc][1], :, :
-                ],
-                dtype=dtype,
+                data=data,
+                dtype=data.dtype,
             )
     return Path("../scratch/reference_image.h5")
 
