@@ -1329,11 +1329,15 @@ def generate_single_plane_reference(fp: Path, session) -> Path:
         bci_epoch_loc = [i["output_parameters"]["tiff_stem"] for i in bci_epochs][0]
         frame_length = tiff_stems[bci_epoch_loc][1] - tiff_stems[bci_epoch_loc][0]
         vsource = h5py.VirtualSource(f["data"])
-        layout = h5py.VirtualLayout(shape=(frame_length, *f["data"].shape[1:]), dtype=dtype)
-        layout[0:frame_length] = vsource[tiff_stems[bci_epoch_loc][0]:tiff_stems[bci_epoch_loc][1]]
-        
+        layout = h5py.VirtualLayout(
+            shape=(frame_length, *f["data"].shape[1:]), dtype=dtype
+        )
+        layout[0:frame_length] = vsource[
+            tiff_stems[bci_epoch_loc][0] : tiff_stems[bci_epoch_loc][1]
+        ]
+
         with h5py.File("../scratch/reference_image.h5", "w") as ref:
-            
+
             ref.create_virtual_dataset("data", layout)
     return Path("../scratch/reference_image.h5")
 
