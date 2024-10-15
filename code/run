@@ -2,4 +2,4 @@
 set -ex
 
 ls ../data
-python registration.py --input-searchpath /data/VISp_0/VISp_0.h5
+python registration.py "$@" 
