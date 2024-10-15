@@ -1304,7 +1304,7 @@ def update_suite2p_args_reference_image(
     return suite2p_args, args
 
 
-def generate_bergamo_movies(fp: Path, session) -> Path:
+def generate_single_plane_reference(fp: Path, session) -> Path:
     """Generate virtual movies for Bergamo data
 
     Parameters
@@ -1369,7 +1369,7 @@ def singleplane_motion_correction(
         h5_file = [f for f in h5_file.rglob("*.h5") if unique_id in str(f)][0]
     print(f"Running h5 file: {h5_file}")
     output_dir = make_output_directory(output_dir, unique_id)
-    reference_image_fp = generate_bergamo_movies(h5_file, session)
+    reference_image_fp = generate_single_plane_reference(h5_file, session)
     if debug:
         stem = h5_file.stem
         debug_file = Path("../scratch") / f"{stem}_debug.h5"
