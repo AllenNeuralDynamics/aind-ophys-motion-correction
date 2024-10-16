@@ -16,4 +16,5 @@ RUN pip3 install -U --no-cache-dir \
     aind-ophys-utils \
     sbxreader \
     git+https://github.com/arielleleon/suite2p@bug-pull-from-defined-h5py \
-    aind-data-schema==0.22.0
+    aind-data-schema==0.22.0 \
+    pydantic==2.8.1
