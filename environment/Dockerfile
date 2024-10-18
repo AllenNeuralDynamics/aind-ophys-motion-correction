@@ -2,7 +2,9 @@
 FROM registry.codeocean.allenneuraldynamics.org/codeocean/jupyterlab:3.4.4-miniconda4.12.0-python3.9-ubuntu20.04
 
 ARG DEBIAN_FRONTEND=noninteractive
-
+ENV PIPELINE_URL=""
+ENV PIPELINE_VERSION="1.0"
+ENV VERSION="7.0"
 ARG GIT_ASKPASS
 ARG GIT_ACCESS_TOKEN
 COPY git-askpass /

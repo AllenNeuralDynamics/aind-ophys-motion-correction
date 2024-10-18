@@ -884,12 +884,12 @@ def write_output_metadata(
     processing = Processing(
         processing_pipeline=PipelineProcess(
             processor_full_name="Multplane Ophys Processing Pipeline",
-            pipeline_url="https://codeocean.allenneuraldynamics.org/capsule/4030161/tree",
-            pipeline_version="0.1.0",
+            pipeline_url=os.getenv("PIPELINE_URL", ""),
+            pipeline_version=os.getenv("PIPELINE_VERSION", ""),
             data_processes=[
                 DataProcess(
                     name=ProcessName.VIDEO_MOTION_CORRECTION,
-                    software_version="0.1.0",
+                    software_version=os.getenv("VERSION", ""),
                     start_date_time=dt.now(),  # TODO: Add actual dt
                     end_date_time=dt.now(),  # TODO: Add actual dt
                     input_location=str(raw_movie),
@@ -907,8 +907,7 @@ def write_output_metadata(
         output_dir = Path(output_dir)
     print(f"~~~~~~~~~~~~~~Writing output: {output_dir}")
     processing.write_standard_file(output_directory=output_dir)
-
-
+    
 def check_trim_frames(data):
     """Make sure that if the user sets auto_remove_empty_frames
     and timing frames is already requested, raise an error.
