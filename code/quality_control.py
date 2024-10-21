@@ -114,25 +114,24 @@ def get_plane_ids():
     
     return plane_ids
 
+def get_all_registration_summary_metrics(plane_ids):
+    registration_summary_metrics = []
+    for plane_id in plane_ids:
+        registration_summary_metrics.append(define_registration_summary_qcmetric_for_plane(plane_id))
+    return registration_summary_metrics
+
+def get_all_fov_quality_metrics(plane_ids):
+    fov_quality_metrics = []
+    for plane_id in plane_ids:
+        combine_and_save_max_and_average_projection_for_plane(plane_id)
+        fov_quality_metrics.append(define_fov_quality_qcmetric_for_plane(plane_id))
+    return fov_quality_metrics
+
 def create_and_write_quality_control_json():
     # Create a QualityControl object 
 
-    plane_ids = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    plane_ids = get_plane_ids()
 
-    qc_metrics = []
-
-    registration_summary_metrics = []
-    fov_quality_metrics = []
-
-    for plane_id in plane_ids:
-        # Define the QC metrics for the plane
-        registration_summary_metrics.append(define_registration_summary_qcmetric_for_plane(plane_id))
-
-        combine_and_save_max_and_average_projection_for_plane(plane_id)
-        fov_quality_metrics.append(define_fov_quality_qcmetric_for_plane(plane_id))
-
-    qc_metrics.append(registration_summary_metrics)
-    qc_metrics.append(fov_quality_metrics)
 
     qc = QualityControl(
         notes='This object represents the quality control for the motion-correction processing step.',
@@ -144,7 +143,7 @@ def create_and_write_quality_control_json():
                 modality=Modality.from_abbreviation('pophys'),
                 notes="",
                 allow_failed_metrics=False,
-                metrics=registration_summary_metrics
+                metrics=get_all_registration_summary_metrics(plane_ids)
             ),
             QCEvaluation(
                 name="FOV Quality Summary",
@@ -153,9 +152,9 @@ def create_and_write_quality_control_json():
                 modality=Modality.from_abbreviation('pophys'),
                 notes="",
                 allow_failed_metrics=False,
-                metrics=registration_summary_metrics
+                metrics=get_all_fov_quality_metrics(plane_ids)
             )
         ]
     )
 
-    qc.write_standard_file(output_directory=output_directory)
+    qc.write_standard_file(output_directory='/results/')
