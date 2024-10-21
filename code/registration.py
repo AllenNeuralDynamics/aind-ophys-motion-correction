@@ -1719,7 +1719,8 @@ if __name__ == "__main__":  # pragma: nocover
         5.0  # Maximum shift allowed in pixels for a block in rigid registration.
     )
     suite2p_args["batch_size"] = 500  # Number of frames to process at once
-    suite2p_args["h5py_key"] = "data"  # h5 path in the file.
+    if suite2p.get("h5py", ""):
+        suite2p_args["h5py_key"] = "data"  # h5 path in the file.
     suite2p_args["smooth_sigma"] = (
         1.15  # Standard deviation in pixels of the gaussian used to smooth the phase correlation.
     )
@@ -1743,35 +1744,36 @@ if __name__ == "__main__":  # pragma: nocover
         shutil.copy(suite2p_args["h5py"], dst)
         suite2p_args["h5py"] = dst
 
-    check_and_warn_on_datatype(
-        h5py_name=suite2p_args["h5py"],
-        h5py_key=suite2p_args["h5py_key"],
-        logger=logger.warning,
-    )
-
-    if args["auto_remove_empty_frames"]:
-        logger.info("Attempting to find empty frames at the start and end of the movie.")
-        lowside, highside = find_movie_start_end_empty_frames(
+    if suite2p_args.get("h5", ""):
+        check_and_warn_on_datatype(
             h5py_name=suite2p_args["h5py"],
             h5py_key=suite2p_args["h5py_key"],
             logger=logger.warning,
         )
-        args["trim_frames_start"] = lowside
-        args["trim_frames_end"] = highside
-        logger.info(f"Found ({lowside}, {highside}) at the start/end of the movie.")
 
-    if suite2p_args["force_refImg"] and len(suite2p_args["refImg"]) == 0:
-        suite2p_args, args = update_suite2p_args_reference_image(
-            suite2p_args,
-            args,
-        )
-    if reference_image_fp:
-        suite2p_args, args = update_suite2p_args_reference_image(
-            suite2p_args, args, reference_image_fp=reference_image_fp
-        )
+        if args["auto_remove_empty_frames"]:
+            logger.info("Attempting to find empty frames at the start and end of the movie.")
+            lowside, highside = find_movie_start_end_empty_frames(
+                h5py_name=suite2p_args["h5py"],
+                h5py_key=suite2p_args["h5py_key"],
+                logger=logger.warning,
+            )
+            args["trim_frames_start"] = lowside
+            args["trim_frames_end"] = highside
+            logger.info(f"Found ({lowside}, {highside}) at the start/end of the movie.")
 
-    # register with Suite2P
-    logger.info(f"attempting to motion correct {suite2p_args['h5py']}")
+        if suite2p_args["force_refImg"] and len(suite2p_args["refImg"]) == 0:
+            suite2p_args, args = update_suite2p_args_reference_image(
+                suite2p_args,
+                args,
+            )
+        if reference_image_fp:
+            suite2p_args, args = update_suite2p_args_reference_image(
+                suite2p_args, args, reference_image_fp=reference_image_fp
+            )
+
+        # register with Suite2P
+        logger.info(f"attempting to motion correct {suite2p_args['h5py']}")
     # make a tempdir for Suite2P's output
     tmp_dir = tempfile.TemporaryDirectory(dir=args["tmp_dir"])
     tdir = tmp_dir.name
@@ -1793,10 +1795,18 @@ if __name__ == "__main__":  # pragma: nocover
     if suite2p_args["force_refImg"]:
         logger.info(f"\tUsing custom reference image: {suite2p_args['refImg']}")
 
-    suite2p_args["h5py"] = [suite2p_args["h5py"]]
+    if suite2p_args.get("h5py", ""):
+        suite2p_args["h5py"] = [suite2p_args["h5py"]]
+    else:
+        suite2p_args["data_path"] = [suite2p_args["data_path"]]
     suite2p.run_s2p(suite2p_args)
-    suite2p_args["h5py"] = suite2p_args["h5py"][0]
-
+    data_path = ""
+    if suite2p_args.get("h5py", ""):
+        data_path = suite2p_args["h5py"][0]
+    else:
+        data_path = suite2p_args["data_path"][0]
+    if not data_path:
+        raise ValueError("No data path found in suite2p_args")
     bin_path = list(Path(tdir).rglob("data.bin"))[0]
     ops_path = list(Path(tdir).rglob("ops.npy"))[0]
     # Suite2P ops file contains at least the following keys:
