@@ -1,23 +1,18 @@
-# hash:sha256:99280683fb763da41f3d9cf24ffdb942310963bc393cfb11c0445b591bf7a603
-FROM registry.codeocean.allenneuraldynamics.org/codeocean/jupyterlab:3.4.4-miniconda4.12.0-python3.9-ubuntu20.04
+# hash:sha256:3f85ba3eda075c8c65fe40d150332b5c17bd68fd1092e80ec8a04d7021277c89
+ARG REGISTRY_HOST
+FROM $REGISTRY_HOST/codeocean/py-r:python3.10-R4.2.2-IRkernel-ubuntu22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-ENV PIPELINE_URL=""
-ENV PIPELINE_VERSION=""
-ENV VERSION="6.0"
 ARG GIT_ASKPASS
 ARG GIT_ACCESS_TOKEN
 COPY git-askpass /
 
-RUN ["apt-get", "update"]
-RUN ["apt-get", "install", "-y", "vim"]
 RUN pip3 install -U --no-cache-dir \
-    torch --index-url https://download.pytorch.org/whl/cpu
-WORKDIR /
-RUN pip3 install -U --no-cache-dir \
-    aind-ophys-utils \
-    sbxreader \
-    git+https://github.com/arielleleon/suite2p@bug-pull-from-defined-h5py \
     aind-data-schema==1.1.0 \
-    pydantic==2.8.1
+    aind-ophys-utils==0.0.7 \
+    pydantic==2.8.1 \
+    sbxreader==0.2.2 \
+    torch==2.5.0 \
+    git+https://github.com/arielleleon/suite2p@bug-pull-from-defined-h5py \
+
