@@ -2028,3 +2028,7 @@ if __name__ == "__main__":  # pragma: nocover
 
     # Clean up temporary directory
     tmp_dir.cleanup()
+
+    from quality_control import create_and_write_quality_control_json
+
+    create_and_write_quality_control_json()
