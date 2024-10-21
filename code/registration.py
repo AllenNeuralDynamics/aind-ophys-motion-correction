@@ -1621,7 +1621,6 @@ if __name__ == "__main__":  # pragma: nocover
         if not parser.data_type=="TIFF" and not parser.tiff_input:
             raise(ValueError("Please provide a TIFF input file"))
         tiff_input = parser.tiff_input
-        args["look_one_level_down"] = parser.look_one_level_down
     else:
         if "Bergamo" in session.get("rig_id", ""):
             h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
@@ -1634,6 +1633,8 @@ if __name__ == "__main__":  # pragma: nocover
         
     # We convert to dictionary
     args = vars(parser)
+    if parser.tiff_input:
+        args["look_one_level_down"] = parser.look_one_level_down
     h5_file = str(h5_file)
     if not frame_rate_hz:
         frame_rate_hz = parser.frame_rate
