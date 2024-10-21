@@ -884,12 +884,12 @@ def write_output_metadata(
     processing = Processing(
         processing_pipeline=PipelineProcess(
             processor_full_name="Multplane Ophys Processing Pipeline",
-            pipeline_url="https://codeocean.allenneuraldynamics.org/capsule/4030161/tree",
-            pipeline_version="0.1.0",
+            pipeline_url=os.getenv("PIPELINE_URL", ""),
+            pipeline_version=os.getenv("PIPELINE_VERSION", ""),
             data_processes=[
                 DataProcess(
                     name=ProcessName.VIDEO_MOTION_CORRECTION,
-                    software_version="0.1.0",
+                    software_version=os.getenv("VERSION", ""),
                     start_date_time=dt.now(),  # TODO: Add actual dt
                     end_date_time=dt.now(),  # TODO: Add actual dt
                     input_location=str(raw_movie),
@@ -907,8 +907,7 @@ def write_output_metadata(
         output_dir = Path(output_dir)
     print(f"~~~~~~~~~~~~~~Writing output: {output_dir}")
     processing.write_standard_file(output_directory=output_dir)
-
-
+    
 def check_trim_frames(data):
     """Make sure that if the user sets auto_remove_empty_frames
     and timing frames is already requested, raise an error.
@@ -1154,17 +1153,17 @@ def get_frame_rate_from_sync(sync_file, platform_data) -> float:
     return frame_rate_hz
 
 
-def multiplane_motion_correction(input: Path, output_dir: Path, debug: bool = False):
+def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool = False):
     """Process multiplane data for suite2p parameters
 
     Parameters
     ----------
-    input: Path
+    data_dir: Path
         path to h5 file
     output_dir: Path
         output directory
-    unique_id: str
-        experiment id from data_description
+    debug: bool
+        run in debug mode
     Returns
     -------
     h5_file: Path
@@ -1175,16 +1174,14 @@ def multiplane_motion_correction(input: Path, output_dir: Path, debug: bool = Fa
         frame rate in Hz
     """
     try:
-        unique_id = [i for i in input.rglob("*") if "ophys_experiment" in str(i)][
-        0
+        unique_id = [i for i in data_dir.rglob("*") if "ophys_experiment" in str(i)][
+            0
         ].name.split("_")[-1]
-        h5_file = [i for i in input.rglob("*") if f"{unique_id}.h5" in str(i)][0]
+        h5_file = [i for i in data_dir.rglob("*") if f"{unique_id}.h5" in str(i)][0]
     except IndexError:
-        
-        unique_id = [i for i in input.rglob("*") if i.is_dir()][
-        0
-        ].name
-        h5_file = [i for i in input.rglob("*") if f"{unique_id}.h5" in str(i)][0]
+
+        unique_id = [i for i in data_dir.rglob("*") if i.is_dir()][0].name
+        h5_file = [i for i in data_dir.rglob("*") if f"{unique_id}.h5" in str(i)][0]
     session_dir = h5_file.parent.parent
     platform_json = next(session_dir.glob("*platform.json"))
     # this file is required for paired plane registration but not for single plane
@@ -1202,7 +1199,7 @@ def multiplane_motion_correction(input: Path, output_dir: Path, debug: bool = Fa
         try:
             sync_file = [i for i in session_dir.glob(platform_data["sync_file"])][0]
         except IndexError:
-            sync_file = next(datainput.glob("*.h5"))
+            sync_file = next(data_dir.glob("*.h5"))
         frame_rate_hz = get_frame_rate_from_sync(sync_file, platform_data)
     if debug:
         logging.info(f"Running in debug mode....")
@@ -1226,7 +1223,7 @@ def update_suite2p_args_reference_image(
     logger.info(
         f'Loading {suite2p_args["nimg_init"]} frames ' "for reference image creation."
     )
-    if reference_image:
+    if reference_image_fp:
         initial_frames = load_initial_frames(
             file_path=reference_image_fp,
             h5py_key=suite2p_args["h5py_key"],
@@ -1306,14 +1303,14 @@ def update_suite2p_args_reference_image(
     return suite2p_args, args
 
 
-def generate_bergamo_movies(fp: Path, session) -> Path:
+def generate_single_plane_reference(fp: Path, session) -> Path:
     """Generate virtual movies for Bergamo data
 
     Parameters
     ----------
     fp: Path
         path to h5 file
-    session: dict   
+    session: dict
         session metadata
     Returns
     -------
@@ -1321,20 +1318,32 @@ def generate_bergamo_movies(fp: Path, session) -> Path:
         path to reference image
     """
     with h5py.File(fp, "r") as f:
-        data = f["data"][:]
-        dtype = data.dtype
         # take the first bci epoch to save out reference image TODO
         tiff_stems = json.loads(f["tiff_stem_location"][:][0])
-        bci_epochs = [i for i in session["stimulus_epochs"] if i["stimulus_name"] == "single neuron BCI conditioning"]
+        bci_epochs = [
+            i
+            for i in session["stimulus_epochs"]
+            if i["stimulus_name"] == "single neuron BCI conditioning"
+        ]
         bci_epoch_loc = [i["output_parameters"]["tiff_stem"] for i in bci_epochs][0]
+        frame_length = tiff_stems[bci_epoch_loc][1] - tiff_stems[bci_epoch_loc][0]
+        vsource = h5py.VirtualSource(f["data"])
+        layout = h5py.VirtualLayout(
+            shape=(frame_length, *f["data"].shape[1:]), dtype=f["data"].dtype
+        )
+        layout[0:frame_length] = vsource[
+            tiff_stems[bci_epoch_loc][0] : tiff_stems[bci_epoch_loc][1]
+        ]
+
         with h5py.File("../scratch/reference_image.h5", "w") as ref:
-            ref.create_dataset(
-                "data", data=data[tiff_stems[bci_epoch_loc][0] : tiff_stems[bci_epoch_loc][1], :, :], dtype=dtype
-            )
+
+            ref.create_virtual_dataset("data", layout)
     return Path("../scratch/reference_image.h5")
 
 
-def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, unique_id: str, debug: bool = False):
+def singleplane_motion_correction(
+    h5_file: Path, output_dir: Path, session, unique_id: str, debug: bool = False
+):
     """Process single plane data for suite2p parameters
 
     Parameters
@@ -1343,10 +1352,10 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, uniq
         path to h5 file
     output_dir: Path
         output directory
-    unique_id: str
-        experiment id from data description
     session: dict
         session metadata
+    unique_id: str
+        experiment id from data description
     debug: bool
 
     Returns
@@ -1362,20 +1371,24 @@ def singleplane_motion_correction(h5_file: Path, output_dir: Path, session, uniq
         h5_file = [f for f in h5_file.rglob("*.h5") if unique_id in str(f)][0]
     print(f"Running h5 file: {h5_file}")
     output_dir = make_output_directory(output_dir, unique_id)
-    reference_image_fp = generate_bergamo_movies(h5_file, session)
+    reference_image_fp = generate_single_plane_reference(h5_file, session)
     if debug:
         stem = h5_file.stem
         debug_file = Path("../scratch") / f"{stem}_debug.h5"
         with h5py.File(h5_file, "r") as f:
             data = f["data"][:5000]
+            tiff_stem_location = f["tiff_stem_location"][()]
+            epoch_filenames = f["epoch_filenames"][()]
         with h5py.File(debug_file, "a") as f:
             f.create_dataset("data", data=data)
+            f.create_dataset("tiff_stem_location", data=tiff_stem_location)
+            f.create_dataset("epoch_filenames", data=epoch_filenames)
         h5_file = debug_file
     with h5py.File(h5_file, "r") as f:
         tiff_stems = json.loads(f["tiff_stem_location"][:][0])
     with open(output_dir / "tiff_stem_locations.json", "w") as j:
         json.dump(tiff_stems, j)
-    
+
     return h5_file, output_dir, reference_image_fp
 
 def get_frame_rate(session: dict) -> Tuple(float, None):
@@ -1693,31 +1706,31 @@ if __name__ == "__main__":  # pragma: nocover
     suite2p_args["do_registration"] = 1
     suite2p_args["data_path"] = []  # TODO: remove this if not needed by suite2p
     suite2p_args["reg_tif"] = False  # We save our own outputs here
-    suite2p_args[
-        "nimg_init"
-    ] = 500  # Nb of images to compute reference. This value is a bit high. Suite2p has it at 300 normally
-    suite2p_args[
-        "maxregshift"
-    ] = 0.2  # Max allowed registration shift as a fraction of frame max(width and height)
+    suite2p_args["nimg_init"] = (
+        500  # Nb of images to compute reference. This value is a bit high. Suite2p has it at 300 normally
+    )
+    suite2p_args["maxregshift"] = (
+        0.2  # Max allowed registration shift as a fraction of frame max(width and height)
+    )
     # These parameters are at the same value as suite2p default. This is just here
     # to make it clear we need those parameters to be at the same value as
     # suite2p default but those lines could be deleted.
-    suite2p_args[
-        "maxregshiftNR"
-    ] = 5.0  # Maximum shift allowed in pixels for a block in rigid registration.
+    suite2p_args["maxregshiftNR"] = (
+        5.0  # Maximum shift allowed in pixels for a block in rigid registration.
+    )
     suite2p_args["batch_size"] = 500  # Number of frames to process at once
     suite2p_args["h5py_key"] = "data"  # h5 path in the file.
-    suite2p_args[
-        "smooth_sigma"
-    ] = 1.15  # Standard deviation in pixels of the gaussian used to smooth the phase correlation.
-    suite2p_args[
-        "smooth_sigma_time"
-    ] = 0.0  # "Standard deviation in time frames of the gaussian used to smooth the data before phase correlation is computed
+    suite2p_args["smooth_sigma"] = (
+        1.15  # Standard deviation in pixels of the gaussian used to smooth the phase correlation.
+    )
+    suite2p_args["smooth_sigma_time"] = (
+        0.0  # "Standard deviation in time frames of the gaussian used to smooth the data before phase correlation is computed
+    )
     suite2p_args["nonrigid"] = True
     suite2p_args["block_size"] = [128, 128]  # Block dimensions in y, x in pixels.
-    suite2p_args[
-        "snr_thresh"
-    ] = 1.2  # If a block is below the above snr threshold. Apply smoothing to the block.
+    suite2p_args["snr_thresh"] = (
+        1.2  # If a block is below the above snr threshold. Apply smoothing to the block.
+    )
 
     # This is to overwrite image reference creation.
     suite2p_args["refImg"] = args["refImg"]
