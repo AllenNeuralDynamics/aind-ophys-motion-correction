@@ -13,7 +13,7 @@ def define_registration_summary_qcmetric_for_plane(plane_id):
         name=f'{plane_id} Registration Summary',
         description=f'The registration summary output by suite2p for plane {plane_id}.',
         # Using path to png within motion correction capsule results
-        reference='/results/{plane_id}/motion_correction/{plane_id}_registration_summary.png',
+        reference=f'/results/{plane_id}/motion_correction/{plane_id}_registration_summary.png',
         value=CheckboxMetric(
             value="Placeholder CheckboxMetric Value",
             # Possible options for the metric
@@ -37,13 +37,14 @@ def define_registration_summary_qcmetric_for_plane(plane_id):
             ]
         ),
     )
+    return metric
 
 def define_fov_quality_qcmetric_for_plane(plane_id):
-        metric = QCMetric(
+    metric = QCMetric(
         name=f'{plane_id} Registration Summary',
         description=f'The registration summary output by suite2p for plane {plane_id}.',
         # Using path to png within motion correction capsule results
-        reference='/results/{plane_id}/motion_correction/{plane_id}_registration_summary.png',
+        reference=f'/results/{plane_id}/motion_correction/{plane_id}_combined_projections.png',
         value=CheckboxMetric(
             value="Placeholder CheckboxMetric Value",
             # Possible options for the metric
@@ -73,6 +74,7 @@ def define_fov_quality_qcmetric_for_plane(plane_id):
             ]
         ),
     )
+    return metric
         
 def combine_and_save_max_and_average_projection_for_plane(plane_id):
     '''
@@ -123,7 +125,7 @@ def get_all_registration_summary_metrics(plane_ids):
 def get_all_fov_quality_metrics(plane_ids):
     fov_quality_metrics = []
     for plane_id in plane_ids:
-        combine_and_save_max_and_average_projection_for_plane(plane_id)
+        combined_projection_path = combine_and_save_max_and_average_projection_for_plane(plane_id)
         fov_quality_metrics.append(define_fov_quality_qcmetric_for_plane(plane_id))
     return fov_quality_metrics
 
@@ -131,7 +133,6 @@ def create_and_write_quality_control_json():
     # Create a QualityControl object 
 
     plane_ids = get_plane_ids()
-
 
     qc = QualityControl(
         notes='This object represents the quality control for the motion-correction processing step.',
