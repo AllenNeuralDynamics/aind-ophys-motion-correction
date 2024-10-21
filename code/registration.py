@@ -1391,7 +1391,7 @@ def singleplane_motion_correction(
 
     return h5_file, output_dir, reference_image_fp
 
-def get_frame_rate(session: dict) -> Tuple(float, None):
+def get_frame_rate(session: dict):
     """ Attempt to pull frame rate from session.json
     Returns none if frame rate not in session.json
 
@@ -1422,7 +1422,7 @@ def parse_arguments():
 
     parser.add_argument(
         "-i",
-        "--input-searchpath",
+        "--input",
         type=str,
         help="File or directory where h5 file is stored",
         default="../data/",
@@ -1438,7 +1438,7 @@ def parse_arguments():
     parser.add_argument(
         "--frame-rate",
         type=float,
-        defualt=31.0,
+        default=31.0,
         help="Frame rate of the movie in Hz. If not provided, "
         "the frame rate will here will be used.",
     )
@@ -1617,7 +1617,12 @@ if __name__ == "__main__":  # pragma: nocover
     unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
     reference_image_fp = ""
     
-    if parser.data_type == "h5":
+    if parser.tiff_input:
+        if not parser.data_type=="TIFF" and not parser.tiff_input:
+            raise(ValueError("Please provide a TIFF input file"))
+        tiff_input = parser.tiff_input
+        args["look_one_level_down"] = parser.look_one_level_down
+    else:
         if "Bergamo" in session.get("rig_id", ""):
             h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
                 data_dir, output_dir, session, unique_id, debug=parser.debug
@@ -1626,11 +1631,6 @@ if __name__ == "__main__":  # pragma: nocover
             h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
                 data_dir, output_dir, debug=parser.debug
             )
-    else:
-        if not parser.data_type=="TIFF" and not parser.tiff_input:
-            raise(ValueError("Please provide a TIFF input file"))
-        tiff_input = parser.tiff_input
-        args["look_one_level_down"] = parser.look_one_level_down
         
     # We convert to dictionary
     args = vars(parser)
@@ -1698,7 +1698,7 @@ if __name__ == "__main__":  # pragma: nocover
     # Here we overwrite the parameters for suite2p that will not change in our
     # processing pipeline. These are parameters that are not exposed to
     # minimize code length. Those are not set to default.
-    if parser.data_type == "h5"
+    if parser.data_type == "h5":
         suite2p_args["h5py"] = h5_file
     else:
         suite2p_args["data_path"] = tiff_input
