@@ -881,32 +881,25 @@ def write_output_metadata(
     motion_corrected_movie: str
         path to motion corrected movies
     """
-    processing = Processing(
-        processing_pipeline=PipelineProcess(
-            processor_full_name="Multplane Ophys Processing Pipeline",
-            pipeline_url=os.getenv("PIPELINE_URL", ""),
-            pipeline_version=os.getenv("PIPELINE_VERSION", ""),
-            data_processes=[
-                DataProcess(
-                    name=ProcessName.VIDEO_MOTION_CORRECTION,
-                    software_version=os.getenv("VERSION", ""),
-                    start_date_time=dt.now(),  # TODO: Add actual dt
-                    end_date_time=dt.now(),  # TODO: Add actual dt
-                    input_location=str(raw_movie),
-                    output_location=str(motion_corrected_movie),
-                    code_url=(
-                        "https://github.com/AllenNeuralDynamics/"
-                        "aind-ophys-motion-correction/tree/main/code"
-                    ),
-                    parameters=metadata,
-                )
-            ],
-        )
+    data_proc = DataProcess(
+        name=ProcessName.VIDEO_MOTION_CORRECTION,
+        software_version=os.getenv("VERSION", ""),
+        start_date_time=dt.now(),  # TODO: Add actual dt
+        end_date_time=dt.now(),  # TODO: Add actual dt
+        input_location=str(raw_movie),
+        output_location=str(motion_corrected_movie),
+        code_url=(
+            "https://github.com/AllenNeuralDynamics/"
+            "aind-ophys-motion-correction/tree/main/code"
+        ),
+        parameters=metadata,
     )
     if isinstance(output_dir, str):
         output_dir = Path(output_dir)
-    print(f"~~~~~~~~~~~~~~Writing output: {output_dir}")
-    processing.write_standard_file(output_directory=output_dir)
+    print(data_proc.model_dump())
+    print(type(data_proc.model_dump()))
+    with open(output_dir / "data_process.json", "w") as f:
+        json.dump(data_proc.model_dump(), f, indent=4)
     
 def check_trim_frames(data):
     """Make sure that if the user sets auto_remove_empty_frames
@@ -1583,7 +1576,8 @@ if __name__ == "__main__":  # pragma: nocover
     args["refImg"] = []
     if reference_image_fp:
         args["refImg"] = [reference_image_fp]
-
+    qc_dir = output_dir / "qc"
+    qc_dir.mkdir()
     # We construct the paths to the outputs
     args["movie_frame_rate_hz"] = frame_rate_hz
     for key, default in (
@@ -1595,10 +1589,14 @@ if __name__ == "__main__":  # pragma: nocover
         ("motion_correction_preview_output", "_motion_preview.webm"),
         ("output_json", "_motion_correction_output.json"),
     ):
-        args[key] = os.path.join(
-            output_dir, os.path.splitext(os.path.basename(h5_file))[0] + default
-        )
-
+        if ("registered.h5" or "motion_transform.csv") in default:
+            args[key] = os.path.join(
+                output_dir, os.path.splitext(os.path.basename(h5_file))[0] + default
+            )
+        else:
+            args[key] = os.path.join(
+                qc_dir, os.path.splitext(os.path.basename(h5_file))[0] + default
+            ) 
     # These are hardcoded parameters of the wrapper. Those are tracked but
     # not exposed.
 
