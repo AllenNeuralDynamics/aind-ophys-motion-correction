@@ -881,32 +881,25 @@ def write_output_metadata(
     motion_corrected_movie: str
         path to motion corrected movies
     """
-    processing = Processing(
-        processing_pipeline=PipelineProcess(
-            processor_full_name="Multplane Ophys Processing Pipeline",
-            pipeline_url=os.getenv("PIPELINE_URL", ""),
-            pipeline_version=os.getenv("PIPELINE_VERSION", ""),
-            data_processes=[
-                DataProcess(
-                    name=ProcessName.VIDEO_MOTION_CORRECTION,
-                    software_version=os.getenv("VERSION", ""),
-                    start_date_time=dt.now(),  # TODO: Add actual dt
-                    end_date_time=dt.now(),  # TODO: Add actual dt
-                    input_location=str(raw_movie),
-                    output_location=str(motion_corrected_movie),
-                    code_url=(
-                        "https://github.com/AllenNeuralDynamics/"
-                        "aind-ophys-motion-correction/tree/main/code"
-                    ),
-                    parameters=metadata,
-                )
-            ],
-        )
+    data_proc = DataProcess(
+        name=ProcessName.VIDEO_MOTION_CORRECTION,
+        software_version=os.getenv("VERSION", ""),
+        start_date_time=dt.now(),  # TODO: Add actual dt
+        end_date_time=dt.now(),  # TODO: Add actual dt
+        input_location=str(raw_movie),
+        output_location=str(motion_corrected_movie),
+        code_url=(
+            "https://github.com/AllenNeuralDynamics/"
+            "aind-ophys-motion-correction/tree/main/code"
+        ),
+        parameters=metadata,
     )
     if isinstance(output_dir, str):
         output_dir = Path(output_dir)
-    print(f"~~~~~~~~~~~~~~Writing output: {output_dir}")
-    processing.write_standard_file(output_directory=output_dir)
+    print(data_proc.model_dump())
+    print(type(data_proc.model_dump()))
+    with open(output_dir / "data_process.json", "w") as f:
+        json.dump(data_proc.model_dump(), f, indent=4)
 
 
 def check_trim_frames(data):
