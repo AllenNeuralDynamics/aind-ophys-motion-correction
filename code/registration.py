@@ -28,7 +28,8 @@ from aind_data_schema.core.processing import (
 from aind_data_schema.core.quality_control import (
     QCEvaluation,
     QCMetric,
-    Stage
+    Stage,
+    Status
 )
 from aind_data_schema_models.process_names import ProcessName
 from aind_data_schema_models.modalities import Modality
@@ -115,16 +116,15 @@ def qc_evaluation(file_path: Path) -> None:
         Location of the avg and max intensity plot with motion plot.
 
     """
-    import pdb;pdb.set_trace()
     qc_evaluation = QCEvaluation(
         name="Field of View Quality and Motion Correction",
-        stage=Stage.PROCESSED,
-        allowed_to_fail=True,
-        modality=Modality.POPHYS,
-        metrics=QCMetric(
+        stage=Stage.PROCESSING,
+        allow_failed_metrics=False,
+        modality=Modality.from_abbreviation("pophys"),
+        metrics=[QCMetric(
             name="Field of View Quality and Motion Correction",
             description="Review the average and max projections to ensure that the FOV quality is sufficient.",
-            reference=file_path,
+            reference=str(file_path),
             value="Placeholder CheckboxMetric Value",
             options=[
                 "Unresonable motion",
@@ -132,11 +132,11 @@ def qc_evaluation(file_path: Path) -> None:
                 "Other Issue with Motion Correction",
             ],
             status=[Status.FAIL, Status.PASS, Status.PENDING],
-        ),
+        )
+        ],
     )
-
-    with open("qc_evaluation.json", "w") as f:
-        json.dump(qc_evaluation.model_to_json(), f, indent=4)
+    with open(Path(file_path.parent) / "qc_evaluation.json", "w") as f:
+        json.dump(qc_evaluation.model_dump_json(), f, indent=4)
 
 
 def compute_reference(
@@ -1861,7 +1861,6 @@ if __name__ == "__main__":  # pragma: nocover
     write_output_metadata(
         args_copy, Path(suite2p_args["h5py"]), args["motion_corrected_output"], output_dir, start_time, end_time=dt.now()
     )
-    qc_evaluation(next(output_dir.rglob("")))
     # TODO: normalize here, if desired
     # save projections
     for im, dst_path in zip(
@@ -2057,5 +2056,7 @@ if __name__ == "__main__":  # pragma: nocover
                 )
                 logger.info(f"created images of PC_low, PC_high, and PC_rof for PC {iPC}")
 
+    # Write QC evaluation
+    qc_evaluation(next(output_dir.rglob("*_registration_summary.png")))
     # Clean up temporary directory
     tmp_dir.cleanup()
