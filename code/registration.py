@@ -115,6 +115,7 @@ def qc_evaluation(file_path: Path) -> None:
         Location of the avg and max intensity plot with motion plot.
 
     """
+    import pdb;pdb.set_trace()
     qc_evaluation = QCEvaluation(
         name="Field of View Quality and Motion Correction",
         stage=Stage.PROCESSED,
@@ -1860,6 +1861,7 @@ if __name__ == "__main__":  # pragma: nocover
     write_output_metadata(
         args_copy, Path(suite2p_args["h5py"]), args["motion_corrected_output"], output_dir, start_time, end_time=dt.now()
     )
+    qc_evaluation(next(output_dir.rglob("")))
     # TODO: normalize here, if desired
     # save projections
     for im, dst_path in zip(
@@ -1874,7 +1876,7 @@ if __name__ == "__main__":  # pragma: nocover
         logger.info(f"wrote {dst_path}")
 
     # Save motion offset data to a csv file
-    # TODO: This *.csv file is being created to maintain compatibility
+    # TODO: This *.csv file is being created to maintain iompatibility
     # with current ophys processing pipeline. In the future this output
     # should be removed and a better data storage format used.
     # 01/25/2021 - NJM
