@@ -1432,7 +1432,7 @@ if __name__ == "__main__":  # pragma: nocover
         default="../data/",
     )
     parser.add_argument(
-        "-o", "--output-dir", type=str, help="Output directory", default="../results/"
+        "-o", "--output-dir", type=str, help="Output directory", default="/results/"
     )
 
     parser.add_argument(
