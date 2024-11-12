@@ -127,7 +127,7 @@ def qc_evaluation(file_path: Path) -> None:
         ],
     )
     with open(Path(file_path.parent) / "qc_evaluation.json", "w") as f:
-        json.dump(qc_evaluation.model_dump_json(), f, indent=4)
+        json.dump(qc_evaluation.model_dump(), f, indent=4)
 
 
 def compute_reference(
