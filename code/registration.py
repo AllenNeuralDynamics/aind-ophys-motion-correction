@@ -25,12 +25,7 @@ import suite2p
 from aind_data_schema.core.processing import (
     DataProcess,
 )
-from aind_data_schema.core.quality_control import (
-    QCEvaluation,
-    QCMetric,
-    Stage,
-    Status
-)
+from aind_data_schema.core.quality_control import QCEvaluation, QCMetric, Stage, Status
 from aind_data_schema_models.process_names import ProcessName
 from aind_data_schema_models.modalities import Modality
 from aind_ophys_utils.array_utils import normalize_array
@@ -121,18 +116,19 @@ def qc_evaluation(file_path: Path) -> None:
         stage=Stage.PROCESSING,
         allow_failed_metrics=False,
         modality=Modality.from_abbreviation("pophys"),
-        metrics=[QCMetric(
-            name="Field of View Quality and Motion Correction",
-            description="Review the average and max projections to ensure that the FOV quality is sufficient.",
-            reference=str(file_path),
-            value="Placeholder CheckboxMetric Value",
-            options=[
-                "Unresonable motion",
-                "No motion",
-                "Other Issue with Motion Correction",
-            ],
-            status=[Status.FAIL, Status.PASS, Status.PENDING],
-        )
+        metrics=[
+            QCMetric(
+                name="Field of View Quality and Motion Correction",
+                description="Review the average and max projections to ensure that the FOV quality is sufficient.",
+                reference=str(file_path),
+                value="Placeholder CheckboxMetric Value",
+                options=[
+                    "Unresonable motion",
+                    "No motion",
+                    "Other Issue with Motion Correction",
+                ],
+                status=[Status.FAIL, Status.PASS, Status.PENDING],
+            )
         ],
     )
     with open(Path(file_path.parent) / "qc_evaluation.json", "w") as f:
@@ -1859,7 +1855,12 @@ if __name__ == "__main__":  # pragma: nocover
     mx_proj = projection_process(data, projection="max")
     av_proj = projection_process(data, projection="avg")
     write_output_metadata(
-        args_copy, Path(suite2p_args["h5py"]), args["motion_corrected_output"], output_dir, start_time, end_time=dt.now()
+        args_copy,
+        Path(suite2p_args["h5py"]),
+        args["motion_corrected_output"],
+        output_dir,
+        start_time,
+        end_time=dt.now(),
     )
     # TODO: normalize here, if desired
     # save projections
