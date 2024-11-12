@@ -899,7 +899,7 @@ def write_output_metadata(
     print(data_proc.model_dump())
     print(type(data_proc.model_dump()))
     with open(output_dir / "data_process.json", "w") as f:
-        json.dump(data_proc.model_dump(), f, indent=4)
+        json.dump(data_proc.model_dump_json(), f, indent=4)
     
 def check_trim_frames(data):
     """Make sure that if the user sets auto_remove_empty_frames
@@ -1576,8 +1576,6 @@ if __name__ == "__main__":  # pragma: nocover
     args["refImg"] = []
     if reference_image_fp:
         args["refImg"] = [reference_image_fp]
-    qc_dir = output_dir / "qc"
-    qc_dir.mkdir()
     # We construct the paths to the outputs
     args["movie_frame_rate_hz"] = frame_rate_hz
     for key, default in (
@@ -1589,14 +1587,9 @@ if __name__ == "__main__":  # pragma: nocover
         ("motion_correction_preview_output", "_motion_preview.webm"),
         ("output_json", "_motion_correction_output.json"),
     ):
-        if ("registered.h5" or "motion_transform.csv") in default:
-            args[key] = os.path.join(
-                output_dir, os.path.splitext(os.path.basename(h5_file))[0] + default
-            )
-        else:
-            args[key] = os.path.join(
-                qc_dir, os.path.splitext(os.path.basename(h5_file))[0] + default
-            ) 
+        args[key] = os.path.join(
+            output_dir, os.path.splitext(os.path.basename(h5_file))[0] + default
+        )
     # These are hardcoded parameters of the wrapper. Those are tracked but
     # not exposed.
 
