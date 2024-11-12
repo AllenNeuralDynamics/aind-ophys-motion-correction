@@ -27,7 +27,14 @@ from aind_data_schema.core.processing import (
     DataProcess,
     PipelineProcess,
 )
+from aind_data_schema.core.quality_control import (
+    QCEvaluation,
+    QCMetric,
+    QCStatus,
+    QCStage
+)
 from aind_data_schema_models.process_names import ProcessName
+from aind_data_schema_models.modalities import Modality
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.video_utils import downsample_h5_video, encode_video
 from matplotlib import pyplot as plt  # noqa: E402
@@ -101,6 +108,31 @@ def load_initial_frames(
         frames = frame_window[requested_frames]
     return frames
 
+
+def qc_evaluation(file_path: Path) -> None:
+    """QC evaluation of the motion corrected movie.
+    
+    Parameters
+    ----------
+    file_path : Path
+        Location of the avg and max intensity plot with motion plot.
+
+    """
+    qc_evaluation = QCEvaluation(
+        name = "Field of View Quality and Motion Correction",
+        stage = QCStage.PROCESSED,
+        allowed_to_fail = True,
+        modality = Modality.POPHYS,
+        metrics = QCMetric(
+            name = "Field of View Quality and Motion Correction",
+            description = "Review the average and max projections to ensure that the FOV quality is sufficient.",
+            status = QCStatus.PASS,
+            file_path = file_path
+        )
+    )
+
+    with open("qc_evaluation.json", "w") as f:
+        json.dump(qc_evaluation.model_to_json(), f, indent=4)
 
 def compute_reference(
     input_frames: np.ndarray,
