@@ -22,12 +22,11 @@ import matplotlib as mpl
 import numpy as np
 import pandas as pd
 import suite2p
-from aind_data_schema.core.processing import (
-    DataProcess,
-)
-from aind_data_schema.core.quality_control import QCEvaluation, QCMetric, Stage, Status
-from aind_data_schema_models.process_names import ProcessName
+from aind_data_schema.core.processing import DataProcess
+from aind_data_schema.core.quality_control import (QCEvaluation, QCMetric,
+                                                   Stage, Status)
 from aind_data_schema_models.modalities import Modality
+from aind_data_schema_models.process_names import ProcessName
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.video_utils import downsample_h5_video, encode_video
 from matplotlib import pyplot as plt  # noqa: E402
@@ -35,14 +34,10 @@ from PIL import Image
 from scipy.ndimage import median_filter
 from scipy.stats import sigmaclip
 from suite2p.registration.nonrigid import make_blocks
-from suite2p.registration.register import pick_initial_reference, register_frames
-from suite2p.registration.rigid import (
-    apply_masks,
-    compute_masks,
-    phasecorr,
-    phasecorr_reference,
-    shift_frame,
-)
+from suite2p.registration.register import (pick_initial_reference,
+                                           register_frames)
+from suite2p.registration.rigid import (apply_masks, compute_masks, phasecorr,
+                                        phasecorr_reference, shift_frame)
 from sync_dataset import Sync
 
 mpl.use("Agg")
