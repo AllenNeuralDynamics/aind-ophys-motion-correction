@@ -26,8 +26,8 @@ from aind_data_schema.core.processing import (
     Processing,
     DataProcess,
     PipelineProcess,
-    ProcessName,
 )
+from aind_data_schema_models.process_names import ProcessName
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.video_utils import downsample_h5_video, encode_video
 from matplotlib import pyplot as plt  # noqa: E402

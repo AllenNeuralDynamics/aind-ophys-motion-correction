@@ -5,6 +5,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ENV PIPELINE_URL="https://codeocean.allenneuraldynamics.org/capsule/6127754/tree"
 ENV PIPELINE_VERSION="1.0"
 ENV VERSION="7.0"
+
 ARG GIT_ASKPASS
 ARG GIT_ACCESS_TOKEN
 COPY git-askpass /
@@ -18,5 +19,5 @@ RUN pip3 install -U --no-cache-dir \
     aind-ophys-utils \
     sbxreader \
     git+https://github.com/arielleleon/suite2p@bug-pull-from-defined-h5py \
-    aind-data-schema==0.22.0 \
+    aind-data-schema==1.1.0 \
     pydantic==2.8.1
