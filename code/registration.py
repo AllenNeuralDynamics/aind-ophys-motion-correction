@@ -905,6 +905,8 @@ def write_output_metadata(
     raw_movie: Union[str, Path],
     motion_corrected_movie: Union[str, Path],
     output_dir: Union[str, Path],
+    start_time: dt,
+    end_time: dt,
 ) -> None:
     """Writes output metadata to plane processing.json
 
@@ -920,8 +922,8 @@ def write_output_metadata(
     data_proc = DataProcess(
         name=ProcessName.VIDEO_MOTION_CORRECTION,
         software_version=os.getenv("VERSION", ""),
-        start_date_time=dt.now(),  # TODO: Add actual dt
-        end_date_time=dt.now(),  # TODO: Add actual dt
+        start_date_time=start_time,  # TODO: Add actual dt
+        end_date_time=end_time,  # TODO: Add actual dt
         input_location=str(raw_movie),
         output_location=str(motion_corrected_movie),
         code_url=(
@@ -1426,7 +1428,7 @@ if __name__ == "__main__":  # pragma: nocover
     # Set the log level and name the logger
     logger = logging.getLogger("Suite2P motion correction")
     logger.setLevel(logging.INFO)
-
+    start_time = dt.now()
     # Create an ArgumentParser object
     parser = argparse.ArgumentParser(description="Suite2P motion correction")
 
@@ -1856,7 +1858,7 @@ if __name__ == "__main__":  # pragma: nocover
     mx_proj = projection_process(data, projection="max")
     av_proj = projection_process(data, projection="avg")
     write_output_metadata(
-        args_copy, Path(suite2p_args["h5py"]), args["motion_corrected_output"], output_dir
+        args_copy, Path(suite2p_args["h5py"]), args["motion_corrected_output"], output_dir, start_time, end_time=dt.now()
     )
     # TODO: normalize here, if desired
     # save projections
