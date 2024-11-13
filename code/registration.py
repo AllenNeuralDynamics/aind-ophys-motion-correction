@@ -106,6 +106,7 @@ def qc_evaluation(file_path: Path) -> None:
         Location of the avg and max intensity plot with motion plot.
 
     """
+    file_parts = file_path.parts[1:]
     qc_evaluation = QCEvaluation(
         name="Field of View Quality and Motion Correction",
         stage=Stage.PROCESSING,
@@ -115,7 +116,7 @@ def qc_evaluation(file_path: Path) -> None:
             QCMetric(
                 name="Field of View Quality and Motion Correction",
                 description="Review the average and max projections to ensure that the FOV quality is sufficient.",
-                reference=str(file_path),
+                reference=str(Path(*file_parts)),
                 value="Placeholder CheckboxMetric Value",
                 options=[
                     "Unresonable motion",
