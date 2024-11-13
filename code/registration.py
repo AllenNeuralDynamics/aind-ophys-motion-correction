@@ -930,7 +930,7 @@ def write_output_metadata(
     print(data_proc.model_dump())
     print(type(data_proc.model_dump()))
     with open(output_dir / "data_process.json", "w") as f:
-        json.dump(data_proc.model_dump_json(), f, indent=4)
+        json.dump(data_proc.model_dump(), f, indent=4)
 
 
 def check_trim_frames(data):
