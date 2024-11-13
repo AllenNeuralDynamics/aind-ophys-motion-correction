@@ -893,7 +893,7 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
         raise Exception(f"Error: {exc}")
 
 
-def write_output_metadata(
+def write_data_process(
     metadata: dict,
     raw_movie: Union[str, Path],
     motion_corrected_movie: Union[str, Path],
@@ -915,8 +915,8 @@ def write_output_metadata(
     data_proc = DataProcess(
         name=ProcessName.VIDEO_MOTION_CORRECTION,
         software_version=os.getenv("VERSION", ""),
-        start_date_time=start_time.isoformat(),  # TODO: Add actual dt
-        end_date_time=end_time.isoformat(),  # TODO: Add actual dt
+        start_date_time=start_time.isoformat(),
+        end_date_time=end_time.isoformat(),
         input_location=str(raw_movie),
         output_location=str(motion_corrected_movie),
         code_url=(
@@ -927,8 +927,6 @@ def write_output_metadata(
     )
     if isinstance(output_dir, str):
         output_dir = Path(output_dir)
-    print(data_proc.model_dump())
-    print(type(data_proc.model_dump()))
     with open(output_dir / "data_process.json", "w") as f:
         json.dump(data_proc.model_dump(), f, indent=4)
 
@@ -1850,7 +1848,7 @@ if __name__ == "__main__":  # pragma: nocover
     # make projections
     mx_proj = projection_process(data, projection="max")
     av_proj = projection_process(data, projection="avg")
-    write_output_metadata(
+    write_data_process(
         args_copy,
         Path(suite2p_args["h5py"]),
         args["motion_corrected_output"],
