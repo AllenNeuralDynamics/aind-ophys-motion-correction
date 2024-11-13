@@ -928,7 +928,7 @@ def write_data_process(
     if isinstance(output_dir, str):
         output_dir = Path(output_dir)
     with open(output_dir / "data_process.json", "w") as f:
-        json.dump(data_proc.model_dump(), f, indent=4)
+        json.dump(json.loads(data_proc.model_json_dump()), f, indent=4)
 
 
 def check_trim_frames(data):
