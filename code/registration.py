@@ -25,6 +25,7 @@ import suite2p
 from aind_data_schema.core.processing import DataProcess
 from aind_data_schema.core.quality_control import (QCEvaluation, QCMetric,
                                                    Stage, Status)
+from aind_qcportal_schema.metric_value improt CheckboxMetric
 from aind_data_schema_models.modalities import Modality
 from aind_data_schema_models.process_names import ProcessName
 from aind_ophys_utils.array_utils import normalize_array
@@ -117,7 +118,21 @@ def qc_evaluation(file_path: Path) -> None:
                 name="Field of View Quality and Motion Correction",
                 description="Review the average and max projections to ensure that the FOV quality is sufficient.",
                 reference=str(Path(*file_parts)),
-                value="Placeholder CheckboxMetric Value",
+                value=value = CheckboxMetric(
+                    value = "Field of view integrity",
+                    options = [
+                        "Low experiment signal to noise",
+                        "Laser/scanner interference ",
+                        "No cells in field of view",
+                        "Uncorrected motion present",
+                    ],
+            status = [
+                Status.PASS,
+                Status.PASS,
+                Status.PASS,
+                Status.PASS
+            ],
+        ),
                 options=[
                     "Unresonable motion",
                     "No motion",
