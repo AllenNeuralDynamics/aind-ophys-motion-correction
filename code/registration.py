@@ -25,7 +25,7 @@ import suite2p
 from aind_data_schema.core.processing import DataProcess
 from aind_data_schema.core.quality_control import (QCEvaluation, QCMetric,
                                                    Stage, Status)
-from aind_qcportal_schema.metric_value improt CheckboxMetric
+from aind_qcportal_schema.metric_value import CheckboxMetric
 from aind_data_schema_models.modalities import Modality
 from aind_data_schema_models.process_names import ProcessName
 from aind_ophys_utils.array_utils import normalize_array
