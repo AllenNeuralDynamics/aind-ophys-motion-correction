@@ -113,12 +113,19 @@ def qc_evaluation(file_path: Path) -> None:
         stage=Stage.PROCESSING,
         allow_failed_metrics=False,
         modality=Modality.from_abbreviation("pophys"),
+        status_history=[                                
+            QCStatus(
+                evaluator='Pending review',
+                timestamp=dt.now(),
+                status=Status.PENDING
+            )
+        ],
         metrics=[
             QCMetric(
                 name="Field of View Quality and Motion Correction",
                 description="Review the average and max projections to ensure that the FOV quality is sufficient.",
                 reference=str(Path(*file_parts)),
-                value=value = CheckboxMetric(
+                value=CheckboxMetric(
                     value = "Field of view integrity",
                     options = [
                         "Low experiment signal to noise",
@@ -126,20 +133,13 @@ def qc_evaluation(file_path: Path) -> None:
                         "No cells in field of view",
                         "Uncorrected motion present",
                     ],
-            status = [
-                Status.PASS,
-                Status.PASS,
-                Status.PASS,
-                Status.PASS
-            ],
-        ),
-                options=[
-                    "Unresonable motion",
-                    "No motion",
-                    "Other Issue with Motion Correction",
+                    status = [
+                        Status.PASS,
+                        Status.PASS,
+                        Status.PASS,
+                        Status.PASS
                 ],
-                status=[Status.FAIL, Status.PASS, Status.PENDING],
-            )
+            ),
         ],
     )
     with open(Path(file_path.parent) / "quality_evaluation.json", "w") as f:
