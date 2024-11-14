@@ -142,7 +142,7 @@ def qc_evaluation(file_path: Path) -> None:
             )
         ],
     )
-    with open(Path(file_path.parent) / "qc_evaluation.json", "w") as f:
+    with open(Path(file_path.parent) / "quality_evaluation.json", "w") as f:
         json.dump(qc_evaluation.model_dump(), f, indent=4)
 
 
