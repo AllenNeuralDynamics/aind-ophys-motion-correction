@@ -24,7 +24,7 @@ import pandas as pd
 import suite2p
 from aind_data_schema.core.processing import DataProcess
 from aind_data_schema.core.quality_control import (QCEvaluation, QCMetric,
-                                                   Stage, Status)
+                                                   Stage, Status, QCStatus)
 from aind_qcportal_schema.metric_value import CheckboxMetric
 from aind_data_schema_models.modalities import Modality
 from aind_data_schema_models.process_names import ProcessName
@@ -109,39 +109,40 @@ def qc_evaluation(file_path: Path) -> None:
     """
     file_parts = file_path.parts[1:]
     qc_evaluation = QCEvaluation(
-        name="Field of View Quality and Motion Correction",
-        stage=Stage.PROCESSING,
-        allow_failed_metrics=False,
-        modality=Modality.from_abbreviation("pophys"),
-        status_history=[                                
-            QCStatus(
-                evaluator='Pending review',
-                timestamp=dt.now(),
-                status=Status.PENDING
-            )
-        ],
-        metrics=[
-            QCMetric(
-                name="Field of View Quality and Motion Correction",
-                description="Review the average and max projections to ensure that the FOV quality is sufficient.",
-                reference=str(Path(*file_parts)),
-                value=CheckboxMetric(
-                    value = "Field of view integrity",
-                    options = [
-                        "Low experiment signal to noise",
-                        "Laser/scanner interference ",
-                        "No cells in field of view",
-                        "Uncorrected motion present",
+            name="Field of View Quality and Motion Correction",
+            stage=Stage.PROCESSING,
+            allow_failed_metrics=False,
+            modality=Modality.from_abbreviation("pophys"),
+            metrics=[
+                QCMetric(
+                    name="Field of View Quality and Motion Correction",
+                    description="Review the average and max projections to ensure that the FOV quality is sufficient.",
+                    reference=str(Path(*file_parts)),
+                    status_history=[                                
+                        QCStatus(
+                            evaluator='Pending review',
+                            timestamp=dt.now(),
+                            status=Status.PENDING
+                        )
                     ],
-                    status = [
-                        Status.PASS,
-                        Status.PASS,
-                        Status.PASS,
-                        Status.PASS
-                ],
-            ),
-        ],
-    )
+                    value=CheckboxMetric(
+                        value="Field of view integrity",
+                        options=[
+                            "Low experiment signal to noise",
+                            "Laser/scanner interference ",
+                            "No cells in field of view",
+                            "Uncorrected motion present",
+                        ],
+                        status=[
+                            Status.PASS,
+                            Status.PASS,
+                            Status.PASS,
+                            Status.PASS
+                        ]
+                    )
+                )
+            ]
+        )
     with open(Path(file_path.parent) / "quality_evaluation.json", "w") as f:
         json.dump(qc_evaluation.model_dump(), f, indent=4)
 
