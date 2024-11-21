@@ -1451,12 +1451,6 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "--tiff-input",
-        type=str,
-        default=None,
-        help="Path to TIFF file if data-type is TIFF"
-    )
-    parser.add_argument(
         "--look-one-level-down",
         type=bool,
         default=False,
@@ -1474,7 +1468,7 @@ def parse_arguments():
     parser.add_argument(
         "--force_refImg",
         action="store_true",
-        default=True,
+        default=False,
         help="Force the use of an external reference image (default: True)",
     )
 
@@ -1617,10 +1611,8 @@ if __name__ == "__main__":  # pragma: nocover
     unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
     reference_image_fp = ""
     
-    if parser.tiff_input:
-        if not parser.data_type=="TIFF" and not parser.tiff_input:
-            raise(ValueError("Please provide a TIFF input file"))
-        tiff_input = parser.tiff_input
+    if parser.data_type=="TIFF":
+        input_file = next(data_dir.rglob("pophys"))
     else:
         if "Bergamo" in session.get("rig_id", ""):
             h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
@@ -1630,12 +1622,9 @@ if __name__ == "__main__":  # pragma: nocover
             h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
                 data_dir, output_dir, debug=parser.debug
             )
-        
+        input_file = str(h5_file)
     # We convert to dictionary
     args = vars(parser)
-    if parser.tiff_input:
-        args["look_one_level_down"] = parser.look_one_level_down
-    h5_file = str(h5_file)
     if not frame_rate_hz:
         frame_rate_hz = parser.frame_rate
         logging.warning("Using default frame rate of 31.0 Hz")
@@ -1645,6 +1634,10 @@ if __name__ == "__main__":  # pragma: nocover
         args["refImg"] = [reference_image_fp]
 
     # We construct the paths to the outputs
+    if isinstance(input_file, list):
+        basename = os.path.basename(input_file[0])
+    else:
+        basename = os.path.basename(input_file)
     args["movie_frame_rate_hz"] = frame_rate_hz
     for key, default in (
         ("motion_corrected_output", "_registered.h5"),
@@ -1656,7 +1649,7 @@ if __name__ == "__main__":  # pragma: nocover
         ("output_json", "_motion_correction_output.json"),
     ):
         args[key] = os.path.join(
-            output_dir, os.path.splitext(os.path.basename(h5_file))[0] + default
+            output_dir, os.path.splitext(basename)[0] + default
         )
 
     # These are hardcoded parameters of the wrapper. Those are tracked but
@@ -1700,12 +1693,14 @@ if __name__ == "__main__":  # pragma: nocover
     # processing pipeline. These are parameters that are not exposed to
     # minimize code length. Those are not set to default.
     if parser.data_type == "h5":
-        suite2p_args["h5py"] = h5_file
+        suite2p_args["h5py"] = input_file
     else:
-        suite2p_args["data_path"] = tiff_input
+        suite2p_args["data_path"] = str(input_file)
+        suite2p_args["look_one_level_down"] = True
+        suite2p_args["tiff_list"] = [str(i) for i in input_file.glob("*.tif*")]
     suite2p_args["roidetect"] = False
     suite2p_args["do_registration"] = 1
-    suite2p_args["data_path"] = []  # TODO: remove this if not needed by suite2p
+    # suite2p_args["data_path"] = []  # TODO: remove this if not needed by suite2p
     suite2p_args["reg_tif"] = False  # We save our own outputs here
     suite2p_args["nimg_init"] = (
         500  # Nb of images to compute reference. This value is a bit high. Suite2p has it at 300 normally
@@ -1720,7 +1715,7 @@ if __name__ == "__main__":  # pragma: nocover
         5.0  # Maximum shift allowed in pixels for a block in rigid registration.
     )
     suite2p_args["batch_size"] = 500  # Number of frames to process at once
-    if suite2p.get("h5py", ""):
+    if suite2p_args.get("h5py", ""):
         suite2p_args["h5py_key"] = "data"  # h5 path in the file.
     suite2p_args["smooth_sigma"] = (
         1.15  # Standard deviation in pixels of the gaussian used to smooth the phase correlation.
@@ -1739,11 +1734,12 @@ if __name__ == "__main__":  # pragma: nocover
     suite2p_args["force_refImg"] = args["force_refImg"]
 
     # if data is in a S3 bucket, copy it to /scratch for faster access
-    if is_S3(suite2p_args["h5py"]):
-        dst = "/scratch/" + Path(suite2p_args["h5py"]).name
-        logger.info(f"copying {suite2p_args['h5py']} from S3 bucket to {dst}")
-        shutil.copy(suite2p_args["h5py"], dst)
-        suite2p_args["h5py"] = dst
+    if suite2p_args.get("h5py", ""):
+        if is_S3(suite2p_args["h5py"]):
+            dst = "/scratch/" + Path(suite2p_args["h5py"]).name
+            logger.info(f"copying {suite2p_args['h5py']} from S3 bucket to {dst}")
+            shutil.copy(suite2p_args["h5py"], dst)
+            suite2p_args["h5py"] = dst
 
     if suite2p_args.get("h5", ""):
         check_and_warn_on_datatype(
@@ -1785,7 +1781,7 @@ if __name__ == "__main__":  # pragma: nocover
     # numpy.ndarray can't be serialized with json. Converting to list
     # and writing to the logger causes the output to be unreadable.
     copy_of_args = copy.deepcopy(suite2p_args)
-    copy_of_parser.pop("refImg")
+    copy_of_args.pop("refImg")
 
     msg = f"running Suite2P v{suite2p.version} with args\n"
     msg += f"{json.dumps(copy_of_args, indent=2, sort_keys=True)}\n"
@@ -1798,14 +1794,13 @@ if __name__ == "__main__":  # pragma: nocover
 
     if suite2p_args.get("h5py", ""):
         suite2p_args["h5py"] = [suite2p_args["h5py"]]
-    else:
-        suite2p_args["data_path"] = [suite2p_args["data_path"]]
     suite2p.run_s2p(suite2p_args)
     data_path = ""
     if suite2p_args.get("h5py", ""):
         data_path = suite2p_args["h5py"][0]
     else:
         data_path = suite2p_args["data_path"][0]
+        
     if not data_path:
         raise ValueError("No data path found in suite2p_args")
     bin_path = list(Path(tdir).rglob("data.bin"))[0]
