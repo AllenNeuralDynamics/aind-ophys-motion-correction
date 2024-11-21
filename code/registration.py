@@ -22,27 +22,20 @@ import matplotlib as mpl
 import numpy as np
 import pandas as pd
 import suite2p
-from aind_data_schema.core.processing import (
-    Processing,
-    DataProcess,
-    PipelineProcess,
-    ProcessName,
-)
+from aind_data_schema.core.processing import (DataProcess, PipelineProcess,
+                                              Processing, ProcessName)
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.video_utils import downsample_h5_video, encode_video
 from matplotlib import pyplot as plt  # noqa: E402
 from PIL import Image
+from ScanImageTiffReader import ScanImageTiffReader
 from scipy.ndimage import median_filter
 from scipy.stats import sigmaclip
 from suite2p.registration.nonrigid import make_blocks
-from suite2p.registration.register import pick_initial_reference, register_frames
-from suite2p.registration.rigid import (
-    apply_masks,
-    compute_masks,
-    phasecorr,
-    phasecorr_reference,
-    shift_frame,
-)
+from suite2p.registration.register import (pick_initial_reference,
+                                           register_frames)
+from suite2p.registration.rigid import (apply_masks, compute_masks, phasecorr,
+                                        phasecorr_reference, shift_frame)
 from sync_dataset import Sync
 
 mpl.use("Agg")
@@ -57,6 +50,117 @@ def is_S3(file_path: str):
     """
     return "s3fs" in subprocess.check_output(
         "df " + file_path + "| sed -n '2 p'", shell=True, text=True
+    )
+
+
+def h5py_to_numpy(
+    h5py_file: h5py.File,
+    h5py_key: str,
+    trim_frames_start: int = 0,
+    trim_frames_end: int = 0,
+) -> np.ndarray:
+    """Converts a h5py dataset to a numpy array
+
+    Parameters
+    ----------
+    h5py_file : h5py.File
+        h5py file object
+    h5py_key : str
+        key to the dataset
+    trim_frames_start : int
+        Number of frames to disregard from the start of the movie. Default 0.
+    trim_frames_end : int
+        Number of frames to disregard from the end of the movie. Default 0.
+    Returns
+    -------
+    np.ndarray
+        numpy array
+    """
+    with open(h5py_file, "r") as f:
+        n_frames = f[h5py_key].shape[0]
+        if trim_frames_start > 0 or trim_frames_end > 0:
+            return f[h5py_key][trim_frames_start : n_frames - trim_frames_end]
+        else:
+            return f[h5py_key][:]
+
+
+def tiff_to_numpy(
+    tiff_list: List[str], trim_frames_start: int = 0, trim_frames_end: int = 0
+) -> np.ndarray:
+    """
+    Converts a list of TIFF files to a single numpy array, with optional frame trimming.
+
+    Parameters
+    ----------
+    tiff_list : List[str]
+        List of TIFF file paths to process
+    trim_frames_start : int, optional
+        Number of frames to remove from the start (default: 0)
+    trim_frames_end : int, optional
+        Number of frames to remove from the end (default: 0)
+
+    Returns
+    -------
+    np.ndarray
+        Combined array of all TIFF data with specified trimming
+
+    Raises
+    ------
+    ValueError
+        If trim values exceed total number of frames or are negative
+    """
+    if not tiff_list:
+        raise ValueError("TIFF list cannot be empty")
+    if trim_frames_start < 0 or trim_frames_end < 0:
+        raise ValueError("Trim values must be non-negative")
+
+    def get_total_frames(tiff_files: List[str]) -> int:
+        """Calculate total number of frames across all TIFF files."""
+        total = 0
+        for tiff in tiff_files:
+            with ScanImageTiffReader(tiff) as reader:
+                total += reader.shape()[0]
+        return total
+
+    # Validate trim parameters
+    total_frames = get_total_frames(tiff_list)
+    if trim_frames_start + trim_frames_end >= total_frames:
+        raise ValueError(
+            f"Invalid trim values: start ({trim_frames_start}) + end ({trim_frames_end}) "
+            f"must be less than total frames ({total_frames})"
+        )
+
+    # Initialize variables for frame counting
+    processed_frames = 0
+    arrays_to_stack = []
+
+    for tiff_path in tiff_list:
+        with ScanImageTiffReader(tiff_path) as reader:
+            current_frames = reader.shape()[0]
+            start_idx = max(0, trim_frames_start - processed_frames)
+            end_idx = current_frames
+
+            if processed_frames + current_frames > total_frames - trim_frames_end:
+                end_idx = total_frames - trim_frames_end - processed_frames
+
+            if start_idx < end_idx:  # Only process if there are frames to include
+                data = np.array(reader.data()[start_idx:end_idx])
+                arrays_to_stack.append(data)
+
+            processed_frames += current_frames
+
+            # Break if we've processed all needed frames
+            if processed_frames >= total_frames - trim_frames_end:
+                break
+
+    # Stack all arrays along the appropriate axis
+    if not arrays_to_stack:
+        raise ValueError("No frames remained after trimming")
+
+    return (
+        np.concatenate(arrays_to_stack, axis=0)
+        if len(arrays_to_stack) > 1
+        else arrays_to_stack[0]
     )
 
 
@@ -88,17 +192,18 @@ def load_initial_frames(
         time axis. If n_frames > tot_frames, a number of frames equal to
         tot_frames is returned.
     """
-    with h5py.File(file_path, "r") as hdf5_file:
-        # Load all frames as fancy indexing is slower than loading the full
-        # data.
-        max_frame = hdf5_file[h5py_key].shape[0] - trim_frames_end
-        frame_window = hdf5_file[h5py_key][trim_frames_start:max_frame]
-        # Total number of frames in the movie.
-        tot_frames = frame_window.shape[0]
-        requested_frames = np.linspace(
-            0, tot_frames, 1 + min(n_frames, tot_frames), dtype=int
-        )[:-1]
-        frames = frame_window[requested_frames]
+    if file_path.endswith(".h5"):
+        array = h5py_to_numpy(file_path, h5py_key, trim_frames_start, trim_frames_end)
+    elif file_path.endswith(".tif"):
+        array = tiff_to_numpy([file_path], trim_frames_start, trim_frames_end)
+    else:
+        raise ValueError("File type not supported")
+    # Total number of frames in the movie.
+    tot_frames = array.shape[0]
+    requested_frames = np.linspace(
+        0, tot_frames, 1 + min(n_frames, tot_frames), dtype=int
+    )[:-1]
+    frames = array[requested_frames]
     return frames
 
 
@@ -907,7 +1012,8 @@ def write_output_metadata(
         output_dir = Path(output_dir)
     print(f"~~~~~~~~~~~~~~Writing output: {output_dir}")
     processing.write_standard_file(output_directory=output_dir)
-    
+
+
 def check_trim_frames(data):
     """Make sure that if the user sets auto_remove_empty_frames
     and timing frames is already requested, raise an error.
@@ -1391,15 +1497,16 @@ def singleplane_motion_correction(
 
     return h5_file, output_dir, reference_image_fp
 
+
 def get_frame_rate(session: dict):
-    """ Attempt to pull frame rate from session.json
+    """Attempt to pull frame rate from session.json
     Returns none if frame rate not in session.json
 
     Parameters
     ----------
     session: dict
         session metadata
-    
+
     Returns
     -------
     frame_rate: float
@@ -1442,20 +1549,16 @@ def parse_arguments():
         help="Frame rate of the movie in Hz. If not provided, "
         "the frame rate will here will be used.",
     )
-    
+
     parser.add_argument(
-        "--data-type",
-        type=str,
-        default="h5",
-        help="Specify h5 or TIFF input type"
+        "--data-type", type=str, default="h5", help="Specify h5 or TIFF input type"
     )
 
     parser.add_argument(
         "--look-one-level-down",
         type=bool,
         default=False,
-        help="If True, search for TIFF files in subdirectories "
-         "of the input directory",
+        help="If True, search for TIFF files in subdirectories " "of the input directory",
     )
     parser.add_argument(
         "--tmp_dir",
@@ -1610,8 +1713,8 @@ if __name__ == "__main__":  # pragma: nocover
     frame_rate_hz = get_frame_rate(session)
     unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
     reference_image_fp = ""
-    
-    if parser.data_type=="TIFF":
+
+    if parser.data_type == "TIFF":
         input_file = next(data_dir.rglob("pophys"))
     else:
         if "Bergamo" in session.get("rig_id", ""):
@@ -1648,9 +1751,7 @@ if __name__ == "__main__":  # pragma: nocover
         ("motion_correction_preview_output", "_motion_preview.webm"),
         ("output_json", "_motion_correction_output.json"),
     ):
-        args[key] = os.path.join(
-            output_dir, os.path.splitext(basename)[0] + default
-        )
+        args[key] = os.path.join(output_dir, os.path.splitext(basename)[0] + default)
 
     # These are hardcoded parameters of the wrapper. Those are tracked but
     # not exposed.
@@ -1749,7 +1850,9 @@ if __name__ == "__main__":  # pragma: nocover
         )
 
         if args["auto_remove_empty_frames"]:
-            logger.info("Attempting to find empty frames at the start and end of the movie.")
+            logger.info(
+                "Attempting to find empty frames at the start and end of the movie."
+            )
             lowside, highside = find_movie_start_end_empty_frames(
                 h5py_name=suite2p_args["h5py"],
                 h5py_key=suite2p_args["h5py_key"],
@@ -1800,7 +1903,7 @@ if __name__ == "__main__":  # pragma: nocover
         data_path = suite2p_args["h5py"][0]
     else:
         data_path = suite2p_args["data_path"][0]
-        
+
     if not data_path:
         raise ValueError("No data path found in suite2p_args")
     bin_path = list(Path(tdir).rglob("data.bin"))[0]
