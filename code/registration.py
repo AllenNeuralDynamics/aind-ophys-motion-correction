@@ -8,13 +8,13 @@ import subprocess
 import tempfile
 import warnings
 from datetime import datetime as dt
-from functools import partial
+from functools import lru_cache, partial
 from glob import glob
 from itertools import product
 from multiprocessing import Pool
 from pathlib import Path
 from time import time
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 import cv2
 import h5py
@@ -22,8 +22,12 @@ import matplotlib as mpl
 import numpy as np
 import pandas as pd
 import suite2p
-from aind_data_schema.core.processing import (DataProcess, PipelineProcess,
-                                              Processing, ProcessName)
+from aind_data_schema.core.processing import (
+    DataProcess,
+    PipelineProcess,
+    Processing,
+    ProcessName,
+)
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.video_utils import downsample_h5_video, encode_video
 from matplotlib import pyplot as plt  # noqa: E402
@@ -32,10 +36,14 @@ from ScanImageTiffReader import ScanImageTiffReader
 from scipy.ndimage import median_filter
 from scipy.stats import sigmaclip
 from suite2p.registration.nonrigid import make_blocks
-from suite2p.registration.register import (pick_initial_reference,
-                                           register_frames)
-from suite2p.registration.rigid import (apply_masks, compute_masks, phasecorr,
-                                        phasecorr_reference, shift_frame)
+from suite2p.registration.register import pick_initial_reference, register_frames
+from suite2p.registration.rigid import (
+    apply_masks,
+    compute_masks,
+    phasecorr,
+    phasecorr_reference,
+    shift_frame,
+)
 from sync_dataset import Sync
 
 mpl.use("Agg")
@@ -53,6 +61,51 @@ def is_S3(file_path: str):
     )
 
 
+def h5py_byteorder_name(h5py_file: h5py.File, h5py_key: str) -> Tuple[str, str]:
+    """Get the byteorder and name of the dataset in the h5py file.
+
+    Parameters
+    ----------
+    h5py_file : h5py.File
+        h5py file object
+    h5py_key : str
+        key to the dataset
+
+    Returns
+    -------
+    str
+        byteorder of the dataset
+    str
+        name of the dataset
+    """
+    with h5py.File(h5py_file, "r") as f:
+        byteorder = f[h5py_key].dtype.byteorder
+        name = f[h5py_key].dtype.name
+    return byteorder, name
+
+
+def tiff_byteorder_name(tiff_file: Path) -> Tuple[str, str]:
+    """Get the byteorder and name of the dataset in the tiff file.
+
+    Parameters
+    ----------
+    tiff_file : Path
+        Location of the tiff file
+
+    Returns
+    -------
+    str
+        byteorder of the dataset
+    str
+        name of the dataset
+    """
+    with ScanImageTiffReader(tiff_file) as reader:
+        byteorder = reader.data().dtype.byteorder
+        name = reader.data().dtype.name
+    return byteorder, name
+
+
+@lru_cache(maxsize=32)
 def h5py_to_numpy(
     h5py_file: h5py.File,
     h5py_key: str,
@@ -84,6 +137,7 @@ def h5py_to_numpy(
             return f[h5py_key][:]
 
 
+@lru_cache(maxsize=32)
 def tiff_to_numpy(
     tiff_list: List[str], trim_frames_start: int = 0, trim_frames_end: int = 0
 ) -> np.ndarray:
@@ -684,44 +738,53 @@ def compute_acutance(
     return (grady**2 + gradx**2).mean()
 
 
-def check_and_warn_on_datatype(h5py_name: str, h5py_key: str, logger: Callable):
+def check_and_warn_on_datatype(
+    filepath: Path, logger: Callable, filetype: str = "h5", h5py_key: str = ""
+):
     """Suite2p assumes int16 types throughout code. Check that the input
     data is type int16 else throw a warning.
 
     Parameters
     ----------
-    h5py_name : str
+    filepath : Path
         Path to the HDF5 containing the data.
-    h5py_key : str
-        Name of the dataset to check.
     logger : Callable
         Logger to output logger warning to.
+    filetype : str
+        Type of file to check. Default is "h5".
+    h5py_key : str
+        Name of the dataset to check. Default is "".
+
     """
-    with h5py.File(h5py_name, "r") as h5_file:
-        dataset = h5_file[h5py_key]
+    if filetype == "h5":
+        byteorder, name = h5py_byteorder_name(filepath, h5py_key)
+    elif filetype == "tiff":
+        byteorder, name = tiff_byteorder_name(filepath)
+    else:
+        raise ValueError("File type not supported")
+    if byteorder == ">":
+        logger(
+            "Data byteorder is big-endian which may cause issues in "
+            "suite2p. This may result in a crash or unexpected "
+            "results."
+        )
+    if name != "int16":
+        logger(
+            f"Data type is {name} and not int16. Suite2p "
+            "assumes int16 data as input and throughout codebase. "
+            "Non-int16 data may result in unexpected results or "
+            "crashes."
+        )
 
-        if dataset.dtype.byteorder == ">":
-            logger(
-                "Data byteorder is big-endian which may cause issues in "
-                "suite2p. This may result in a crash or unexpected "
-                "results."
-            )
-        if dataset.dtype.name != "int16":
-            logger(
-                f"Data type is {dataset.dtype.name} and not int16. Suite2p "
-                "assumes int16 data as input and throughout codebase. "
-                "Non-int16 data may result in unexpected results or "
-                "crashes."
-            )
 
-
-def _mean_of_batch(i, h5py_name, h5py_key):
-    return h5py.File(h5py_name)[h5py_key][i : i + 1000].mean(axis=(1, 2))
+def _mean_of_batch(i, array):
+    return array[i : i + 1000].mean(axis=(1, 2))
 
 
 def find_movie_start_end_empty_frames(
-    h5py_name: str,
-    h5py_key: str,
+    filepath: Path | list[Path],
+    filetype: str = "h5",
+    h5py_key: str = "",
     n_sigma: float = 5,
     logger: Optional[Callable] = None,
     n_jobs: Optional[int] = None,
@@ -735,10 +798,12 @@ def find_movie_start_end_empty_frames(
 
     Parameters
     ----------
-    h5py_name : str
-        Name of the HDF5 file to load from.
+    filepath : Path | list[Path]
+        File path to HDF5 file or the list of TIFFS to process
+    filetype : str
+        Type of file to load ("tif" or "h5"). Default is "h5".
     h5py_key : str
-        Name of the dataset to load from the HDF5 file.
+        Name of the dataset to load from the HDF5 file. Default is ""
     n_sigma : float
         Number of standard deviations beyond which a frame is considered an
         outlier and "empty".
@@ -753,22 +818,28 @@ def find_movie_start_end_empty_frames(
         Tuple of the number of frames to cut from the start and end of the
         movie as (n_trim_start, n_trim_end).
     """
+
+    if file_path.endswith(".h5"):
+        array = h5py_to_numpy(file_path, h5py_key, trim_frames_start, trim_frames_end)
+    elif file_path.endswith(".tif"):
+        array = tiff_to_numpy([file_path], trim_frames_start, trim_frames_end)
+    else:
+        raise ValueError("File type not supported")
     # Find the midpoint of the movie.
-    with h5py.File(h5py_name, "r") as f:
-        n_frames = f[h5py_key].shape[0]
-        midpoint = n_frames // 2
-        # We discover empty or extrema frames by comparing the mean of each frames
-        # to the mean of the full movie.
-        if n_jobs == 1 or n_frames < 2000:
-            means = f[h5py_key][:].mean(axis=(1, 2))
-        else:
-            means = np.concatenate(
-                Pool(n_jobs).starmap(
-                    _mean_of_batch,
-                    product(range(0, n_frames, 1000), [h5py_name], [h5py_key]),
-                )
+    n_frames = array.shape[0]
+    midpoint = n_frames // 2
+    # We discover empty or extrema frames by comparing the mean of each frames
+    # to the mean of the full movie.
+    if n_jobs == 1 or n_frames < 2000:
+        means = array[:].mean(axis=(1, 2))
+    else:
+        means = np.concatenate(
+            Pool(n_jobs).starmap(
+                _mean_of_batch,
+                product(range(0, n_frames, 1000), array),
             )
-        mean_of_frames = means.mean()
+        )
+    mean_of_frames = means.mean()
 
     # Compute a robust standard deviation that is not sensitive to the
     # outliers we are attempting to find.
@@ -1842,35 +1913,37 @@ if __name__ == "__main__":  # pragma: nocover
             shutil.copy(suite2p_args["h5py"], dst)
             suite2p_args["h5py"] = dst
 
-    if suite2p_args.get("h5", ""):
+    if suite2p_args.get("tiff_list", ""):
         check_and_warn_on_datatype(
+            h5py_name=suite2p_args["tiff_list"][0], logger=logger.warning, filetype="tiff"
+        )
+    else:
+        check_and_warn_on_datatype(
+            filepath=suite2p_args["h5py"],
+            logger=logger.warning,
+            h5py_key=suite2p_args["h5py_key"],
+        )
+
+    if args["auto_remove_empty_frames"]:
+        logger.info("Attempting to find empty frames at the start and end of the movie.")
+        lowside, highside = find_movie_start_end_empty_frames(
             h5py_name=suite2p_args["h5py"],
             h5py_key=suite2p_args["h5py_key"],
             logger=logger.warning,
         )
+        args["trim_frames_start"] = lowside
+        args["trim_frames_end"] = highside
+        logger.info(f"Found ({lowside}, {highside}) at the start/end of the movie.")
 
-        if args["auto_remove_empty_frames"]:
-            logger.info(
-                "Attempting to find empty frames at the start and end of the movie."
-            )
-            lowside, highside = find_movie_start_end_empty_frames(
-                h5py_name=suite2p_args["h5py"],
-                h5py_key=suite2p_args["h5py_key"],
-                logger=logger.warning,
-            )
-            args["trim_frames_start"] = lowside
-            args["trim_frames_end"] = highside
-            logger.info(f"Found ({lowside}, {highside}) at the start/end of the movie.")
-
-        if suite2p_args["force_refImg"] and len(suite2p_args["refImg"]) == 0:
-            suite2p_args, args = update_suite2p_args_reference_image(
-                suite2p_args,
-                args,
-            )
-        if reference_image_fp:
-            suite2p_args, args = update_suite2p_args_reference_image(
-                suite2p_args, args, reference_image_fp=reference_image_fp
-            )
+    if suite2p_args["force_refImg"] and len(suite2p_args["refImg"]) == 0:
+        suite2p_args, args = update_suite2p_args_reference_image(
+            suite2p_args,
+            args,
+        )
+    if reference_image_fp:
+        suite2p_args, args = update_suite2p_args_reference_image(
+            suite2p_args, args, reference_image_fp=reference_image_fp
+        )
 
         # register with Suite2P
         logger.info(f"attempting to motion correct {suite2p_args['h5py']}")
