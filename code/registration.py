@@ -782,8 +782,8 @@ def _mean_of_batch(i, array):
 
 
 def find_movie_start_end_empty_frames(
-    filepath: Path | list[Path],
-    filetype: str = "h5",
+    file_path: Path | list[Path],
+    file_type: str = "h5",
     h5py_key: str = "",
     n_sigma: float = 5,
     logger: Optional[Callable] = None,
@@ -1926,11 +1926,19 @@ if __name__ == "__main__":  # pragma: nocover
 
     if args["auto_remove_empty_frames"]:
         logger.info("Attempting to find empty frames at the start and end of the movie.")
-        lowside, highside = find_movie_start_end_empty_frames(
-            h5py_name=suite2p_args["h5py"],
-            h5py_key=suite2p_args["h5py_key"],
-            logger=logger.warning,
-        )
+        if suite2p_args.get("tiff_list", ""):
+            lowside, highside = find_movie_start_end_empty_frames(
+                file_path=suite2p_args["tiff_list"],
+                file_type="tiff",
+                logger=logger.warning,
+            )
+        else:
+            lowside, highside = find_movie_start_end_empty_frames(
+                file_path=suite2p_args["h5py"],
+                file_type="h5",
+                h5py_key=suite2p_args["h5py_key"],
+                logger=logger.warning,
+            )
         args["trim_frames_start"] = lowside
         args["trim_frames_end"] = highside
         logger.info(f"Found ({lowside}, {highside}) at the start/end of the movie.")
