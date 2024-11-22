@@ -106,7 +106,7 @@ def tiff_byteorder_name(tiff_file: Path) -> Tuple[str, str]:
 
 
 def h5py_to_numpy(
-    h5py_file: h5py.File,
+    h5py_file: str,
     h5py_key: str,
     trim_frames_start: int = 0,
     trim_frames_end: int = 0,
@@ -115,8 +115,8 @@ def h5py_to_numpy(
 
     Parameters
     ----------
-    h5py_file : h5py.File
-        h5py file object
+    h5py_file: str
+        h5py file path
     h5py_key : str
         key to the dataset
     trim_frames_start : int
@@ -128,7 +128,7 @@ def h5py_to_numpy(
     np.ndarray
         numpy array
     """
-    with open(h5py_file, "r") as f:
+    with h5py.File(h5py_file, "r") as f:
         n_frames = f[h5py_key].shape[0]
         if trim_frames_start > 0 or trim_frames_end > 0:
             return f[h5py_key][trim_frames_start : n_frames - trim_frames_end]
@@ -778,7 +778,7 @@ def _mean_of_batch(i, array):
 
 
 def find_movie_start_end_empty_frames(
-    filepath: Union[Path , list[Path]],
+    filepath: Union[str , list[str]],
     h5py_key: str = "",
     n_sigma: float = 5,
     logger: Optional[Callable] = None,
@@ -793,7 +793,7 @@ def find_movie_start_end_empty_frames(
 
     Parameters
     ----------
-    filepath : Path | list[Path]
+    filepath : str | list[str]
         File path to HDF5 file or the list of TIFFS to process
     h5py_key : str
         Name of the dataset to load from the HDF5 file. Default is ""
@@ -812,7 +812,7 @@ def find_movie_start_end_empty_frames(
         movie as (n_trim_start, n_trim_end).
     """
 
-    if isinstance(filepath, Path):
+    if isinstance(filepath, str):
         array = h5py_to_numpy(filepath, h5py_key)
     elif isinstance(filepath, list):
         array = tiff_to_numpy(filepath)
@@ -826,7 +826,6 @@ def find_movie_start_end_empty_frames(
     if n_jobs == 1 or n_frames < 2000:
         means = array[:].mean(axis=(1, 2))
     else:
-        import pdb;pdb.set_trace()
         means = np.concatenate(
             Pool(n_jobs).starmap(
                 _mean_of_batch,
@@ -1344,14 +1343,15 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
     frame_rate_hz: float
         frame rate in Hz
     """
-    import pdb;pdb.set_trace()
+    data_dir = next(data_dir.rglob("pophys"))
+    if not data_dir.is_dir():
+        raise ValueError("Could not locate 'pophys' directory")
     try:
         unique_id = [i for i in data_dir.rglob("*") if "ophys_experiment" in str(i)][
             0
         ].name.split("_")[-1]
         h5_file = [i for i in data_dir.rglob("*") if f"{unique_id}.h5" in str(i)][0]
     except IndexError:
-
         unique_id = [i for i in data_dir.rglob("*") if i.is_dir()][0].name
         h5_file = [i for i in data_dir.rglob("*") if f"{unique_id}.h5" in str(i)][0]
     session_dir = h5_file.parent.parent
