@@ -782,8 +782,7 @@ def _mean_of_batch(i, array):
 
 
 def find_movie_start_end_empty_frames(
-    file_path: Path | list[Path],
-    file_type: str = "h5",
+    filepath: Path | list[Path],
     h5py_key: str = "",
     n_sigma: float = 5,
     logger: Optional[Callable] = None,
@@ -800,8 +799,6 @@ def find_movie_start_end_empty_frames(
     ----------
     filepath : Path | list[Path]
         File path to HDF5 file or the list of TIFFS to process
-    filetype : str
-        Type of file to load ("tif" or "h5"). Default is "h5".
     h5py_key : str
         Name of the dataset to load from the HDF5 file. Default is ""
     n_sigma : float
@@ -819,10 +816,10 @@ def find_movie_start_end_empty_frames(
         movie as (n_trim_start, n_trim_end).
     """
 
-    if file_path.endswith(".h5"):
-        array = h5py_to_numpy(file_path, h5py_key, trim_frames_start, trim_frames_end)
-    elif file_path.endswith(".tif"):
-        array = tiff_to_numpy([file_path], trim_frames_start, trim_frames_end)
+    if filepath.endswith(".h5"):
+        array = h5py_to_numpy(filepath, h5py_key, trim_frames_start, trim_frames_end)
+    elif filepath.endswith(".tif"):
+        array = tiff_to_numpy(filepath, trim_frames_start, trim_frames_end)
     else:
         raise ValueError("File type not supported")
     # Find the midpoint of the movie.
@@ -1915,12 +1912,13 @@ if __name__ == "__main__":  # pragma: nocover
 
     if suite2p_args.get("tiff_list", ""):
         check_and_warn_on_datatype(
-            h5py_name=suite2p_args["tiff_list"][0], logger=logger.warning, filetype="tiff"
+            filepath=suite2p_args["tiff_list"][0], logger=logger.warning, filetype="tiff"
         )
     else:
         check_and_warn_on_datatype(
             filepath=suite2p_args["h5py"],
             logger=logger.warning,
+            filetype="h5",
             h5py_key=suite2p_args["h5py_key"],
         )
 
@@ -1928,14 +1926,12 @@ if __name__ == "__main__":  # pragma: nocover
         logger.info("Attempting to find empty frames at the start and end of the movie.")
         if suite2p_args.get("tiff_list", ""):
             lowside, highside = find_movie_start_end_empty_frames(
-                file_path=suite2p_args["tiff_list"],
-                file_type="tiff",
+                filepath=suite2p_args["tiff_list"],
                 logger=logger.warning,
             )
         else:
             lowside, highside = find_movie_start_end_empty_frames(
-                file_path=suite2p_args["h5py"],
-                file_type="h5",
+                filepath=suite2p_args["h5py"],
                 h5py_key=suite2p_args["h5py_key"],
                 logger=logger.warning,
             )
