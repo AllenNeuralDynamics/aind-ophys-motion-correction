@@ -1571,7 +1571,7 @@ def parse_arguments():
     parser.add_argument(
         "--force_refImg",
         action="store_true",
-        default=False,
+        default=True,
         help="Force the use of an external reference image (default: True)",
     )
 
