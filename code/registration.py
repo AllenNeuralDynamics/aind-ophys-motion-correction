@@ -105,7 +105,6 @@ def tiff_byteorder_name(tiff_file: Path) -> Tuple[str, str]:
     return byteorder, name
 
 
-@lru_cache(maxsize=32)
 def h5py_to_numpy(
     h5py_file: h5py.File,
     h5py_key: str,
@@ -137,9 +136,8 @@ def h5py_to_numpy(
             return f[h5py_key][:]
 
 
-@lru_cache(maxsize=32)
 def tiff_to_numpy(
-    tiff_list: List[str], trim_frames_start: int = 0, trim_frames_end: int = 0
+    tiff_list: List[Path], trim_frames_start: int = 0, trim_frames_end: int = 0
 ) -> np.ndarray:
     """
     Converts a list of TIFF files to a single numpy array, with optional frame trimming.
@@ -163,12 +161,10 @@ def tiff_to_numpy(
     ValueError
         If trim values exceed total number of frames or are negative
     """
-    if not tiff_list:
-        raise ValueError("TIFF list cannot be empty")
     if trim_frames_start < 0 or trim_frames_end < 0:
         raise ValueError("Trim values must be non-negative")
 
-    def get_total_frames(tiff_files: List[str]) -> int:
+    def get_total_frames(tiff_files: List[Path]) -> int:
         """Calculate total number of frames across all TIFF files."""
         total = 0
         for tiff in tiff_files:
@@ -778,11 +774,11 @@ def check_and_warn_on_datatype(
 
 
 def _mean_of_batch(i, array):
-    return array[i : i + 1000].mean(axis=(1, 2))
+     return array[i : i + 1000].mean(axis=(1, 2))
 
 
 def find_movie_start_end_empty_frames(
-    filepath: Path | list[Path],
+    filepath: Union[Path , list[Path]],
     h5py_key: str = "",
     n_sigma: float = 5,
     logger: Optional[Callable] = None,
@@ -816,10 +812,10 @@ def find_movie_start_end_empty_frames(
         movie as (n_trim_start, n_trim_end).
     """
 
-    if filepath.endswith(".h5"):
-        array = h5py_to_numpy(filepath, h5py_key, trim_frames_start, trim_frames_end)
-    elif filepath.endswith(".tif"):
-        array = tiff_to_numpy(filepath, trim_frames_start, trim_frames_end)
+    if isinstance(filepath, Path):
+        array = h5py_to_numpy(filepath, h5py_key)
+    elif isinstance(filepath, list):
+        array = tiff_to_numpy(filepath)
     else:
         raise ValueError("File type not supported")
     # Find the midpoint of the movie.
@@ -830,6 +826,7 @@ def find_movie_start_end_empty_frames(
     if n_jobs == 1 or n_frames < 2000:
         means = array[:].mean(axis=(1, 2))
     else:
+        import pdb;pdb.set_trace()
         means = np.concatenate(
             Pool(n_jobs).starmap(
                 _mean_of_batch,
@@ -1347,6 +1344,7 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
     frame_rate_hz: float
         frame rate in Hz
     """
+    import pdb;pdb.set_trace()
     try:
         unique_id = [i for i in data_dir.rglob("*") if "ophys_experiment" in str(i)][
             0
