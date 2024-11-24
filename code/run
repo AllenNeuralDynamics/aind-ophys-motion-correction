@@ -2,4 +2,4 @@
 set -ex
 
 ls ../data
-python registration.py "$@"
+python registration.py "$@" --input /data/single-plane-2024-10-21_11-15-00 --data-type TIFF

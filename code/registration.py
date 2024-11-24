@@ -215,7 +215,7 @@ def tiff_to_numpy(
 
 
 def load_initial_frames(
-    file_path: str,
+    file_path: Union[str, list],
     h5py_key: str,
     n_frames: int,
     trim_frames_start: int = 0,
@@ -242,10 +242,10 @@ def load_initial_frames(
         time axis. If n_frames > tot_frames, a number of frames equal to
         tot_frames is returned.
     """
-    if file_path.endswith(".h5"):
+    if isinstance(file_path, str):
         array = h5py_to_numpy(file_path, h5py_key, trim_frames_start, trim_frames_end)
-    elif file_path.endswith(".tif"):
-        array = tiff_to_numpy([file_path], trim_frames_start, trim_frames_end)
+    elif isinstance(file_path, list):
+        array = tiff_to_numpy(file_path, trim_frames_start, trim_frames_end)
     else:
         raise ValueError("File type not supported")
     # Total number of frames in the movie.
@@ -829,7 +829,7 @@ def find_movie_start_end_empty_frames(
         means = np.concatenate(
             Pool(n_jobs).starmap(
                 _mean_of_batch,
-                product(range(0, n_frames, 1000), array),
+                product(range(0, n_frames, 1000), [array]),
             )
         )
     mean_of_frames = means.mean()
@@ -1971,7 +1971,7 @@ if __name__ == "__main__":  # pragma: nocover
         logger.info(f"\tUsing custom reference image: {suite2p_args['refImg']}")
 
     if suite2p_args.get("h5py", ""):
-        suite2p_args["h5py"] = [suite2p_args["h5py"]]
+        suite2p_args["h5py"] = suite2p_args["h5py"]
     suite2p.run_s2p(suite2p_args)
     data_path = ""
     if suite2p_args.get("h5py", ""):
