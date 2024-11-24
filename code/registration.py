@@ -1405,9 +1405,15 @@ def update_suite2p_args_reference_image(
         )
 
     else:
+        if suite2p_args.get("h5py", None):
+            file_path = suite2p_args["h5py"]
+            h5py_key = suite2p_args["h5py_key"]
+        else:
+            file_path = suite2p_args["tiff_list"]
+            h5py_key = None
         initial_frames = load_initial_frames(
-            file_path=suite2p_args["h5py"],
-            h5py_key=suite2p_args["h5py_key"],
+            file_path=file_path,
+            h5py_key=h5py_key,
             n_frames=suite2p_args["nimg_init"],
             trim_frames_start=args["trim_frames_start"],
             trim_frames_end=args["trim_frames_end"],
