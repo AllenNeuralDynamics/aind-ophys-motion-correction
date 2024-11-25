@@ -2293,7 +2293,7 @@ if __name__ == "__main__":  # pragma: nocover
         with h5py.File(args["motion_corrected_output"], "r+") as f:
             crispness = [
                 np.sqrt(np.sum(np.array(np.gradient(np.mean(m, 0))) ** 2))
-                for m in (mov_raw, mov)
+                for m in (mov_raw, f["data"])
             ]
             logger.info("computed crispness of mean image before and after registration")
             if f["reg_metrics/regPC"][:].any():
