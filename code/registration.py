@@ -2325,20 +2325,20 @@ if __name__ == "__main__":  # pragma: nocover
                     "appended additional registration metrics to"
                     f"{args['motion_corrected_output']}"
                 )
-        # create image of PC_low, PC_high, and the residual optical flow between them
-        if f["reg_metrics/regDX"][:].any():
-            for iPC in set(
-                (
-                    np.argmax(f["reg_metrics/regDX"][:, -1]),
-                    np.argmax(farnebackDX[:, -1]),
-                )
-            ):
-                p = Path(args["registration_summary_output"])
-                flow_png(
-                    Path(args["motion_corrected_output"]),
-                    str(p.parent / p.stem),
-                    iPC,
-                )
+            # create image of PC_low, PC_high, and the residual optical flow between them
+            if f["reg_metrics/regDX"][:].any():
+                for iPC in set(
+                    (
+                        np.argmax(f["reg_metrics/regDX"][:, -1]),
+                        np.argmax(farnebackDX[:, -1]),
+                    )
+                ):
+                    p = Path(args["registration_summary_output"])
+                    flow_png(
+                        Path(args["motion_corrected_output"]),
+                        str(p.parent / p.stem),
+                        iPC,
+                    )
                 logger.info(f"created images of PC_low, PC_high, and PC_rof for PC {iPC}")
 
     # Clean up temporary directory
