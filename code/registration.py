@@ -1035,7 +1035,7 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
 
 def write_output_metadata(
     metadata: dict,
-    raw_movie: Union[Path, list],
+    raw_movie: Union[str, list],
     motion_corrected_movie: Union[str, Path],
     output_dir: Union[str, Path],
 ) -> None:
@@ -2088,7 +2088,7 @@ if __name__ == "__main__":  # pragma: nocover
     else:
         filepath = suite2p_args["h5py"]
     write_output_metadata(
-        args_copy, Path(suite2p_args["h5py"]), args["motion_corrected_output"], output_dir
+        args_copy, suite2p_args["h5py"], args["motion_corrected_output"], output_dir
     )
     # TODO: normalize here, if desired
     # save projections
