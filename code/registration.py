@@ -2245,49 +2245,86 @@ if __name__ == "__main__":  # pragma: nocover
     except:
         logger.info("Could not write motion correction preview")
     # compute crispness of mean image using raw and registered movie
-    with (
-        h5py.File(h5_file) as f_raw,
-        h5py.File(args["motion_corrected_output"], "r+") as f,
-    ):
-        mov_raw = f_raw["data"]
-        mov = f["data"]
-        crispness = [
-            np.sqrt(np.sum(np.array(np.gradient(np.mean(m, 0))) ** 2))
-            for m in (mov_raw, mov)
-        ]
-        logger.info("computed crispness of mean image before and after registration")
+    if suite2p_args.get("h5py", ""):
+        with (
+            h5py.File(h5_file) as f_raw,
+            h5py.File(args["motion_corrected_output"], "r+") as f,
+        ):
+            mov_raw = f_raw["data"]
+            mov = f["data"]
+            crispness = [
+                np.sqrt(np.sum(np.array(np.gradient(np.mean(m, 0))) ** 2))
+                for m in (mov_raw, mov)
+            ]
+            logger.info("computed crispness of mean image before and after registration")
 
-        # compute residual optical flow using Farneback method
-        if f["reg_metrics/regPC"][:].any():
-            regPC = f["reg_metrics/regPC"]
-            flows = np.zeros(regPC.shape[1:] + (2,), np.float32)
-            for i in range(len(flows)):
-                pclow, pchigh = regPC[:, i]
-                flows[i] = cv2.calcOpticalFlowFarneback(
-                    pclow,
-                    pchigh,
-                    None,
-                    pyr_scale=0.5,
-                    levels=3,
-                    winsize=100,
-                    iterations=15,
-                    poly_n=5,
-                    poly_sigma=1.2 / 5,
-                    flags=0,
+            # compute residual optical flow using Farneback method
+            if f["reg_metrics/regPC"][:].any():
+                regPC = f["reg_metrics/regPC"]
+                flows = np.zeros(regPC.shape[1:] + (2,), np.float32)
+                for i in range(len(flows)):
+                    pclow, pchigh = regPC[:, i]
+                    flows[i] = cv2.calcOpticalFlowFarneback(
+                        pclow,
+                        pchigh,
+                        None,
+                        pyr_scale=0.5,
+                        levels=3,
+                        winsize=100,
+                        iterations=15,
+                        poly_n=5,
+                        poly_sigma=1.2 / 5,
+                        flags=0,
+                    )
+                flows_norm = np.sqrt(np.sum(flows**2, -1))
+                farnebackDX = np.transpose([flows_norm.mean((1, 2)), flows_norm.max((1, 2))])
+                f.create_dataset("reg_metrics/crispness", data=crispness)
+                f.create_dataset("reg_metrics/farnebackROF", data=flows)
+                f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
+                logger.info(
+                    "computed residual optical flow of top PCs using Farneback method"
                 )
-            flows_norm = np.sqrt(np.sum(flows**2, -1))
-            farnebackDX = np.transpose([flows_norm.mean((1, 2)), flows_norm.max((1, 2))])
-            f.create_dataset("reg_metrics/crispness", data=crispness)
-            f.create_dataset("reg_metrics/farnebackROF", data=flows)
-            f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
-            logger.info(
-                "computed residual optical flow of top PCs using Farneback method"
-            )
-            logger.info(
-                "appended additional registration metrics to"
-                f"{args['motion_corrected_output']}"
-            )
-
+                logger.info(
+                    "appended additional registration metrics to"
+                    f"{args['motion_corrected_output']}"
+                )
+    else:
+        mov_raw = tiff_array
+        with h5py.File(args["motion_corrected_output"], "r+") as f:
+            crispness = [
+                np.sqrt(np.sum(np.array(np.gradient(np.mean(m, 0))) ** 2)
+                for m in (mov_raw, f["data"])
+            ]
+            logger.info("computed crispness of mean image before and after registration")
+            if f["reg_metrics/regPC"][:].any():
+                regPC = f["reg_metrics/regPC"]
+                flows = np.zeros(regPC.shape[1:] + (2,), np.float32)
+                for i in range(len(flows)):
+                    pclow, pchigh = regPC[:, i]
+                    flows[i] = cv2.calcOpticalFlowFarneback(
+                        pclow,
+                        pchigh,
+                        None,
+                        pyr_scale=0.5,
+                        levels=3,
+                        winsize=100,
+                        iterations=15,
+                        poly_n=5,
+                        poly_sigma=1.2 / 5,
+                        flags=0,
+                    )
+                flows_norm = np.sqrt(np.sum(flows**2, -1))
+                farnebackDX = np.transpose([flows_norm.mean((1, 2)), flows_norm.max((1, 2))])
+                f.create_dataset("reg_metrics/crispness", data=crispness)
+                f.create_dataset("reg_metrics/farnebackROF", data=flows)
+                f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
+                logger.info(
+                    "computed residual optical flow of top PCs using Farneback method"
+                )
+                logger.info(
+                    "appended additional registration metrics to"
+                    f"{args['motion_corrected_output']}"
+                )
         # create image of PC_low, PC_high, and the residual optical flow between them
         if f["reg_metrics/regDX"][:].any():
             for iPC in set(
