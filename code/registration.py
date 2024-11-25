@@ -1035,7 +1035,7 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
 
 def write_output_metadata(
     metadata: dict,
-    raw_movie: Union[str, Path],
+    raw_movie: Union[Path, list],
     motion_corrected_movie: Union[str, Path],
     output_dir: Union[str, Path],
 ) -> None:
@@ -1050,6 +1050,10 @@ def write_output_metadata(
     motion_corrected_movie: str
         path to motion corrected movies
     """
+    if isinstance(raw_movie, Path):
+        raw_movie = str(raw_movie)
+    elif isinstance(raw_movie, list):
+        raw_movie = " ".join(raw_movie)
     processing = Processing(
         processing_pipeline=PipelineProcess(
             processor_full_name="Multplane Ophys Processing Pipeline",
@@ -2079,6 +2083,10 @@ if __name__ == "__main__":  # pragma: nocover
     # make projections
     mx_proj = projection_process(data, projection="max")
     av_proj = projection_process(data, projection="avg")
+    if not suite2p_args.get("h5py", []):
+        filepath = suite2p_args["tiff_list"]
+    else:
+        filepath = suite2p_args["h5py"]
     write_output_metadata(
         args_copy, Path(suite2p_args["h5py"]), args["motion_corrected_output"], output_dir
     )
