@@ -29,7 +29,7 @@ from aind_data_schema.core.processing import (
     ProcessName,
 )
 from aind_ophys_utils.array_utils import normalize_array
-from aind_ophys_utils.video_utils import downsample_h5_video, encode_video
+from aind_ophys_utils.video_utils import downsample_h5_video, encode_video, downsample_array
 from matplotlib import pyplot as plt  # noqa: E402
 from PIL import Image
 from ScanImageTiffReader import ScanImageTiffReader
@@ -135,6 +135,10 @@ def h5py_to_numpy(
         else:
             return f[h5py_key][:]
 
+@lru_cache(maxsize=10)
+def _tiff_to_numpy(tiff_file: Path) -> np.ndarray:
+    with ScanImageTiffReader(tiff_file) as reader:
+        return reader.data()
 
 def tiff_to_numpy(
     tiff_list: List[Path], trim_frames_start: int = 0, trim_frames_end: int = 0
@@ -1195,7 +1199,7 @@ def make_nonrigid_png(
 
 
 def downsample_normalize(
-    movie_path: Path,
+    movie_path: Union[Path, np.array],
     frame_rate: float,
     bin_size: float,
     lower_quantile: float,
@@ -1207,9 +1211,9 @@ def downsample_normalize(
 
     Parameters
     ----------
-    movie_path: Path
+    movie_path: Union[Path, np.array]
         path to an h5 file, containing an (nframes x nrows x ncol) dataset
-        named 'data'
+        named 'data' or a numpy array.
     frame_rate: float
         frame rate of the movie specified by 'movie_path'
     bin_size: float
@@ -1233,7 +1237,10 @@ def downsample_normalize(
     consistent visibility.
 
     """
-    ds = downsample_h5_video(movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size)
+    if isinstance(movie_path, Path):
+        ds = downsample_h5_video(movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size)
+    else:
+        ds = downsample_array(movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size)
     avg_projection = ds.mean(axis=0)
     lower_cutoff, upper_cutoff = np.quantile(
         avg_projection.flatten(), (lower_quantile, upper_quantile)
@@ -2206,13 +2213,25 @@ if __name__ == "__main__":  # pragma: nocover
         lower_quantile=args["movie_lower_quantile"],
         upper_quantile=args["movie_upper_quantile"],
     )
-    processed_vids = [
-        ds_partial(i)
-        for i in [
-            Path(h5_file),
-            Path(args["motion_corrected_output"]),
+    if suite2p_args.get("h5py", ""):
+        h5_file = suite2p_args["h5py"]
+        processed_vids = [
+            ds_partial(i)
+            for i in [
+                Path(h5_file),
+                Path(args["motion_corrected_output"]),
+            ]
         ]
-    ]
+    else:
+        tiff_array = tiff_to_numpy(suite2p_args["tiff_list"])
+        processed_vids = [
+            ds_partial(i)
+            for i in [
+                tiff_array,
+                Path(args["motion_corrected_output"]),
+            ]
+        ]
+
     logger.info("finished downsampling motion corrected and non-motion corrected movies")
 
     # tile into 1 movie, raw on left, motion corrected on right
