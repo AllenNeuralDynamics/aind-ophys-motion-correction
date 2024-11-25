@@ -135,7 +135,7 @@ def h5py_to_numpy(
         else:
             return f[h5py_key][:]
 
-@lru_cache(maxsize=10)
+@lru_cache(maxsize=None)
 def _tiff_to_numpy(tiff_file: Path) -> np.ndarray:
     with ScanImageTiffReader(tiff_file) as reader:
         return reader.data()
@@ -191,21 +191,21 @@ def tiff_to_numpy(
     for tiff_path in tiff_list:
         with ScanImageTiffReader(tiff_path) as reader:
             current_frames = reader.shape()[0]
-            start_idx = max(0, trim_frames_start - processed_frames)
-            end_idx = current_frames
+        start_idx = max(0, trim_frames_start - processed_frames)
+        end_idx = current_frames
 
-            if processed_frames + current_frames > total_frames - trim_frames_end:
-                end_idx = total_frames - trim_frames_end - processed_frames
+        if processed_frames + current_frames > total_frames - trim_frames_end:
+            end_idx = total_frames - trim_frames_end - processed_frames
 
-            if start_idx < end_idx:  # Only process if there are frames to include
-                data = np.array(reader.data()[start_idx:end_idx])
-                arrays_to_stack.append(data)
+        if start_idx < end_idx:  # Only process if there are frames to include
+            data = np.array(_tiff_to_numpy(tiff_path)[start_idx:end_idx])
+            arrays_to_stack.append(data)
 
-            processed_frames += current_frames
+        processed_frames += current_frames
 
-            # Break if we've processed all needed frames
-            if processed_frames >= total_frames - trim_frames_end:
-                break
+        # Break if we've processed all needed frames
+        if processed_frames >= total_frames - trim_frames_end:
+            break
 
     # Stack all arrays along the appropriate axis
     if not arrays_to_stack:
