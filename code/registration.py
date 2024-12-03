@@ -109,12 +109,13 @@ def serialize_registration_summary_qcmetric(unique_id, file_path: Path) -> None:
     """
     
     #remove /results from file_path
-    reference_filepath = file_path.parts[1:]
+    reference_filepath = Path(*file_path.parts[2:])
+    plane_name = reference_filepath.parts[0]
 
     metric = QCMetric(
-        name=f"{unique_id} Registration Summary",
+        name=f"{plane_name} Registration Summary",
         description="Review the registration summary plot to ensure that the motion correction is accurate and sufficient.",
-        reference=str(Path(*reference_filepath)),
+        reference=str(reference_filepath),
         status_history=[
             QCStatus(
                 evaluator='Pending review',
