@@ -97,6 +97,52 @@ def load_initial_frames(
         frames = frame_window[requested_frames]
     return frames
 
+def serialize_registration_summary_qcmetric(unique_id, file_path: Path) -> None:
+    """Serialize the registration summary QC metric to registration_summary_metric.json.
+
+    Parameters
+    ----------
+    unique_id : str
+        Unique identifier for relevant ophys plane.
+    file_path : Path
+        Location of the registration summary plot.
+    """
+    
+    #remove /results from file_path
+    reference_filepath = file_path.parts[1:]
+
+    metric = QCMetric(
+        name=f"{unique_id} Registration Summary",
+        description="Review the registration summary plot to ensure that the motion correction is accurate and sufficient.",
+        reference=str(Path(*reference_filepath)),
+        status_history=[
+            QCStatus(
+                evaluator='Pending review',
+                timestamp=dt.now(),
+                status=Status.PENDING
+            )
+        ],
+        value=CheckboxMetric(
+            value="Registration Summary",
+            options=[
+                "No motion correction applied",
+                "Motion correction failed",
+                "Motion correction partially successful",
+                "Motion correction successful",
+            ],
+            status=[
+                Status.PASS,
+                Status.PASS,
+                Status.PASS,
+                Status.PASS
+            ]
+        )
+    )
+
+    with open(Path(file_path.parent) / "registration_summary_metric.json", "w") as f:
+        json.dump(json.loads(metric.model_dump_json()), f, indent=4)
+
+
 
 def qc_evaluation(file_path: Path) -> None:
     """QC evaluation of the motion corrected movie.
@@ -2067,7 +2113,8 @@ if __name__ == "__main__":  # pragma: nocover
                 )
                 logger.info(f"created images of PC_low, PC_high, and PC_rof for PC {iPC}")
 
-    # Write QC evaluation
-    qc_evaluation(next(output_dir.rglob("*_registration_summary.png")))
+    # Write QC metrics
+    serialize_registration_summary_qcmetric(unique_id, next(output_dir.rglob("*_registration_summary.png")))
+
     # Clean up temporary directory
     tmp_dir.cleanup()
