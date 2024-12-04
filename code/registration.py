@@ -735,7 +735,7 @@ def compute_acutance(
 
 
 def check_and_warn_on_datatype(
-    filepath: Path, logger: Callable, filetype: str = "h5", h5py_key: str = ""
+    filepath: Path, logger: Callable, h5py_key: str = "data"
 ):
     """Suite2p assumes int16 types throughout code. Check that the input
     data is type int16 else throw a warning.
@@ -746,18 +746,11 @@ def check_and_warn_on_datatype(
         Path to the HDF5 containing the data.
     logger : Callable
         Logger to output logger warning to.
-    filetype : str
-        Type of file to check. Default is "h5".
     h5py_key : str
         Name of the dataset to check. Default is "".
 
     """
-    if filetype == "h5":
-        byteorder, name = h5py_byteorder_name(filepath, h5py_key)
-    elif filetype == "tiff":
-        byteorder, name = tiff_byteorder_name(filepath)
-    else:
-        raise ValueError("File type not supported")
+    byteorder, name = h5py_byteorder_name(filepath, h5py_key)
     if byteorder == ">":
         logger(
             "Data byteorder is big-endian which may cause issues in "
@@ -1922,7 +1915,6 @@ if __name__ == "__main__":  # pragma: nocover
     check_and_warn_on_datatype(
         filepath=suite2p_args["h5py"],
         logger=logger.warning,
-        filetype="h5",
         h5py_key=suite2p_args["h5py_key"],
     )
 
