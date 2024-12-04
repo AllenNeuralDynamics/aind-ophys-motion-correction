@@ -1378,7 +1378,7 @@ def singleplane_motion_correction(
         with h5py.File(h5_file, "r") as f:
             data = f["data"][:5000]
             trial_locations = f["trial_locations"][()]
-            epoch_filenames = f["epoch_filenames"][()]
+            epoch_filenames = f["epoch_locations"][()]
         with h5py.File(debug_file, "a") as f:
             f.create_dataset("data", data=data)
             f.create_dataset("trial_locations", data=trial_locations)
