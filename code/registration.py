@@ -1377,11 +1377,11 @@ def singleplane_motion_correction(
         debug_file = Path("../scratch") / f"{stem}_debug.h5"
         with h5py.File(h5_file, "r") as f:
             data = f["data"][:5000]
-            tiff_stem_location = f["tiff_stem_location"][()]
+            trial_locations = f["trial_locations"][()]
             epoch_filenames = f["epoch_filenames"][()]
         with h5py.File(debug_file, "a") as f:
             f.create_dataset("data", data=data)
-            f.create_dataset("tiff_stem_location", data=tiff_stem_location)
+            f.create_dataset("trial_locations", data=trial_locations)
             f.create_dataset("epoch_filenames", data=epoch_filenames)
         h5_file = debug_file
     with h5py.File(h5_file, "r") as f:
