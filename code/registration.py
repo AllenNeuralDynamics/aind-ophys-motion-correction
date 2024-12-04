@@ -1319,7 +1319,7 @@ def generate_single_plane_reference(fp: Path, session) -> Path:
     """
     with h5py.File(fp, "r") as f:
         # take the first bci epoch to save out reference image TODO
-        tiff_stems = json.loads(f["tiff_stem_location"][:][0])
+        tiff_stems = json.loads(f["trial_locations"][:][0])
         bci_epochs = [
             i
             for i in session["stimulus_epochs"]
