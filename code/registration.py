@@ -1319,7 +1319,7 @@ def generate_single_plane_reference(fp: Path, session) -> Path:
     """
     with h5py.File(fp, "r") as f:
         # take the first bci epoch to save out reference image TODO
-        tiff_stems = json.loads(f["trial_locations"][:][0])
+        tiff_stems = json.loads(f["epoch_locations"][:][0])
         bci_epochs = [
             i
             for i in session["stimulus_epochs"]
@@ -1385,9 +1385,12 @@ def singleplane_motion_correction(
             f.create_dataset("epoch_filenames", data=epoch_filenames)
         h5_file = debug_file
     with h5py.File(h5_file, "r") as f:
-        tiff_stems = json.loads(f["tiff_stem_location"][:][0])
-    with open(output_dir / "tiff_stem_locations.json", "w") as j:
-        json.dump(tiff_stems, j)
+        trial_locations = json.loads(f["trial_locations"][:][0])
+        epoch_locations = json.loads(f["epoch_locations"][:][0])
+    with open(output_dir / "trial_locations.json", "w") as j:
+        json.dump(trial_locations, j)
+    with open(output_dir / "epoch_locations.json", "w") as j:
+        json.dump(epoch_locations, j)
 
     return h5_file, output_dir, reference_image_fp
 
