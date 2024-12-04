@@ -84,27 +84,6 @@ def h5py_byteorder_name(h5py_file: h5py.File, h5py_key: str) -> Tuple[str, str]:
     return byteorder, name
 
 
-def tiff_byteorder_name(tiff_file: Path) -> Tuple[str, str]:
-    """Get the byteorder and name of the dataset in the tiff file.
-
-    Parameters
-    ----------
-    tiff_file : Path
-        Location of the tiff file
-
-    Returns
-    -------
-    str
-        byteorder of the dataset
-    str
-        name of the dataset
-    """
-    with ScanImageTiffReader(tiff_file) as reader:
-        byteorder = reader.data().dtype.byteorder
-        name = reader.data().dtype.name
-    return byteorder, name
-
-
 def h5py_to_numpy(
     h5py_file: str,
     h5py_key: str,
