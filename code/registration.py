@@ -115,9 +115,9 @@ def h5py_to_numpy(
             return f[h5py_key][:]
 
 def array_to_h5(
-    array: np.ndarray, 
-    output_path: str, 
-    dataset_name: str = 'data', 
+    array: np.ndarray,
+    output_path: str,
+    dataset_name: str = 'data',
     chunk_size: int = 1000
 ):
     """
@@ -156,6 +156,7 @@ def array_to_h5(
             dset[i:end] = array[i:end]
 
 
+@lru_cache(maxsize=3)
 def _tiff_to_numpy(tiff_file: str) -> np.ndarray:
     with ScanImageTiffReader(tiff_file) as reader:
         return reader.data()
@@ -1760,6 +1761,7 @@ if __name__ == "__main__":  # pragma: nocover
     output_dir = Path(parser.output_dir)
     session_fp = next(data_dir.rglob("session.json"))
     description_fp = next(data_dir.rglob("data_description.json"))
+    tmp_dir = Path(parser.tmp_dir)
     with open(session_fp, "r") as j:
         session = json.load(j)
     with open(description_fp, "r") as j:
@@ -1795,8 +1797,9 @@ if __name__ == "__main__":  # pragma: nocover
         logging.info("Processing tiff timeseries")
         basename = unique_id
         data = tiff_to_numpy(input_file)
-        array_to_h5(data, output_dir / f"{basename}.h5")
-        input_file = output_dir / f"{basename}.h5"
+        h5_tmp = str(tmp_dir / f"{basename}.h5")
+        array_to_h5(data, h5_tmp)
+        input_file = h5_tmp
     else:
         basename = os.path.basename(input_file)
     args["movie_frame_rate_hz"] = frame_rate_hz
@@ -1851,7 +1854,9 @@ if __name__ == "__main__":  # pragma: nocover
     # Here we overwrite the parameters for suite2p that will not change in our
     # processing pipeline. These are parameters that are not exposed to
     # minimize code length. Those are not set to default.
-    suite2p_args["h5py"] = str(input_file)
+    if isinstance(input_file, Path):
+        input_file = str(input_file)
+    suite2p_args["h5py"] = input_file
     suite2p_args["roidetect"] = False
     suite2p_args["do_registration"] = 1
     # suite2p_args["data_path"] = []  # TODO: remove this if not needed by suite2p
