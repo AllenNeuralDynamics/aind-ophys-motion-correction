@@ -1382,7 +1382,7 @@ def singleplane_motion_correction(
         with h5py.File(debug_file, "a") as f:
             f.create_dataset("data", data=data)
             f.create_dataset("trial_locations", data=trial_locations)
-            f.create_dataset("epoch_filenames", data=epoch_filenames)
+            f.create_dataset("epoch_locations", data=epoch_filenames)
         h5_file = debug_file
     with h5py.File(h5_file, "r") as f:
         trial_locations = json.loads(f["trial_locations"][:][0])
