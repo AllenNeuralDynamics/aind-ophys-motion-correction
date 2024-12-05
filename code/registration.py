@@ -84,27 +84,6 @@ def h5py_byteorder_name(h5py_file: h5py.File, h5py_key: str) -> Tuple[str, str]:
     return byteorder, name
 
 
-def tiff_byteorder_name(tiff_file: Path) -> Tuple[str, str]:
-    """Get the byteorder and name of the dataset in the tiff file.
-
-    Parameters
-    ----------
-    tiff_file : Path
-        Location of the tiff file
-
-    Returns
-    -------
-    str
-        byteorder of the dataset
-    str
-        name of the dataset
-    """
-    with ScanImageTiffReader(tiff_file) as reader:
-        byteorder = reader.data().dtype.byteorder
-        name = reader.data().dtype.name
-    return byteorder, name
-
-
 def h5py_to_numpy(
     h5py_file: str,
     h5py_key: str,
@@ -177,7 +156,7 @@ def array_to_h5(
             dset[i:end] = array[i:end]
 
 
-def _tiff_to_numpy(tiff_file: Path) -> np.ndarray:
+def _tiff_to_numpy(tiff_file: str) -> np.ndarray:
     with ScanImageTiffReader(tiff_file) as reader:
         return reader.data()
 
@@ -205,7 +184,7 @@ def tiff_to_numpy(
     arrays_to_stack = []
 
     for tiff_path in tiff_list:
-        image_array = np.array(_tiff_to_numpy(tiff_path))
+        image_array = np.array(_tiff_to_numpy(str(tiff_path)))
         arrays_to_stack.append(image_array)
     return (
         np.concatenate(arrays_to_stack, axis=0)
@@ -1790,7 +1769,7 @@ if __name__ == "__main__":  # pragma: nocover
     reference_image_fp = ""
 
     if parser.data_type == "TIFF":
-        input_file = next(data_dir.rglob("pophys"))
+        input_file = [i for i in data_dir.rglob("pophys/*.tif*")] 
     else:
         if "Bergamo" in session.get("rig_id", ""):
             h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
@@ -1814,7 +1793,7 @@ if __name__ == "__main__":  # pragma: nocover
     # We construct the paths to the outputs
     if isinstance(input_file, list):
         logging.info("Processing tiff timeseries")
-        basename = os.path.basename(input_file[0])
+        basename = unique_id
         data = tiff_to_numpy(input_file)
         array_to_h5(data, output_dir / f"{basename}.h5")
         input_file = output_dir / f"{basename}.h5"
