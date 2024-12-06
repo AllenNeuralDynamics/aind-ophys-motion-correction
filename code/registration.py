@@ -97,7 +97,48 @@ def load_initial_frames(
         frames = frame_window[requested_frames]
     return frames
 
-def serialize_registration_summary_qcmetric(unique_id, file_path: Path) -> None:
+def serialize_registration_summary_qcmetric() -> None:
+    """Serialize the registration summary QC metric to registration_summary_metric.json.
+
+    file_path = next(output_dir.rglob("*_registration_summary.png"))
+    
+    #remove '/results' from file_path
+    reference_filepath = Path(*file_path.parts[2:])
+    plane_name = reference_filepath.parts[0]
+
+    metric = QCMetric(
+        name=f"{plane_name} Registration Summary",
+        description="Review the registration summary plot to ensure that the motion correction is accurate and sufficient.",
+        reference=str(reference_filepath),
+        status_history=[
+            QCStatus(
+                evaluator='Pending review',
+                timestamp=dt.now(),
+                status=Status.PENDING
+            )
+        ],
+        value=CheckboxMetric(
+            value="Registration Summary",
+            options=[
+                "No motion correction applied",
+                "Motion correction failed",
+                "Motion correction partially successful",
+                "Motion correction successful",
+            ],
+            status=[
+                Status.PASS,
+                Status.PASS,
+                Status.PASS,
+                Status.PASS
+            ]
+        )
+    )
+
+    with open(Path(file_path.parent) / "registration_summary_metric.json", "w") as f:
+        json.dump(json.loads(metric.model_dump_json()), f, indent=4)
+
+
+def serialize_fov_quality_qcmetric(unique_id, file_path: Path) -> None:
     """Serialize the registration summary QC metric to registration_summary_metric.json.
 
     Parameters
@@ -142,7 +183,6 @@ def serialize_registration_summary_qcmetric(unique_id, file_path: Path) -> None:
 
     with open(Path(file_path.parent) / "registration_summary_metric.json", "w") as f:
         json.dump(json.loads(metric.model_dump_json()), f, indent=4)
-
 
 
 def qc_evaluation(file_path: Path) -> None:
@@ -2115,7 +2155,9 @@ if __name__ == "__main__":  # pragma: nocover
                 logger.info(f"created images of PC_low, PC_high, and PC_rof for PC {iPC}")
 
     # Write QC metrics
-    serialize_registration_summary_qcmetric(unique_id, next(output_dir.rglob("*_registration_summary.png")))
+    serialize_registration_summary_qcmetric()
+    serialize_fov_quality_qcmetric(unique_id, next(output_dir.rglob("*_registration_summary.png")))
+
 
     # Clean up temporary directory
     tmp_dir.cleanup()
