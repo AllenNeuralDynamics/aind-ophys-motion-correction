@@ -97,8 +97,72 @@ def load_initial_frames(
         frames = frame_window[requested_frames]
     return frames
 
+from PIL import Image, ImageDraw, ImageFont
+
+def combine_images_with_individual_titles(image1_path, image2_path, output_path, title1="", title2=""):
+    """
+    Combine two images side-by-side with padding and add individual titles above each image.
+
+    Parameters:
+    - image1_path (str): Path to the first image.
+    - image2_path (str): Path to the second image.
+    - output_path (str): Path to save the combined image.
+    - title1 (str): Title text for the first image.
+    - title2 (str): Title text for the second image.
+    """
+    # Open both images
+    img1 = Image.open(image1_path)
+    img2 = Image.open(image2_path)
+
+    # Ensure both images have the same height
+    max_height = max(img1.height, img2.height)
+    img1 = img1.resize((img1.width, max_height), Image.ANTIALIAS)
+    img2 = img2.resize((img2.width, max_height), Image.ANTIALIAS)
+
+    # Set padding
+    padding = 20
+    title_height = 50  # Space for the titles
+
+    # Calculate dimensions of the combined image
+    combined_width = img1.width + img2.width + padding * 3  # Padding between and around images
+    combined_height = max_height + padding * 2 + title_height
+
+    # Create a new blank image with padding and room for the titles
+    combined_image = Image.new('RGBA', (combined_width, combined_height), (255, 255, 255, 255))
+
+    # Draw the titles
+    draw = ImageDraw.Draw(combined_image)
+    try:
+        font = ImageFont.truetype("arial.ttf", 24)  # You can replace with a path to your desired font
+    except IOError:
+        font = ImageFont.load_default()  # Fallback to default font
+
+    # Title 1: Above the first image
+    text_width1, text_height1 = draw.textsize(title1, font=font)
+    text_x1 = padding + (img1.width - text_width1) // 2
+    text_y1 = padding
+    draw.text((text_x1, text_y1), title1, fill="black", font=font)
+
+    # Title 2: Above the second image
+    text_width2, text_height2 = draw.textsize(title2, font=font)
+    text_x2 = padding * 2 + img1.width + (img2.width - text_width2) // 2
+    text_y2 = padding
+    draw.text((text_x2, text_y2), title2, fill="black", font=font)
+
+    # Paste images into the new image
+    img1_x = padding
+    img2_x = img1_x + img1.width + padding
+    img_y = padding + title_height
+    combined_image.paste(img1, (img1_x, img_y))
+    combined_image.paste(img2, (img2_x, img_y))
+
+    # Save the result
+    combined_image.save(output_path)
+    print(f"Combined image with individual titles saved to {output_path}")
+
+
 def serialize_registration_summary_qcmetric() -> None:
-    """Serialize the registration summary QC metric to registration_summary_metric.json.
+    """Serialize the registration summary QC metric to registration_summary_metric.json."""
 
     file_path = next(output_dir.rglob("*_registration_summary.png"))
     
@@ -138,24 +202,30 @@ def serialize_registration_summary_qcmetric() -> None:
         json.dump(json.loads(metric.model_dump_json()), f, indent=4)
 
 
-def serialize_fov_quality_qcmetric(unique_id, file_path: Path) -> None:
-    """Serialize the registration summary QC metric to registration_summary_metric.json.
+def serialize_fov_quality_qcmetric() -> None:
+    """Serialize the registration summary QC metric to registration_summary_metric.json."""
 
-    Parameters
-    ----------
-    unique_id : str
-        Unique identifier for relevant ophys plane.
-    file_path : Path
-        Location of the registration summary plot.
-    """
-    
+    avg_projection_file_path = next(output_dir.rglob("*_average_projection.png"))
+    max_projection_file_path = next(output_dir.rglob("*_maximum_projection.png"))
+
+    file_path = max_projection_file_path.replace("maximum", "combined")
+
+    combine_images_with_individual_titles(
+        avg_projection_file_path,
+        max_projection_file_path,
+        file_path,
+        title1="Average Projection", 
+        title2="Maximum Projection"
+    )
+
     #remove /results from file_path
+    #TODO make this abstracted to output_dir?
     reference_filepath = Path(*file_path.parts[2:])
     plane_name = reference_filepath.parts[0]
 
     metric = QCMetric(
-        name=f"{plane_name} Registration Summary",
-        description="Review the registration summary plot to ensure that the motion correction is accurate and sufficient.",
+        name=f"{plane_name} FOV Quality",
+        description="Review the avg. and max. projections to ensure that the FOV quality is sufficient.",
         reference=str(reference_filepath),
         status_history=[
             QCStatus(
@@ -165,13 +235,14 @@ def serialize_fov_quality_qcmetric(unique_id, file_path: Path) -> None:
             )
         ],
         value=CheckboxMetric(
-            value="Registration Summary",
+            value="FOV Quality", # TODO value?
             options=[
-                "No motion correction applied",
-                "Motion correction failed",
-                "Motion correction partially successful",
-                "Motion correction successful",
+                "Timeseries shuffled between planes",
+                "Field of view associated with incorrect area and/or depth",
+                "Paired plane cross talk: Extreme",
+                "Paired plane cross-talk: Moderate",
             ],
+            # TODO status?
             status=[
                 Status.PASS,
                 Status.PASS,
@@ -181,7 +252,7 @@ def serialize_fov_quality_qcmetric(unique_id, file_path: Path) -> None:
         )
     )
 
-    with open(Path(file_path.parent) / "registration_summary_metric.json", "w") as f:
+    with open(Path(file_path.parent) / "fov_quality_metric.json", "w") as f:
         json.dump(json.loads(metric.model_dump_json()), f, indent=4)
 
 
