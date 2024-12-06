@@ -84,6 +84,27 @@ def h5py_byteorder_name(h5py_file: h5py.File, h5py_key: str) -> Tuple[str, str]:
     return byteorder, name
 
 
+def tiff_byteorder_name(tiff_file: Path) -> Tuple[str, str]:
+    """Get the byteorder and name of the dataset in the tiff file.
+
+    Parameters
+    ----------
+    tiff_file : Path
+        Location of the tiff file
+
+    Returns
+    -------
+    str
+        byteorder of the dataset
+    str
+        name of the dataset
+    """
+    with ScanImageTiffReader(tiff_file) as reader:
+        byteorder = reader.data().dtype.byteorder
+        name = reader.data().dtype.name
+    return byteorder, name
+
+
 def h5py_to_numpy(
     h5py_file: str,
     h5py_key: str,
@@ -114,79 +135,82 @@ def h5py_to_numpy(
         else:
             return f[h5py_key][:]
 
-def array_to_h5(
-    array: np.ndarray,
-    output_path: str,
-    dataset_name: str = 'data',
-    chunk_size: int = 1000
-):
-    """
-    Save a large NumPy array to an H5 file in chunks.
-    
-    Parameters
-    ----------
-    array : np.ndarray
-        The NumPy array to save
-    output_path : str
-        Path to the output H5 file
-    dataset_name : str, optional
-        Name of the dataset in the H5 file (default: 'data')
-    chunk_size : int, optional
-        Number of frames/rows to write in each chunk (default: 1000)
-    """
-    # Ensure chunk size doesn't exceed total array length
-    chunk_size = min(chunk_size, array.shape[0])
-    
-    with h5py.File(output_path, 'w') as h5file:
-        # Create dataset with maximum size and chunking
-        maxshape = (None,) + array.shape[1:] if len(array.shape) > 1 else (None,)
-        chunks = (chunk_size,) + array.shape[1:] if len(array.shape) > 1 else (chunk_size,)
-        
-        dset = h5file.create_dataset(
-            dataset_name, 
-            shape=array.shape, 
-            maxshape=maxshape,
-            chunks=chunks,
-            dtype=array.dtype
-        )
-        
-        # Write the entire array in chunks
-        for i in range(0, array.shape[0], chunk_size):
-            end = min(i + chunk_size, array.shape[0])
-            dset[i:end] = array[i:end]
-
-
-@lru_cache(maxsize=3)
-def _tiff_to_numpy(tiff_file: str) -> np.ndarray:
+@lru_cache(maxsize=None)
+def _tiff_to_numpy(tiff_file: Path) -> np.ndarray:
     with ScanImageTiffReader(tiff_file) as reader:
         return reader.data()
 
-
 def tiff_to_numpy(
-    tiff_list: List[Path]) -> np.ndarray:
+    tiff_list: List[Path], trim_frames_start: int = 0, trim_frames_end: int = 0
+) -> np.ndarray:
     """
-    Converts a list of TIFF files to a single numpy array
+    Converts a list of TIFF files to a single numpy array, with optional frame trimming.
 
     Parameters
     ----------
     tiff_list : List[str]
         List of TIFF file paths to process
+    trim_frames_start : int, optional
+        Number of frames to remove from the start (default: 0)
+    trim_frames_end : int, optional
+        Number of frames to remove from the end (default: 0)
 
     Returns
     -------
     np.ndarray
-        Combined array of all TIFF data 
+        Combined array of all TIFF data with specified trimming
 
     Raises
     ------
     ValueError
         If trim values exceed total number of frames or are negative
     """
+    if trim_frames_start < 0 or trim_frames_end < 0:
+        raise ValueError("Trim values must be non-negative")
+
+    def get_total_frames(tiff_files: List[Path]) -> int:
+        """Calculate total number of frames across all TIFF files."""
+        total = 0
+        for tiff in tiff_files:
+            with ScanImageTiffReader(tiff) as reader:
+                total += reader.shape()[0]
+        return total
+
+    # Validate trim parameters
+    total_frames = get_total_frames(tiff_list)
+    if trim_frames_start + trim_frames_end >= total_frames:
+        raise ValueError(
+            f"Invalid trim values: start ({trim_frames_start}) + end ({trim_frames_end}) "
+            f"must be less than total frames ({total_frames})"
+        )
+
+    # Initialize variables for frame counting
+    processed_frames = 0
     arrays_to_stack = []
 
     for tiff_path in tiff_list:
-        image_array = np.array(_tiff_to_numpy(str(tiff_path)))
-        arrays_to_stack.append(image_array)
+        with ScanImageTiffReader(tiff_path) as reader:
+            current_frames = reader.shape()[0]
+        start_idx = max(0, trim_frames_start - processed_frames)
+        end_idx = current_frames
+
+        if processed_frames + current_frames > total_frames - trim_frames_end:
+            end_idx = total_frames - trim_frames_end - processed_frames
+
+        if start_idx < end_idx:  # Only process if there are frames to include
+            data = np.array(_tiff_to_numpy(tiff_path)[start_idx:end_idx])
+            arrays_to_stack.append(data)
+
+        processed_frames += current_frames
+
+        # Break if we've processed all needed frames
+        if processed_frames >= total_frames - trim_frames_end:
+            break
+
+    # Stack all arrays along the appropriate axis
+    if not arrays_to_stack:
+        raise ValueError("No frames remained after trimming")
+
     return (
         np.concatenate(arrays_to_stack, axis=0)
         if len(arrays_to_stack) > 1
@@ -715,7 +739,7 @@ def compute_acutance(
 
 
 def check_and_warn_on_datatype(
-    filepath: Path, logger: Callable, h5py_key: str = "data"
+    filepath: Path, logger: Callable, filetype: str = "h5", h5py_key: str = ""
 ):
     """Suite2p assumes int16 types throughout code. Check that the input
     data is type int16 else throw a warning.
@@ -726,11 +750,18 @@ def check_and_warn_on_datatype(
         Path to the HDF5 containing the data.
     logger : Callable
         Logger to output logger warning to.
+    filetype : str
+        Type of file to check. Default is "h5".
     h5py_key : str
         Name of the dataset to check. Default is "".
 
     """
-    byteorder, name = h5py_byteorder_name(filepath, h5py_key)
+    if filetype == "h5":
+        byteorder, name = h5py_byteorder_name(filepath, h5py_key)
+    elif filetype == "tiff":
+        byteorder, name = tiff_byteorder_name(filepath)
+    else:
+        raise ValueError("File type not supported")
     if byteorder == ">":
         logger(
             "Data byteorder is big-endian which may cause issues in "
@@ -746,8 +777,8 @@ def check_and_warn_on_datatype(
         )
 
 
-def _mean_of_batch(i, h5py_name, h5py_key):
-    return h5py.File(h5py_name)[h5py_key][i : i + 1000].mean(axis=(1, 2))
+def _mean_of_batch(i, array):
+     return array[i : i + 1000].mean(axis=(1, 2))
 
 
 def find_movie_start_end_empty_frames(
@@ -786,28 +817,27 @@ def find_movie_start_end_empty_frames(
     """
 
     if isinstance(filepath, str):
-        h5py_name = filepath
+        array = h5py_to_numpy(filepath, h5py_key)
     elif isinstance(filepath, list):
         array = tiff_to_numpy(filepath)
-        array_to_h5(array, "../scratch/temp.h5")
     else:
         raise ValueError("File type not supported")
     # Find the midpoint of the movie.
-    with h5py.File(h5py_name, "r") as f:
-        n_frames = f[h5py_key].shape[0]
-        midpoint = n_frames // 2
-        # We discover empty or extrema frames by comparing the mean of each frames
-        # to the mean of the full movie.
-        if n_jobs == 1 or n_frames < 2000:
-            means = f[h5py_key][:].mean(axis=(1, 2))
-        else:
-            means = np.concatenate(
-                Pool(n_jobs).starmap(
-                    _mean_of_batch,
-                    product(range(0, n_frames, 1000), [h5py_name], [h5py_key]),
-                )
+    n_frames = array.shape[0]
+    midpoint = n_frames // 2
+    # We discover empty or extrema frames by comparing the mean of each frames
+    # to the mean of the full movie.
+    if n_jobs == 1 or n_frames < 2000:
+        means = array[:].mean(axis=(1, 2))
+    else:
+        means = np.concatenate(
+            Pool(n_jobs).starmap(
+                _mean_of_batch,
+                product(range(0, n_frames, 1000), [array]),
             )
-        mean_of_frames = means.mean()
+        )
+    mean_of_frames = means.mean()
+
     # Compute a robust standard deviation that is not sensitive to the
     # outliers we are attempting to find.
     quart_low, quart_high = np.percentile(means, [25, 75])
@@ -1364,6 +1394,7 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
         with h5py.File(trimmed_fn, "w") as f:
             f.create_dataset("data", data=trimmed_data)
         h5_file = trimmed_fn
+    shutil.copy(h5_file, output_dir)
     return h5_file, output_dir, frame_rate_hz
 
 
@@ -1477,7 +1508,7 @@ def generate_single_plane_reference(fp: Path, session) -> Path:
     """
     with h5py.File(fp, "r") as f:
         # take the first bci epoch to save out reference image TODO
-        tiff_stems = json.loads(f["epoch_locations"][:][0])
+        tiff_stems = json.loads(f["tiff_stem_location"][:][0])
         bci_epochs = [
             i
             for i in session["stimulus_epochs"]
@@ -1535,20 +1566,17 @@ def singleplane_motion_correction(
         debug_file = Path("../scratch") / f"{stem}_debug.h5"
         with h5py.File(h5_file, "r") as f:
             data = f["data"][:5000]
-            trial_locations = f["trial_locations"][()]
-            epoch_filenames = f["epoch_locations"][()]
+            tiff_stem_location = f["tiff_stem_location"][()]
+            epoch_filenames = f["epoch_filenames"][()]
         with h5py.File(debug_file, "a") as f:
             f.create_dataset("data", data=data)
-            f.create_dataset("trial_locations", data=trial_locations)
-            f.create_dataset("epoch_locations", data=epoch_filenames)
+            f.create_dataset("tiff_stem_location", data=tiff_stem_location)
+            f.create_dataset("epoch_filenames", data=epoch_filenames)
         h5_file = debug_file
     with h5py.File(h5_file, "r") as f:
-        trial_locations = json.loads(f["trial_locations"][:][0])
-        epoch_locations = json.loads(f["epoch_locations"][:][0])
-    with open(output_dir / "trial_locations.json", "w") as j:
-        json.dump(trial_locations, j)
-    with open(output_dir / "epoch_locations.json", "w") as j:
-        json.dump(epoch_locations, j)
+        tiff_stems = json.loads(f["tiff_stem_location"][:][0])
+    with open(output_dir / "tiff_stem_locations.json", "w") as j:
+        json.dump(tiff_stems, j)
 
     return h5_file, output_dir, reference_image_fp
 
@@ -1761,7 +1789,6 @@ if __name__ == "__main__":  # pragma: nocover
     output_dir = Path(parser.output_dir)
     session_fp = next(data_dir.rglob("session.json"))
     description_fp = next(data_dir.rglob("data_description.json"))
-    tmp_dir = Path(parser.tmp_dir)
     with open(session_fp, "r") as j:
         session = json.load(j)
     with open(description_fp, "r") as j:
@@ -1771,7 +1798,7 @@ if __name__ == "__main__":  # pragma: nocover
     reference_image_fp = ""
 
     if parser.data_type == "TIFF":
-        input_file = [i for i in data_dir.rglob("pophys/*.tif*")] 
+        input_file = next(data_dir.rglob("pophys"))
     else:
         if "Bergamo" in session.get("rig_id", ""):
             h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
@@ -1794,12 +1821,7 @@ if __name__ == "__main__":  # pragma: nocover
 
     # We construct the paths to the outputs
     if isinstance(input_file, list):
-        logging.info("Processing tiff timeseries")
-        basename = unique_id
-        data = tiff_to_numpy(input_file)
-        h5_tmp = str(tmp_dir / f"{basename}.h5")
-        array_to_h5(data, h5_tmp)
-        input_file = h5_tmp
+        basename = os.path.basename(input_file[0])
     else:
         basename = os.path.basename(input_file)
     args["movie_frame_rate_hz"] = frame_rate_hz
@@ -1854,9 +1876,12 @@ if __name__ == "__main__":  # pragma: nocover
     # Here we overwrite the parameters for suite2p that will not change in our
     # processing pipeline. These are parameters that are not exposed to
     # minimize code length. Those are not set to default.
-    if isinstance(input_file, Path):
-        input_file = str(input_file)
-    suite2p_args["h5py"] = input_file
+    if parser.data_type == "h5":
+        suite2p_args["h5py"] = input_file
+    else:
+        suite2p_args["data_path"] = str(input_file)
+        suite2p_args["look_one_level_down"] = True
+        suite2p_args["tiff_list"] = [str(i) for i in input_file.glob("*.tif*")]
     suite2p_args["roidetect"] = False
     suite2p_args["do_registration"] = 1
     # suite2p_args["data_path"] = []  # TODO: remove this if not needed by suite2p
@@ -1893,25 +1918,38 @@ if __name__ == "__main__":  # pragma: nocover
     suite2p_args["force_refImg"] = args["force_refImg"]
 
     # if data is in a S3 bucket, copy it to /scratch for faster access
-    if is_S3(suite2p_args["h5py"]):
-        dst = "/scratch/" + Path(suite2p_args["h5py"]).name
-        logger.info(f"copying {suite2p_args['h5py']} from S3 bucket to {dst}")
-        shutil.copy(suite2p_args["h5py"], dst)
-        suite2p_args["h5py"] = dst
+    if suite2p_args.get("h5py", ""):
+        if is_S3(suite2p_args["h5py"]):
+            dst = "/scratch/" + Path(suite2p_args["h5py"]).name
+            logger.info(f"copying {suite2p_args['h5py']} from S3 bucket to {dst}")
+            shutil.copy(suite2p_args["h5py"], dst)
+            suite2p_args["h5py"] = dst
 
-    check_and_warn_on_datatype(
-        filepath=suite2p_args["h5py"],
-        logger=logger.warning,
-        h5py_key=suite2p_args["h5py_key"],
-    )
+    if suite2p_args.get("tiff_list", ""):
+        check_and_warn_on_datatype(
+            filepath=suite2p_args["tiff_list"][0], logger=logger.warning, filetype="tiff"
+        )
+    else:
+        check_and_warn_on_datatype(
+            filepath=suite2p_args["h5py"],
+            logger=logger.warning,
+            filetype="h5",
+            h5py_key=suite2p_args["h5py_key"],
+        )
 
     if args["auto_remove_empty_frames"]:
         logger.info("Attempting to find empty frames at the start and end of the movie.")
-        lowside, highside = find_movie_start_end_empty_frames(
-            filepath=suite2p_args["h5py"],
-            h5py_key=suite2p_args["h5py_key"],
-            logger=logger.warning,
-        )
+        if suite2p_args.get("tiff_list", ""):
+            lowside, highside = find_movie_start_end_empty_frames(
+                filepath=suite2p_args["tiff_list"],
+                logger=logger.warning,
+            )
+        else:
+            lowside, highside = find_movie_start_end_empty_frames(
+                filepath=suite2p_args["h5py"],
+                h5py_key=suite2p_args["h5py_key"],
+                logger=logger.warning,
+            )
         args["trim_frames_start"] = lowside
         args["trim_frames_end"] = highside
         logger.info(f"Found ({lowside}, {highside}) at the start/end of the movie.")
@@ -1949,8 +1987,15 @@ if __name__ == "__main__":  # pragma: nocover
     if suite2p_args["force_refImg"]:
         logger.info(f"\tUsing custom reference image: {suite2p_args['refImg']}")
 
+    if suite2p_args.get("h5py", ""):
+        suite2p_args["h5py"] = suite2p_args["h5py"]
     suite2p.run_s2p(suite2p_args)
-    data_path = suite2p_args["h5py"][0]
+    data_path = ""
+    if suite2p_args.get("h5py", ""):
+        data_path = suite2p_args["h5py"][0]
+    else:
+        data_path = suite2p_args["data_path"][0]
+
     if not data_path:
         raise ValueError("No data path found in suite2p_args")
     bin_path = list(Path(tdir).rglob("data.bin"))[0]
