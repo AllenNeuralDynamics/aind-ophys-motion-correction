@@ -11,7 +11,7 @@ from datetime import datetime as dt
 from functools import lru_cache, partial
 from glob import glob
 from itertools import product
-from multiprocessing import Pool
+from multiprocessing import ThreadPool
 from pathlib import Path
 from time import time
 from typing import Callable, List, Optional, Tuple, Union
@@ -802,7 +802,7 @@ def find_movie_start_end_empty_frames(
             means = f[h5py_key][:].mean(axis=(1, 2))
         else:
             means = np.concatenate(
-                Pool(n_jobs).starmap(
+                ThreadPool(n_jobs).starmap(
                     _mean_of_batch,
                     product(range(0, n_frames, 1000), [h5py_name], [h5py_key]),
                 )
