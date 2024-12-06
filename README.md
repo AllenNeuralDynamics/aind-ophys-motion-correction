@@ -33,15 +33,15 @@ For QC some videos and figures are created:
 - The correction offset in the registration summary image does not contain outliers.
 - The correction offsets of the individual patches in the nonrigid registration summary image do not contain outliers. If they do, the `block_size` was likely too small for the data's noise level.   
 good block size   
-![good blocks](resources/good_blocks.png)   
+![good blocks](good_blocks.png)   
 too small blocks   
-![too small blocks](resources/too_small_blocks.png)
+![too small blocks](too_small_blocks.png)
 - Comparing the images of `PCxhigh` and `PCxlow` (x is number of the PC) does not reveal residual motion but different cells being active.   
 <sup>PCxhigh and PCxlow are obtained from the top prinicipal components of the registered movie (each averaging similar frames together to reduce noise), so that they capture the variation in the data. This variation should be due to changes in neural activity not residual motion.</sup>
 - The residual optical flow `PCxrof` between `PCxhigh` and `PCxlow` has values close to zero.   
 <sup>To obtain `PCxrof`, `PCxhigh` and `PCxlow` are aligned using OpenCV's implementation of Farneback's method, thus we further rely on an independent method not just Suite2p's own.</sup>   
 Reducing a large block size (left) to a good block size (right) reduces the residual optical flow to almost zero.   
-![too large blocks](resources/PC_large_blocks.png)      ![good blocks](resources/PC_good_blocks.png)  
+![too large blocks](PC_large_blocks.png)      ![good blocks](PC_good_blocks.png)  
 **Numbers**
 - The scores in `[input]_registered.h5`'s datasets `'reg_metrics/regDX'` and `'reg_metrics/farnebackDX'` are very close to zero.   
 <sup>These are summary statistics for all computed 30 PCs, the PC images are created for PC x that shows the most extreme residual motion.</sup>
