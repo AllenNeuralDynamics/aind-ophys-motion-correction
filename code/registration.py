@@ -2227,7 +2227,7 @@ if __name__ == "__main__":  # pragma: nocover
 
     # Write QC metrics
     serialize_registration_summary_qcmetric()
-    serialize_fov_quality_qcmetric(unique_id, next(output_dir.rglob("*_registration_summary.png")))
+    serialize_fov_quality_qcmetric()
 
 
     # Clean up temporary directory
