@@ -11,7 +11,7 @@ from datetime import datetime as dt
 from functools import lru_cache, partial
 from glob import glob
 from itertools import product
-from multiprocessing import ThreadPool
+from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from time import time
 from typing import Callable, List, Optional, Tuple, Union
