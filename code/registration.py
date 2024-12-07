@@ -208,8 +208,8 @@ def serialize_fov_quality_qcmetric() -> None:
     avg_projection_file_path = next(output_dir.rglob("*_average_projection.png"))
     max_projection_file_path = next(output_dir.rglob("*_maximum_projection.png"))
 
-    file_path = max_projection_file_path.replace("maximum", "combined")
-
+    file_path = Path(str(max_projection_file_path).replace("maximum", "combined"))
+    
     combine_images_with_individual_titles(
         avg_projection_file_path,
         max_projection_file_path,
@@ -2227,7 +2227,7 @@ if __name__ == "__main__":  # pragma: nocover
 
     # Write QC metrics
     serialize_registration_summary_qcmetric()
-    serialize_fov_quality_qcmetric()
+    serialize_fov_quality_qcmetric(unique_id, next(output_dir.rglob("*_registration_summary.png")))
 
 
     # Clean up temporary directory
