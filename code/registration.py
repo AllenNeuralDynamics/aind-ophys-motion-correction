@@ -116,8 +116,8 @@ def combine_images_with_individual_titles(image1_path, image2_path, output_path,
 
     # Ensure both images have the same height
     max_height = max(img1.height, img2.height)
-    img1 = img1.resize((img1.width, max_height), Image.ANTIALIAS)
-    img2 = img2.resize((img2.width, max_height), Image.ANTIALIAS)
+    img1 = img1.resize((img1.width, max_height), Image.LANCZOS)
+    img2 = img2.resize((img2.width, max_height), Image.LANCZOS)
 
     # Set padding
     padding = 20
