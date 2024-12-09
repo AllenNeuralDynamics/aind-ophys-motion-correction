@@ -22,28 +22,21 @@ import matplotlib as mpl
 import numpy as np
 import pandas as pd
 import suite2p
-from aind_data_schema.core.processing import (
-    DataProcess,
-    PipelineProcess,
-    Processing,
-    ProcessName,
-)
+from aind_data_schema.core.processing import (DataProcess, PipelineProcess,
+                                              Processing, ProcessName)
 from aind_ophys_utils.array_utils import normalize_array
-from aind_ophys_utils.video_utils import downsample_h5_video, encode_video, downsample_array
+from aind_ophys_utils.video_utils import (downsample_array,
+                                          downsample_h5_video, encode_video)
 from matplotlib import pyplot as plt  # noqa: E402
 from PIL import Image
 from ScanImageTiffReader import ScanImageTiffReader
 from scipy.ndimage import median_filter
 from scipy.stats import sigmaclip
 from suite2p.registration.nonrigid import make_blocks
-from suite2p.registration.register import pick_initial_reference, register_frames
-from suite2p.registration.rigid import (
-    apply_masks,
-    compute_masks,
-    phasecorr,
-    phasecorr_reference,
-    shift_frame,
-)
+from suite2p.registration.register import (pick_initial_reference,
+                                           register_frames)
+from suite2p.registration.rigid import (apply_masks, compute_masks, phasecorr,
+                                        phasecorr_reference, shift_frame)
 from sync_dataset import Sync
 
 mpl.use("Agg")
@@ -135,10 +128,12 @@ def h5py_to_numpy(
         else:
             return f[h5py_key][:]
 
+
 @lru_cache(maxsize=None)
 def _tiff_to_numpy(tiff_file: Path) -> np.ndarray:
     with ScanImageTiffReader(tiff_file) as reader:
         return reader.data()
+
 
 def tiff_to_numpy(
     tiff_list: List[Path], trim_frames_start: int = 0, trim_frames_end: int = 0
@@ -776,12 +771,13 @@ def check_and_warn_on_datatype(
             "crashes."
         )
 
+
 def _mean_of_batch(i, array):
-     return array[i : i + 1000].mean(axis=(1, 2))
+    return array[i : i + 1000].mean(axis=(1, 2))
 
 
 def find_movie_start_end_empty_frames(
-    filepath: Union[str , list[str]],
+    filepath: Union[str, list[str]],
     h5py_key: str = "",
     n_sigma: float = 5,
     logger: Optional[Callable] = None,
@@ -1237,7 +1233,9 @@ def downsample_normalize(
 
     """
     if isinstance(movie_path, Path):
-        ds = downsample_h5_video(movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size)
+        ds = downsample_h5_video(
+            movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size
+        )
     else:
         ds = downsample_array(movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size)
     avg_projection = ds.mean(axis=0)
@@ -2276,7 +2274,9 @@ if __name__ == "__main__":  # pragma: nocover
                         flags=0,
                     )
                 flows_norm = np.sqrt(np.sum(flows**2, -1))
-                farnebackDX = np.transpose([flows_norm.mean((1, 2)), flows_norm.max((1, 2))])
+                farnebackDX = np.transpose(
+                    [flows_norm.mean((1, 2)), flows_norm.max((1, 2))]
+                )
                 f.create_dataset("reg_metrics/crispness", data=crispness)
                 f.create_dataset("reg_metrics/farnebackROF", data=flows)
                 f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
@@ -2313,7 +2313,9 @@ if __name__ == "__main__":  # pragma: nocover
                         flags=0,
                     )
                 flows_norm = np.sqrt(np.sum(flows**2, -1))
-                farnebackDX = np.transpose([flows_norm.mean((1, 2)), flows_norm.max((1, 2))])
+                farnebackDX = np.transpose(
+                    [flows_norm.mean((1, 2)), flows_norm.max((1, 2))]
+                )
                 f.create_dataset("reg_metrics/crispness", data=crispness)
                 f.create_dataset("reg_metrics/farnebackROF", data=flows)
                 f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
