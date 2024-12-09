@@ -128,19 +128,11 @@ def h5py_to_numpy(
         else:
             return f[h5py_key][:]
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 901b71c59ddce5700f51e762f8b45881a9df84dd
 @lru_cache(maxsize=None)
 def _tiff_to_numpy(tiff_file: Path) -> np.ndarray:
     with ScanImageTiffReader(tiff_file) as reader:
         return reader.data()
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 901b71c59ddce5700f51e762f8b45881a9df84dd
 def tiff_to_numpy(
     tiff_list: List[Path], trim_frames_start: int = 0, trim_frames_end: int = 0
 ) -> np.ndarray:
@@ -261,6 +253,25 @@ def load_initial_frames(
     frames = array[requested_frames]
     return frames
 
+
+def compute_crispness(mov_raw: np.ndarray, mov_corr: np.ndarray) -> List[float]:
+    """Compute the crispness of the raw and corrected movie.
+    
+    Parameters
+    ----------
+    mov_raw : np.ndarray
+        Raw movie data.
+    mov_corr : np.ndarray
+        Corrected movie data.
+    
+    Returns
+    -------
+    crispness of array : List[float]
+    """
+    return [
+            np.sqrt(np.sum(np.array(np.gradient(np.mean(m, 0))) ** 2))
+            for m in (mov_raw, mov_corr)
+        ]
 
 def compute_reference(
     input_frames: np.ndarray,
@@ -2255,10 +2266,7 @@ if __name__ == "__main__":  # pragma: nocover
         ):
             mov_raw = f_raw["data"]
             mov = f["data"]
-            crispness = [
-                np.sqrt(np.sum(np.array(np.gradient(np.mean(m, 0))) ** 2))
-                for m in (mov_raw, mov)
-            ]
+            crispness = compute_crispness(mov_raw, mov)
             logger.info("computed crispness of mean image before and after registration")
 
             # compute residual optical flow using Farneback method
@@ -2294,12 +2302,8 @@ if __name__ == "__main__":  # pragma: nocover
                     f"{args['motion_corrected_output']}"
                 )
     else:
-        mov_raw = tiff_array
         with h5py.File(args["motion_corrected_output"], "r+") as f:
-            crispness = [
-                np.sqrt(np.sum(np.array(np.gradient(np.mean(m, 0))) ** 2))
-                for m in (mov_raw, f["data"])
-            ]
+            crispness = compute_crispness(tiff_array, f["data"])
             logger.info("computed crispness of mean image before and after registration")
             if f["reg_metrics/regPC"][:].any():
                 regPC = f["reg_metrics/regPC"]
