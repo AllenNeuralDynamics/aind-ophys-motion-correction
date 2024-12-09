@@ -15,8 +15,6 @@ from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from time import time
 from typing import Callable, List, Optional, Tuple, Union
-import cProfile
-import pstats
 
 import cv2
 import h5py
@@ -1941,30 +1939,16 @@ if __name__ == "__main__":  # pragma: nocover
     if args["auto_remove_empty_frames"]:
         logger.info("Attempting to find empty frames at the start and end of the movie.")
         if suite2p_args.get("tiff_list", ""):
-            cProfile.run("find_movie_start_end_empty_frames(filepath=suite2p_args['tiff_list'],logger=logger.warning,)")
-            profiler = cProfile.Profile()
-            profiler.enable()
             lowside, highside = find_movie_start_end_empty_frames(
                 filepath=suite2p_args["tiff_list"],
                 logger=logger.warning,
             )
-            profiler.disable()
-            print("```````````````")
-            stats = pstats.Stats(profiler).sort_stats("cumulative")
-            stats.print_stats()
         else:
-            cProfile.run("find_movie_start_end_empty_frames(filepath=suite2p_args['h5py'],h5py_key=suite2p_args['h5py_key'],logger=logger.warning)")
-            profiler = cProfile.Profile()
-            profiler.enable()
             lowside, highside = find_movie_start_end_empty_frames(
                 filepath=suite2p_args["h5py"],
                 h5py_key=suite2p_args["h5py_key"],
                 logger=logger.warning,
             )
-            profiler.disable()
-            print("```````````````")
-            stats = pstats.Stats(profiler).sort_stats("cumulative")
-            stats.print_stats()
         args["trim_frames_start"] = lowside
         args["trim_frames_end"] = highside
         logger.info(f"Found ({lowside}, {highside}) at the start/end of the movie.")
