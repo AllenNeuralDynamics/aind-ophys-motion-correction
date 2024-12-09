@@ -128,13 +128,19 @@ def h5py_to_numpy(
         else:
             return f[h5py_key][:]
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 901b71c59ddce5700f51e762f8b45881a9df84dd
 @lru_cache(maxsize=None)
 def _tiff_to_numpy(tiff_file: Path) -> np.ndarray:
     with ScanImageTiffReader(tiff_file) as reader:
         return reader.data()
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 901b71c59ddce5700f51e762f8b45881a9df84dd
 def tiff_to_numpy(
     tiff_list: List[Path], trim_frames_start: int = 0, trim_frames_end: int = 0
 ) -> np.ndarray:
