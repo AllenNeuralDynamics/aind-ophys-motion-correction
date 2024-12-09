@@ -2,8 +2,8 @@
 	"version": 1,
 	"attached_datasets": [
 		{
-			"id": "70dae0ae-1f5a-4016-9d08-1071e0e0b70c",
-			"mount": "bergamo-test20241204"
+			"id": "8219dd46-a1ea-4f06-83a8-226878d6e0c9",
+			"mount": "multiplane-ophys_721291_2024-05-08_08-05-54"
 		}
 	]
 }

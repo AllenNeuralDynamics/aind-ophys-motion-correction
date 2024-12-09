@@ -11,7 +11,7 @@ from datetime import datetime as dt
 from functools import lru_cache, partial
 from glob import glob
 from itertools import product
-from multiprocessing import Pool
+from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from time import time
 from typing import Callable, Optional, Tuple, Union
@@ -21,28 +21,21 @@ import matplotlib as mpl
 import numpy as np
 import pandas as pd
 import suite2p
-from aind_data_schema.core.processing import (
-    DataProcess,
-    PipelineProcess,
-    Processing,
-    ProcessName,
-)
+from aind_data_schema.core.processing import (DataProcess, PipelineProcess,
+                                              Processing, ProcessName)
 from aind_ophys_utils.array_utils import normalize_array
-from aind_ophys_utils.video_utils import downsample_h5_video, encode_video, downsample_array
+from aind_ophys_utils.video_utils import (downsample_array,
+                                          downsample_h5_video, encode_video)
 from matplotlib import pyplot as plt  # noqa: E402
 from PIL import Image
 from ScanImageTiffReader import ScanImageTiffReader
 from scipy.ndimage import median_filter
 from scipy.stats import sigmaclip
 from suite2p.registration.nonrigid import make_blocks
-from suite2p.registration.register import pick_initial_reference, register_frames
-from suite2p.registration.rigid import (
-    apply_masks,
-    compute_masks,
-    phasecorr,
-    phasecorr_reference,
-    shift_frame,
-)
+from suite2p.registration.register import (pick_initial_reference,
+                                           register_frames)
+from suite2p.registration.rigid import (apply_masks, compute_masks, phasecorr,
+                                        phasecorr_reference, shift_frame)
 from sync_dataset import Sync
 
 mpl.use("Agg")
@@ -259,6 +252,25 @@ def load_initial_frames(
     frames = array[requested_frames]
     return frames
 
+
+def compute_crispness(mov_raw: np.ndarray, mov_corr: np.ndarray) -> List[float]:
+    """Compute the crispness of the raw and corrected movie.
+    
+    Parameters
+    ----------
+    mov_raw : np.ndarray
+        Raw movie data.
+    mov_corr : np.ndarray
+        Corrected movie data.
+    
+    Returns
+    -------
+    crispness of array : List[float]
+    """
+    return [
+            np.sqrt(np.sum(np.array(np.gradient(np.mean(m, 0))) ** 2))
+            for m in (mov_raw, mov_corr)
+        ]
 
 def compute_reference(
     input_frames: np.ndarray,
@@ -777,11 +789,11 @@ def check_and_warn_on_datatype(
 
 
 def _mean_of_batch(i, array):
-     return array[i : i + 1000].mean(axis=(1, 2))
+    return array[i : i + 1000].mean(axis=(1, 2))
 
 
 def find_movie_start_end_empty_frames(
-    filepath: Union[str , list[str]],
+    filepath: Union[str, list[str]],
     h5py_key: str = "",
     n_sigma: float = 5,
     logger: Optional[Callable] = None,
@@ -830,7 +842,7 @@ def find_movie_start_end_empty_frames(
         means = array[:].mean(axis=(1, 2))
     else:
         means = np.concatenate(
-            Pool(n_jobs).starmap(
+            ThreadPool(n_jobs).starmap(
                 _mean_of_batch,
                 product(range(0, n_frames, 1000), [array]),
             )
@@ -1237,7 +1249,9 @@ def downsample_normalize(
 
     """
     if isinstance(movie_path, Path):
-        ds = downsample_h5_video(movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size)
+        ds = downsample_h5_video(
+            movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size
+        )
     else:
         ds = downsample_array(movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size)
     avg_projection = ds.mean(axis=0)
@@ -1507,7 +1521,7 @@ def generate_single_plane_reference(fp: Path, session) -> Path:
     """
     with h5py.File(fp, "r") as f:
         # take the first bci epoch to save out reference image TODO
-        tiff_stems = json.loads(f["epoch_locations"][:][0])
+        tiff_stems = json.loads(f["tiff_stem_location"][:][0])
         bci_epochs = [
             i
             for i in session["stimulus_epochs"]
@@ -1565,20 +1579,17 @@ def singleplane_motion_correction(
         debug_file = Path("../scratch") / f"{stem}_debug.h5"
         with h5py.File(h5_file, "r") as f:
             data = f["data"][:5000]
-            trial_locations = f["trial_locations"][()]
-            epoch_filenames = f["epoch_locations"][()]
+            tiff_stem_location = f["tiff_stem_location"][()]
+            epoch_filenames = f["epoch_filenames"][()]
         with h5py.File(debug_file, "a") as f:
             f.create_dataset("data", data=data)
-            f.create_dataset("trial_locations", data=trial_locations)
-            f.create_dataset("epoch_locations", data=epoch_filenames)
+            f.create_dataset("tiff_stem_location", data=tiff_stem_location)
+            f.create_dataset("epoch_filenames", data=epoch_filenames)
         h5_file = debug_file
     with h5py.File(h5_file, "r") as f:
-        trial_locations = json.loads(f["trial_locations"][:][0])
-        epoch_locations = json.loads(f["epoch_locations"][:][0])
-    with open(output_dir / "trial_locations.json", "w") as j:
-        json.dump(trial_locations, j)
-    with open(output_dir / "epoch_locations.json", "w") as j:
-        json.dump(epoch_locations, j)
+        tiff_stems = json.loads(f["tiff_stem_location"][:][0])
+    with open(output_dir / "tiff_stem_locations.json", "w") as j:
+        json.dump(tiff_stems, j)
 
     return h5_file, output_dir, reference_image_fp
 
@@ -2254,10 +2265,7 @@ if __name__ == "__main__":  # pragma: nocover
         ):
             mov_raw = f_raw["data"]
             mov = f["data"]
-            crispness = [
-                np.sqrt(np.sum(np.array(np.gradient(np.mean(m, 0))) ** 2))
-                for m in (mov_raw, mov)
-            ]
+            crispness = compute_crispness(mov_raw, mov)
             logger.info("computed crispness of mean image before and after registration")
 
             # compute residual optical flow using Farneback method
@@ -2279,7 +2287,9 @@ if __name__ == "__main__":  # pragma: nocover
                         flags=0,
                     )
                 flows_norm = np.sqrt(np.sum(flows**2, -1))
-                farnebackDX = np.transpose([flows_norm.mean((1, 2)), flows_norm.max((1, 2))])
+                farnebackDX = np.transpose(
+                    [flows_norm.mean((1, 2)), flows_norm.max((1, 2))]
+                )
                 f.create_dataset("reg_metrics/crispness", data=crispness)
                 f.create_dataset("reg_metrics/farnebackROF", data=flows)
                 f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
@@ -2291,12 +2301,8 @@ if __name__ == "__main__":  # pragma: nocover
                     f"{args['motion_corrected_output']}"
                 )
     else:
-        mov_raw = tiff_array
         with h5py.File(args["motion_corrected_output"], "r+") as f:
-            crispness = [
-                np.sqrt(np.sum(np.array(np.gradient(np.mean(m, 0))) ** 2))
-                for m in (mov_raw, f["data"])
-            ]
+            crispness = compute_crispness(tiff_array, f["data"])
             logger.info("computed crispness of mean image before and after registration")
             if f["reg_metrics/regPC"][:].any():
                 regPC = f["reg_metrics/regPC"]
@@ -2316,7 +2322,9 @@ if __name__ == "__main__":  # pragma: nocover
                         flags=0,
                     )
                 flows_norm = np.sqrt(np.sum(flows**2, -1))
-                farnebackDX = np.transpose([flows_norm.mean((1, 2)), flows_norm.max((1, 2))])
+                farnebackDX = np.transpose(
+                    [flows_norm.mean((1, 2)), flows_norm.max((1, 2))]
+                )
                 f.create_dataset("reg_metrics/crispness", data=crispness)
                 f.create_dataset("reg_metrics/farnebackROF", data=flows)
                 f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
