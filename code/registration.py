@@ -1953,7 +1953,7 @@ if __name__ == "__main__":  # pragma: nocover
             stats = pstats.Stats(profiler).sort_stats("cumulative")
             stats.print_stats()
         else:
-            cProfile.run("find_movie_start_end_empty_frames(filepath=suite2p_args['h5py']h5py_key=suite2p_args['h5py_key'],logger=logger.warning)")
+            cProfile.run("find_movie_start_end_empty_frames(filepath=suite2p_args['h5py'],h5py_key=suite2p_args['h5py_key'],logger=logger.warning)")
             profiler = cProfile.Profile()
             profiler.enable()
             lowside, highside = find_movie_start_end_empty_frames(
