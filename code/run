@@ -2,5 +2,4 @@
 set -ex
 
 ls ../data
-python registration.py "$@" --input ../data/multiplane-ophys_721291_2024-05-08_08-05-54 --debug
-# python registration.py "$@"
+python registration.py "$@" 
