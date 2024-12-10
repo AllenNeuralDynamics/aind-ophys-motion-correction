@@ -99,6 +99,8 @@ def load_initial_frames(
 
 from PIL import Image, ImageDraw, ImageFont
 
+from PIL import Image, ImageDraw, ImageFont
+
 def combine_images_with_individual_titles(image1_path, image2_path, output_path, title1="", title2=""):
     """
     Combine two images side-by-side with padding and add individual titles above each image.
@@ -116,10 +118,10 @@ def combine_images_with_individual_titles(image1_path, image2_path, output_path,
 
     # Ensure both images have the same height
     max_height = max(img1.height, img2.height)
-    img1 = img1.resize((img1.width, max_height), Image.LANCZOS)
-    img2 = img2.resize((img2.width, max_height), Image.LANCZOS)
+    img1 = img1.resize((img1.width, max_height), Image.Resampling.LANCZOS)
+    img2 = img2.resize((img2.width, max_height), Image.Resampling.LANCZOS)
 
-    # Set padding
+    # Set padding and title height
     padding = 20
     title_height = 50  # Space for the titles
 
@@ -128,25 +130,27 @@ def combine_images_with_individual_titles(image1_path, image2_path, output_path,
     combined_height = max_height + padding * 2 + title_height
 
     # Create a new blank image with padding and room for the titles
-    combined_image = Image.new('RGBA', (combined_width, combined_height), (255, 255, 255, 255))
+    combined_image = Image.new('RGB', (combined_width, combined_height), (255, 255, 255))
 
     # Draw the titles
     draw = ImageDraw.Draw(combined_image)
     try:
         font = ImageFont.truetype("arial.ttf", 24)  # You can replace with a path to your desired font
     except IOError:
-        font = ImageFont.load_default()  # Fallback to default font
+        font = ImageFont.load_default()  # Fallback to default font; may not match expected size
 
     # Title 1: Above the first image
-    bbox = draw.textbbox((0, 0), title1, font=font)
-    text_width1 = bbox[2] - bbox[0]
-    text_height1 = bbox[3] - bbox[1]    
+    bbox1 = draw.textbbox((0, 0), title1, font=font)
+    text_width1 = bbox1[2] - bbox1[0]
+    text_height1 = bbox1[3] - bbox1[1]
     text_y1 = padding
     text_x1 = padding + (img1.width - text_width1) // 2
     draw.text((text_x1, text_y1), title1, fill="black", font=font)
 
     # Title 2: Above the second image
-    text_width2, text_height2 = draw.textsize(title2, font=font)
+    bbox2 = draw.textbbox((0, 0), title2, font=font)
+    text_width2 = bbox2[2] - bbox2[0]
+    text_height2 = bbox2[3] - bbox2[1]
     text_x2 = padding * 2 + img1.width + (img2.width - text_width2) // 2
     text_y2 = padding
     draw.text((text_x2, text_y2), title2, fill="black", font=font)
