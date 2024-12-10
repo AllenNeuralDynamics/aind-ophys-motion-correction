@@ -128,10 +128,12 @@ def h5py_to_numpy(
         else:
             return f[h5py_key][:]
 
+
 @lru_cache(maxsize=None)
 def _tiff_to_numpy(tiff_file: Path) -> np.ndarray:
     with ScanImageTiffReader(tiff_file) as reader:
         return reader.data()
+
 
 def tiff_to_numpy(
     tiff_list: List[Path], trim_frames_start: int = 0, trim_frames_end: int = 0
@@ -253,6 +255,7 @@ def load_initial_frames(
     frames = array[requested_frames]
     return frames
 
+
 def compute_residual_optical_flow(reg_pc: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Compute the residual optical flow from the registration principal
     components.
@@ -261,7 +264,7 @@ def compute_residual_optical_flow(reg_pc: np.ndarray) -> tuple[np.ndarray, np.nd
     ----------
     reg_pc : np.ndarray
         Registration principal components.
-    
+
     Returns
     -------
     residual optical flow : np.ndarray
@@ -286,29 +289,29 @@ def compute_residual_optical_flow(reg_pc: np.ndarray) -> tuple[np.ndarray, np.nd
             flags=0,
         )
     flows_norm = np.sqrt(np.sum(flows**2, -1))
-    farnebackDX = np.transpose(
-        [flows_norm.mean((1, 2)), flows_norm.max((1, 2))]
-    )
+    farnebackDX = np.transpose([flows_norm.mean((1, 2)), flows_norm.max((1, 2))])
     return flows_norm, farnebackDX
+
 
 def compute_crispness(mov_raw: np.ndarray, mov_corr: np.ndarray) -> List[float]:
     """Compute the crispness of the raw and corrected movie.
-    
+
     Parameters
     ----------
     mov_raw : np.ndarray
         Raw movie data.
     mov_corr : np.ndarray
         Corrected movie data.
-    
+
     Returns
     -------
     crispness of array : List[float]
     """
     return [
-            np.sqrt(np.sum(np.array(np.gradient(np.mean(m, 0))) ** 2))
-            for m in (mov_raw, mov_corr)
-        ]
+        np.sqrt(np.sum(np.array(np.gradient(np.mean(m, 0))) ** 2))
+        for m in (mov_raw, mov_corr)
+    ]
+
 
 def compute_reference(
     input_frames: np.ndarray,
@@ -1634,6 +1637,7 @@ def singleplane_motion_correction(
 
     return h5_file, output_dir, reference_image_fp
 
+
 def get_frame_rate(session: dict):
     """Attempt to pull frame rate from session.json
     Returns none if frame rate not in session.json
@@ -2317,13 +2321,13 @@ if __name__ == "__main__":  # pragma: nocover
                 logger.info(
                     "computed residual optical flow of top PCs using Farneback method"
                 )
-                    # create image of PC_low, PC_high, and the residual optical flow between them
+                # create image of PC_low, PC_high, and the residual optical flow between them
             f.create_dataset("reg_metrics/crispness", data=crispness)
             logger.info(
-                    "appended additional registration metrics to"
-                    f"{args['motion_corrected_output']}"
-                )
-            
+                "appended additional registration metrics to"
+                f"{args['motion_corrected_output']}"
+            )
+
     else:
         with h5py.File(args["motion_corrected_output"], "r+") as f:
             regDX = f["reg_metrics/regDX"][:]
@@ -2331,20 +2335,20 @@ if __name__ == "__main__":  # pragma: nocover
             logger.info("computed crispness of mean image before and after registration")
             if f["reg_metrics/regPC"][:].any():
                 regPC = f["reg_metrics/regPC"]
-                
+
                 flows_norm, farnebackDX = compute_residual_optical_flow(regPC)
-                
+
                 f.create_dataset("reg_metrics/farnebackROF", data=flows)
                 f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
                 logger.info(
                     "computed residual optical flow of top PCs using Farneback method"
                 )
-                
+
             f.create_dataset("reg_metrics/crispness", data=crispness)
             logger.info(
-                    "appended additional registration metrics to"
-                    f"{args['motion_corrected_output']}"
-                )
+                "appended additional registration metrics to"
+                f"{args['motion_corrected_output']}"
+            )
 
     if regDX.any() and farnebackDX.any():
         for iPC in set(
