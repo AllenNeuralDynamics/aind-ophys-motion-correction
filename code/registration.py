@@ -253,6 +253,43 @@ def load_initial_frames(
     frames = array[requested_frames]
     return frames
 
+def compute_residual_optical_flow(reg_pc: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Compute the residual optical flow from the registration principal
+    components.
+
+    Parameters
+    ----------
+    reg_pc : np.ndarray
+        Registration principal components.
+    
+    Returns
+    -------
+    residual optical flow : np.ndarray
+    farneback method : np.ndarray
+
+    """
+
+    regPC = reg_pc
+    flows = np.zeros(regPC.shape[1:] + (2,), np.float32)
+    for i in range(len(flows)):
+        pclow, pchigh = regPC[:, i]
+        flows[i] = cv2.calcOpticalFlowFarneback(
+            pclow,
+            pchigh,
+            None,
+            pyr_scale=0.5,
+            levels=3,
+            winsize=100,
+            iterations=15,
+            poly_n=5,
+            poly_sigma=1.2 / 5,
+            flags=0,
+        )
+    flows_norm = np.sqrt(np.sum(flows**2, -1))
+    farnebackDX = np.transpose(
+        [flows_norm.mean((1, 2)), flows_norm.max((1, 2))]
+    )
+    return flows_norm, farnebackDX
 
 def compute_crispness(mov_raw: np.ndarray, mov_corr: np.ndarray) -> List[float]:
     """Compute the crispness of the raw and corrected movie.
@@ -2268,91 +2305,60 @@ if __name__ == "__main__":  # pragma: nocover
         ):
             mov_raw = f_raw["data"]
             mov = f["data"]
+            regDX = f["reg_metrics/regDX"][:]
             crispness = compute_crispness(mov_raw, mov)
             logger.info("computed crispness of mean image before and after registration")
 
             # compute residual optical flow using Farneback method
             if f["reg_metrics/regPC"][:].any():
-                regPC = f["reg_metrics/regPC"]
-                flows = np.zeros(regPC.shape[1:] + (2,), np.float32)
-                for i in range(len(flows)):
-                    pclow, pchigh = regPC[:, i]
-                    flows[i] = cv2.calcOpticalFlowFarneback(
-                        pclow,
-                        pchigh,
-                        None,
-                        pyr_scale=0.5,
-                        levels=3,
-                        winsize=100,
-                        iterations=15,
-                        poly_n=5,
-                        poly_sigma=1.2 / 5,
-                        flags=0,
-                    )
-                flows_norm = np.sqrt(np.sum(flows**2, -1))
-                farnebackDX = np.transpose(
-                    [flows_norm.mean((1, 2)), flows_norm.max((1, 2))]
-                )
-                f.create_dataset("reg_metrics/crispness", data=crispness)
+                flows, farnebackDX = compute_residual_optical_flow(f["reg_metrics/regPC"])
                 f.create_dataset("reg_metrics/farnebackROF", data=flows)
                 f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
                 logger.info(
                     "computed residual optical flow of top PCs using Farneback method"
                 )
-                logger.info(
+                    # create image of PC_low, PC_high, and the residual optical flow between them
+            f.create_dataset("reg_metrics/crispness", data=crispness)
+            logger.info(
                     "appended additional registration metrics to"
                     f"{args['motion_corrected_output']}"
                 )
+            
     else:
         with h5py.File(args["motion_corrected_output"], "r+") as f:
+            regDX = f["reg_metrics/regDX"][:]
             crispness = compute_crispness(tiff_array, f["data"])
             logger.info("computed crispness of mean image before and after registration")
             if f["reg_metrics/regPC"][:].any():
                 regPC = f["reg_metrics/regPC"]
-                flows = np.zeros(regPC.shape[1:] + (2,), np.float32)
-                for i in range(len(flows)):
-                    pclow, pchigh = regPC[:, i]
-                    flows[i] = cv2.calcOpticalFlowFarneback(
-                        pclow,
-                        pchigh,
-                        None,
-                        pyr_scale=0.5,
-                        levels=3,
-                        winsize=100,
-                        iterations=15,
-                        poly_n=5,
-                        poly_sigma=1.2 / 5,
-                        flags=0,
-                    )
-                flows_norm = np.sqrt(np.sum(flows**2, -1))
-                farnebackDX = np.transpose(
-                    [flows_norm.mean((1, 2)), flows_norm.max((1, 2))]
-                )
-                f.create_dataset("reg_metrics/crispness", data=crispness)
+                
+                flows_norm, farnebackDX = compute_residual_optical_flow(regPC)
+                
                 f.create_dataset("reg_metrics/farnebackROF", data=flows)
                 f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
                 logger.info(
                     "computed residual optical flow of top PCs using Farneback method"
                 )
-                logger.info(
+                
+            f.create_dataset("reg_metrics/crispness", data=crispness)
+            logger.info(
                     "appended additional registration metrics to"
                     f"{args['motion_corrected_output']}"
                 )
-            # create image of PC_low, PC_high, and the residual optical flow between them
-            if f["reg_metrics/regDX"][:].any():
-                for iPC in set(
-                    (
-                        np.argmax(f["reg_metrics/regDX"][:, -1]),
-                        np.argmax(farnebackDX[:, -1]),
-                    )
-                ):
-                    p = Path(args["registration_summary_output"])
-                    flow_png(
-                        Path(args["motion_corrected_output"]),
-                        str(p.parent / p.stem),
-                        iPC,
-                    )
-                logger.info(f"created images of PC_low, PC_high, and PC_rof for PC {iPC}")
 
+    if regDX.any() and farnebackDX.any():
+        for iPC in set(
+            (
+                np.argmax(regDX[:, -1]),
+                np.argmax(farnebackDX[:, -1]),
+            )
+        ):
+            p = Path(args["registration_summary_output"])
+            flow_png(
+                Path(args["motion_corrected_output"]),
+                str(p.parent / p.stem),
+                iPC,
+            )
+        logger.info(f"created images of PC_low, PC_high, and PC_rof for PC {iPC}")
     # Clean up temporary directory
     tmp_dir.cleanup()
