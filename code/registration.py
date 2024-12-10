@@ -1629,14 +1629,16 @@ def singleplane_motion_correction(
     return h5_file, output_dir, reference_image_fp
 
 
-if __name__ == "__main__":  # pragma: nocover
-    # Set the log level and name the logger
-    logger = logging.getLogger("Suite2P motion correction")
-    logger.setLevel(logging.INFO)
+def parse_args() -> argparse.Namespace:
+    """Parse command line arguments
 
-    # Create an ArgumentParser object
+    Returns
+    -------
+    args: argparse.Namespace
+        parsed arguments
+    """
+
     parser = argparse.ArgumentParser(description="Suite2P motion correction")
-
     parser.add_argument(
         "-i",
         "--input",
@@ -1783,8 +1785,15 @@ if __name__ == "__main__":  # pragma: nocover
         "steps=1.",
     )
 
+    return parser.parse_args()
+
+
+if __name__ == "__main__":  # pragma: nocover
+    # Set the log level and name the logger
+    logger = logging.getLogger("Suite2P motion correction")
+    logger.setLevel(logging.INFO)
     # Parse command-line arguments
-    args = parser.parse_args()
+    args = parse_args()
     # General settings
     output_dir = Path(args.output_dir)
     data_dir = Path("../data")
