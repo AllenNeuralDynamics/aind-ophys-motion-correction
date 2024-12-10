@@ -138,9 +138,11 @@ def combine_images_with_individual_titles(image1_path, image2_path, output_path,
         font = ImageFont.load_default()  # Fallback to default font
 
     # Title 1: Above the first image
-    text_width1, text_height1 = draw.textsize(title1, font=font)
-    text_x1 = padding + (img1.width - text_width1) // 2
+    bbox = draw.textbbox((0, 0), title1, font=font)
+    text_width1 = bbox[2] - bbox[0]
+    text_height1 = bbox[3] - bbox[1]    
     text_y1 = padding
+    text_x1 = padding + (img1.width - text_width1) // 2
     draw.text((text_x1, text_y1), title1, fill="black", font=font)
 
     # Title 2: Above the second image
