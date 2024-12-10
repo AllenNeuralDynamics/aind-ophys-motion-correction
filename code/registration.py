@@ -25,6 +25,7 @@ import suite2p
 from aind_data_schema.core.processing import (DataProcess, PipelineProcess,
                                               Processing, ProcessName)
 from aind_ophys_utils.array_utils import normalize_array
+from aind_ophys_utils.summary_images import mean_image
 from aind_ophys_utils.video_utils import (downsample_array,
                                           downsample_h5_video, encode_video)
 from matplotlib import pyplot as plt  # noqa: E402
@@ -256,20 +257,21 @@ def load_initial_frames(
     return frames
 
 
-def compute_residual_optical_flow(reg_pc: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def compute_residual_optical_flow(
+    reg_pc: Union[h5py.Dataset, np.ndarray]
+) -> tuple[np.ndarray, np.ndarray]:
     """Compute the residual optical flow from the registration principal
     components.
 
     Parameters
     ----------
-    reg_pc : np.ndarray
+    reg_pc : Union[h5py.Dataset, np.ndarray]
         Registration principal components.
 
     Returns
     -------
     residual optical flow : np.ndarray
-    farneback method : np.ndarray
-
+    average and max shifts : np.ndarray
     """
 
     regPC = reg_pc
@@ -293,22 +295,25 @@ def compute_residual_optical_flow(reg_pc: np.ndarray) -> tuple[np.ndarray, np.nd
     return flows, farnebackDX
 
 
-def compute_crispness(mov_raw: np.ndarray, mov_corr: np.ndarray) -> List[float]:
+def compute_crispness(
+    mov_raw: Union[h5py.Dataset, np.ndarray],
+    mov_corr: Union[h5py.Dataset, np.ndarray]
+) -> List[float]:
     """Compute the crispness of the raw and corrected movie.
 
     Parameters
     ----------
-    mov_raw : np.ndarray
+    mov_raw : Union[h5py.Dataset, np.ndarray]
         Raw movie data.
-    mov_corr : np.ndarray
+    mov_corr : Union[h5py.Dataset, np.ndarray]
         Corrected movie data.
 
     Returns
     -------
-    crispness of array : List[float]
+    crispness of mean image : List[float]
     """
     return [
-        np.sqrt(np.sum(np.array(np.gradient(np.mean(m, 0))) ** 2))
+        np.sqrt(np.sum(np.array(np.gradient(mean_image(m))) ** 2))
         for m in (mov_raw, mov_corr)
     ]
 
