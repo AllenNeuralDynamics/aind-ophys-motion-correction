@@ -290,7 +290,7 @@ def compute_residual_optical_flow(reg_pc: np.ndarray) -> tuple[np.ndarray, np.nd
         )
     flows_norm = np.sqrt(np.sum(flows**2, -1))
     farnebackDX = np.transpose([flows_norm.mean((1, 2)), flows_norm.max((1, 2))])
-    return flows_norm, farnebackDX
+    return flows, farnebackDX
 
 
 def compute_crispness(mov_raw: np.ndarray, mov_corr: np.ndarray) -> List[float]:
@@ -1878,7 +1878,7 @@ if __name__ == "__main__":  # pragma: nocover
 
     # We construct the paths to the outputs
     if isinstance(input_file, list):
-        basename = os.path.basename(input_file[0])
+        basename = unique_id
     else:
         basename = os.path.basename(input_file)
     args["movie_frame_rate_hz"] = frame_rate_hz
@@ -1924,8 +1924,6 @@ if __name__ == "__main__":  # pragma: nocover
 
     # This is part of a complex scheme to pass an image that is a bit too
     # complicated. Will remove when tested.
-    # if not parser.get("refImg", ""):
-    # args["refImg"] = []
 
     # Set suite2p parser.
     suite2p_args = suite2p.default_ops()
@@ -2336,7 +2334,7 @@ if __name__ == "__main__":  # pragma: nocover
             if f["reg_metrics/regPC"][:].any():
                 regPC = f["reg_metrics/regPC"]
 
-                flows_norm, farnebackDX = compute_residual_optical_flow(regPC)
+                flows, farnebackDX = compute_residual_optical_flow(regPC)
 
                 f.create_dataset("reg_metrics/farnebackROF", data=flows)
                 f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
