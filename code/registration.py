@@ -11,7 +11,7 @@ from datetime import datetime as dt
 from functools import partial
 from glob import glob
 from itertools import product
-from multiprocessing import Pool
+from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from time import time
 from typing import Callable, Optional, Tuple, Union
@@ -22,27 +22,21 @@ import matplotlib as mpl
 import numpy as np
 import pandas as pd
 import suite2p
-from aind_data_schema.core.processing import (
-    Processing,
-    DataProcess,
-    PipelineProcess,
-    ProcessName,
-)
+from aind_data_schema.core.processing import (DataProcess, PipelineProcess,
+                                              Processing, ProcessName)
 from aind_ophys_utils.array_utils import normalize_array
-from aind_ophys_utils.video_utils import downsample_h5_video, encode_video
+from aind_ophys_utils.summary_images import mean_image
+from aind_ophys_utils.video_utils import (downsample_array,
+                                          downsample_h5_video, encode_video)
 from matplotlib import pyplot as plt  # noqa: E402
 from PIL import Image
 from scipy.ndimage import median_filter
 from scipy.stats import sigmaclip
 from suite2p.registration.nonrigid import make_blocks
-from suite2p.registration.register import pick_initial_reference, register_frames
-from suite2p.registration.rigid import (
-    apply_masks,
-    compute_masks,
-    phasecorr,
-    phasecorr_reference,
-    shift_frame,
-)
+from suite2p.registration.register import (pick_initial_reference,
+                                           register_frames)
+from suite2p.registration.rigid import (apply_masks, compute_masks, phasecorr,
+                                        phasecorr_reference, shift_frame)
 from sync_dataset import Sync
 
 mpl.use("Agg")
@@ -59,6 +53,164 @@ def is_S3(file_path: str):
         "df " + file_path + "| sed -n '2 p'", shell=True, text=True
     )
 
+
+def h5py_byteorder_name(h5py_file: h5py.File, h5py_key: str) -> Tuple[str, str]:
+    """Get the byteorder and name of the dataset in the h5py file.
+
+    Parameters
+    ----------
+    h5py_file : h5py.File
+        h5py file object
+    h5py_key : str
+        key to the dataset
+
+    Returns
+    -------
+    str
+        byteorder of the dataset
+    str
+        name of the dataset
+    """
+    with h5py.File(h5py_file, "r") as f:
+        byteorder = f[h5py_key].dtype.byteorder
+        name = f[h5py_key].dtype.name
+    return byteorder, name
+
+
+def tiff_byteorder_name(tiff_file: Path) -> Tuple[str, str]:
+    """Get the byteorder and name of the dataset in the tiff file.
+
+    Parameters
+    ----------
+    tiff_file : Path
+        Location of the tiff file
+
+    Returns
+    -------
+    str
+        byteorder of the dataset
+    str
+        name of the dataset
+    """
+    with ScanImageTiffReader(tiff_file) as reader:
+        byteorder = reader.data().dtype.byteorder
+        name = reader.data().dtype.name
+    return byteorder, name
+
+
+def h5py_to_numpy(
+    h5py_file: str,
+    h5py_key: str,
+    trim_frames_start: int = 0,
+    trim_frames_end: int = 0,
+) -> np.ndarray:
+    """Converts a h5py dataset to a numpy array
+
+    Parameters
+    ----------
+    h5py_file: str
+        h5py file path
+    h5py_key : str
+        key to the dataset
+    trim_frames_start : int
+        Number of frames to disregard from the start of the movie. Default 0.
+    trim_frames_end : int
+        Number of frames to disregard from the end of the movie. Default 0.
+    Returns
+    -------
+    np.ndarray
+        numpy array
+    """
+    with h5py.File(h5py_file, "r") as f:
+        n_frames = f[h5py_key].shape[0]
+        if trim_frames_start > 0 or trim_frames_end > 0:
+            return f[h5py_key][trim_frames_start : n_frames - trim_frames_end]
+        else:
+            return f[h5py_key][:]
+
+
+@lru_cache(maxsize=None)
+def _tiff_to_numpy(tiff_file: Path) -> np.ndarray:
+    with ScanImageTiffReader(tiff_file) as reader:
+        return reader.data()
+
+
+def tiff_to_numpy(
+    tiff_list: List[Path], trim_frames_start: int = 0, trim_frames_end: int = 0
+) -> np.ndarray:
+    """
+    Converts a list of TIFF files to a single numpy array, with optional frame trimming.
+
+    Parameters
+    ----------
+    tiff_list : List[str]
+        List of TIFF file paths to process
+    trim_frames_start : int, optional
+        Number of frames to remove from the start (default: 0)
+    trim_frames_end : int, optional
+        Number of frames to remove from the end (default: 0)
+
+    Returns
+    -------
+    np.ndarray
+        Combined array of all TIFF data with specified trimming
+
+    Raises
+    ------
+    ValueError
+        If trim values exceed total number of frames or are negative
+    """
+    if trim_frames_start < 0 or trim_frames_end < 0:
+        raise ValueError("Trim values must be non-negative")
+
+    def get_total_frames(tiff_files: List[Path]) -> int:
+        """Calculate total number of frames across all TIFF files."""
+        total = 0
+        for tiff in tiff_files:
+            with ScanImageTiffReader(tiff) as reader:
+                total += reader.shape()[0]
+        return total
+
+    # Validate trim parameters
+    total_frames = get_total_frames(tiff_list)
+    if trim_frames_start + trim_frames_end >= total_frames:
+        raise ValueError(
+            f"Invalid trim values: start ({trim_frames_start}) + end ({trim_frames_end}) "
+            f"must be less than total frames ({total_frames})"
+        )
+
+    # Initialize variables for frame counting
+    processed_frames = 0
+    arrays_to_stack = []
+
+    for tiff_path in tiff_list:
+        with ScanImageTiffReader(tiff_path) as reader:
+            current_frames = reader.shape()[0]
+        start_idx = max(0, trim_frames_start - processed_frames)
+        end_idx = current_frames
+
+        if processed_frames + current_frames > total_frames - trim_frames_end:
+            end_idx = total_frames - trim_frames_end - processed_frames
+
+        if start_idx < end_idx:  # Only process if there are frames to include
+            data = np.array(_tiff_to_numpy(tiff_path)[start_idx:end_idx])
+            arrays_to_stack.append(data)
+
+        processed_frames += current_frames
+
+        # Break if we've processed all needed frames
+        if processed_frames >= total_frames - trim_frames_end:
+            break
+
+    # Stack all arrays along the appropriate axis
+    if not arrays_to_stack:
+        raise ValueError("No frames remained after trimming")
+
+    return (
+        np.concatenate(arrays_to_stack, axis=0)
+        if len(arrays_to_stack) > 1
+        else arrays_to_stack[0]
+    )
 
 def load_initial_frames(
     file_path: str,
@@ -100,6 +252,67 @@ def load_initial_frames(
         )[:-1]
         frames = frame_window[requested_frames]
     return frames
+
+
+def compute_residual_optical_flow(
+    reg_pc: Union[h5py.Dataset, np.ndarray]
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute the residual optical flow from the registration principal
+    components.
+
+    Parameters
+    ----------
+    reg_pc : Union[h5py.Dataset, np.ndarray]
+        Registration principal components.
+
+    Returns
+    -------
+    residual optical flow : np.ndarray
+    average and max shifts : np.ndarray
+    """
+
+    regPC = reg_pc
+    flows = np.zeros(regPC.shape[1:] + (2,), np.float32)
+    for i in range(len(flows)):
+        pclow, pchigh = regPC[:, i]
+        flows[i] = cv2.calcOpticalFlowFarneback(
+            pclow,
+            pchigh,
+            None,
+            pyr_scale=0.5,
+            levels=3,
+            winsize=100,
+            iterations=15,
+            poly_n=5,
+            poly_sigma=1.2 / 5,
+            flags=0,
+        )
+    flows_norm = np.sqrt(np.sum(flows**2, -1))
+    farnebackDX = np.transpose([flows_norm.mean((1, 2)), flows_norm.max((1, 2))])
+    return flows, farnebackDX
+
+
+def compute_crispness(
+    mov_raw: Union[h5py.Dataset, np.ndarray],
+    mov_corr: Union[h5py.Dataset, np.ndarray]
+) -> List[float]:
+    """Compute the crispness of the raw and corrected movie.
+
+    Parameters
+    ----------
+    mov_raw : Union[h5py.Dataset, np.ndarray]
+        Raw movie data.
+    mov_corr : Union[h5py.Dataset, np.ndarray]
+        Corrected movie data.
+
+    Returns
+    -------
+    crispness of mean image : List[float]
+    """
+    return [
+        np.sqrt(np.sum(np.array(np.gradient(mean_image(m))) ** 2))
+        for m in (mov_raw, mov_corr)
+    ]
 
 
 def compute_reference(
@@ -609,14 +822,13 @@ def check_and_warn_on_datatype(h5py_name: str, h5py_key: str, logger: Callable):
                 "crashes."
             )
 
-
-def _mean_of_batch(i, h5py_name, h5py_key):
-    return h5py.File(h5py_name)[h5py_key][i : i + 1000].mean(axis=(1, 2))
+def _mean_of_batch(i, array):
+    return array[i : i + 1000].mean(axis=(1, 2))
 
 
 def find_movie_start_end_empty_frames(
-    h5py_name: str,
-    h5py_key: str,
+    filepath: Union[str, list[str]],
+    h5py_key: str = "",
     n_sigma: float = 5,
     logger: Optional[Callable] = None,
     n_jobs: Optional[int] = None,
@@ -649,19 +861,17 @@ def find_movie_start_end_empty_frames(
         movie as (n_trim_start, n_trim_end).
     """
     # Find the midpoint of the movie.
-    with h5py.File(h5py_name, "r") as f:
-        n_frames = f[h5py_key].shape[0]
-        midpoint = n_frames // 2
-        # We discover empty or extrema frames by comparing the mean of each frames
-        # to the mean of the full movie.
-        if n_jobs == 1 or n_frames < 2000:
-            means = f[h5py_key][:].mean(axis=(1, 2))
-        else:
-            means = np.concatenate(
-                Pool(n_jobs).starmap(
-                    _mean_of_batch,
-                    product(range(0, n_frames, 1000), [h5py_name], [h5py_key]),
-                )
+    n_frames = array.shape[0]
+    midpoint = n_frames // 2
+    # We discover empty or extrema frames by comparing the mean of each frames
+    # to the mean of the full movie.
+    if n_jobs == 1 or n_frames < 2000:
+        means = array[:].mean(axis=(1, 2))
+    else:
+        means = np.concatenate(
+            ThreadPool(n_jobs).starmap(
+                _mean_of_batch,
+                product(range(0, n_frames, 1000), [array]),
             )
         mean_of_frames = means.mean()
 
@@ -1059,7 +1269,12 @@ def downsample_normalize(
     consistent visibility.
 
     """
-    ds = downsample_h5_video(movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size)
+    if isinstance(movie_path, Path):
+        ds = downsample_h5_video(
+            movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size
+        )
+    else:
+        ds = downsample_array(movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size)
     avg_projection = ds.mean(axis=0)
     lower_cutoff, upper_cutoff = np.quantile(
         avg_projection.flatten(), (lower_quantile, upper_quantile)
@@ -1579,8 +1794,10 @@ if __name__ == "__main__":  # pragma: nocover
         )
 
     # We convert to dictionary
-    args = vars(args)
-    h5_file = str(h5_file)
+    args = vars(parser)
+    if not frame_rate_hz:
+        frame_rate_hz = parser.frame_rate
+        logging.warning("User input frame rate used. %s", frame_rate_hz)
     reference_image = None
     meta_jsons = list(data_dir.glob("*/*.json"))
     args["refImg"] = []
@@ -1588,6 +1805,10 @@ if __name__ == "__main__":  # pragma: nocover
         args["refImg"] = [reference_image_fp]
 
     # We construct the paths to the outputs
+    if isinstance(input_file, list):
+        basename = unique_id
+    else:
+        basename = os.path.basename(input_file)
     args["movie_frame_rate_hz"] = frame_rate_hz
     for key, default in (
         ("motion_corrected_output", "_registered.h5"),
@@ -1633,8 +1854,6 @@ if __name__ == "__main__":  # pragma: nocover
 
     # This is part of a complex scheme to pass an image that is a bit too
     # complicated. Will remove when tested.
-    # if not args.get("refImg", ""):
-    # args["refImg"] = []
 
     # Set suite2p args.
     suite2p_args = suite2p.default_ops()
@@ -1969,64 +2188,66 @@ if __name__ == "__main__":  # pragma: nocover
     except:
         logger.info("Could not write motion correction preview")
     # compute crispness of mean image using raw and registered movie
-    with (
-        h5py.File(h5_file) as f_raw,
-        h5py.File(args["motion_corrected_output"], "r+") as f,
-    ):
-        mov_raw = f_raw["data"]
-        mov = f["data"]
-        crispness = [
-            np.sqrt(np.sum(np.array(np.gradient(np.mean(m, 0))) ** 2))
-            for m in (mov_raw, mov)
-        ]
-        logger.info("computed crispness of mean image before and after registration")
+    if suite2p_args.get("h5py", ""):
+        with (
+            h5py.File(h5_file) as f_raw,
+            h5py.File(args["motion_corrected_output"], "r+") as f,
+        ):
+            mov_raw = f_raw["data"]
+            mov = f["data"]
+            regDX = f["reg_metrics/regDX"][:]
+            crispness = compute_crispness(mov_raw, mov)
+            logger.info("computed crispness of mean image before and after registration")
 
-        # compute residual optical flow using Farneback method
-        if f["reg_metrics/regPC"][:].any():
-            regPC = f["reg_metrics/regPC"]
-            flows = np.zeros(regPC.shape[1:] + (2,), np.float32)
-            for i in range(len(flows)):
-                pclow, pchigh = regPC[:, i]
-                flows[i] = cv2.calcOpticalFlowFarneback(
-                    pclow,
-                    pchigh,
-                    None,
-                    pyr_scale=0.5,
-                    levels=3,
-                    winsize=100,
-                    iterations=15,
-                    poly_n=5,
-                    poly_sigma=1.2 / 5,
-                    flags=0,
+            # compute residual optical flow using Farneback method
+            if f["reg_metrics/regPC"][:].any():
+                flows, farnebackDX = compute_residual_optical_flow(f["reg_metrics/regPC"])
+                f.create_dataset("reg_metrics/farnebackROF", data=flows)
+                f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
+                logger.info(
+                    "computed residual optical flow of top PCs using Farneback method"
                 )
-            flows_norm = np.sqrt(np.sum(flows**2, -1))
-            farnebackDX = np.transpose([flows_norm.mean((1, 2)), flows_norm.max((1, 2))])
+                # create image of PC_low, PC_high, and the residual optical flow between them
             f.create_dataset("reg_metrics/crispness", data=crispness)
-            f.create_dataset("reg_metrics/farnebackROF", data=flows)
-            f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
             logger.info(
-                "computed residual optical flow of top PCs using Farneback method"
+                "appended additional registration metrics to"
+                f"{args['motion_corrected_output']}"
             )
+    else:
+        with h5py.File(args["motion_corrected_output"], "r+") as f:
+            regDX = f["reg_metrics/regDX"][:]
+            crispness = compute_crispness(tiff_array, f["data"])
+            logger.info("computed crispness of mean image before and after registration")
+            if f["reg_metrics/regPC"][:].any():
+                regPC = f["reg_metrics/regPC"]
+
+                flows, farnebackDX = compute_residual_optical_flow(regPC)
+
+                f.create_dataset("reg_metrics/farnebackROF", data=flows)
+                f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
+                logger.info(
+                    "computed residual optical flow of top PCs using Farneback method"
+                )
+
+            f.create_dataset("reg_metrics/crispness", data=crispness)
             logger.info(
                 "appended additional registration metrics to"
                 f"{args['motion_corrected_output']}"
             )
 
-        # create image of PC_low, PC_high, and the residual optical flow between them
-        if f["reg_metrics/regDX"][:].any():
-            for iPC in set(
-                (
-                    np.argmax(f["reg_metrics/regDX"][:, -1]),
-                    np.argmax(farnebackDX[:, -1]),
-                )
-            ):
-                p = Path(args["registration_summary_output"])
-                flow_png(
-                    Path(args["motion_corrected_output"]),
-                    str(p.parent / p.stem),
-                    iPC,
-                )
-                logger.info(f"created images of PC_low, PC_high, and PC_rof for PC {iPC}")
-
+    if regDX.any() and farnebackDX.any():
+        for iPC in set(
+            (
+                np.argmax(regDX[:, -1]),
+                np.argmax(farnebackDX[:, -1]),
+            )
+        ):
+            p = Path(args["registration_summary_output"])
+            flow_png(
+                Path(args["motion_corrected_output"]),
+                str(p.parent / p.stem),
+                iPC,
+            )
+        logger.info(f"created images of PC_low, PC_high, and PC_rof for PC {iPC}")
     # Clean up temporary directory
     tmp_dir.cleanup()
