@@ -873,7 +873,7 @@ def find_movie_start_end_empty_frames(
                 _mean_of_batch,
                 product(range(0, n_frames, 1000), [array]),
             )
-        mean_of_frames = means.mean()
+    mean_of_frames = means.mean()
 
     # Compute a robust standard deviation that is not sensitive to the
     # outliers we are attempting to find.
