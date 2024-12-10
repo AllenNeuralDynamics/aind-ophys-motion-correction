@@ -1,0 +1,24 @@
+{
+	"version": 1,
+	"named_parameters": true,
+	"parameters": [
+		{
+			"id": "qHFkm1CnOP4wUDIm",
+			"name": "--data-type",
+			"param_name": "data-type",
+			"description": "Choices for input data type are h5 (default) and TIFF",
+			"type": "text",
+			"value_type": "string",
+			"default_value": "h5"
+		},
+		{
+			"id": "uILRNBMMjAuDM9NQ",
+			"name": "--input",
+			"param_name": "input",
+			"description": "Where to look for data",
+			"type": "text",
+			"value_type": "string",
+			"default_value": "../data"
+		}
+	]
+}
