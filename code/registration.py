@@ -22,21 +22,32 @@ import matplotlib as mpl
 import numpy as np
 import pandas as pd
 import suite2p
-from aind_data_schema.core.processing import (DataProcess, PipelineProcess,
-                                              Processing, ProcessName)
+from aind_data_schema.core.processing import (
+    DataProcess,
+    PipelineProcess,
+    Processing,
+    ProcessName,
+)
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.summary_images import mean_image
-from aind_ophys_utils.video_utils import (downsample_array,
-                                          downsample_h5_video, encode_video)
+from aind_ophys_utils.video_utils import (
+    downsample_array,
+    downsample_h5_video,
+    encode_video,
+)
 from matplotlib import pyplot as plt  # noqa: E402
 from PIL import Image
 from scipy.ndimage import median_filter
 from scipy.stats import sigmaclip
 from suite2p.registration.nonrigid import make_blocks
-from suite2p.registration.register import (pick_initial_reference,
-                                           register_frames)
-from suite2p.registration.rigid import (apply_masks, compute_masks, phasecorr,
-                                        phasecorr_reference, shift_frame)
+from suite2p.registration.register import pick_initial_reference, register_frames
+from suite2p.registration.rigid import (
+    apply_masks,
+    compute_masks,
+    phasecorr,
+    phasecorr_reference,
+    shift_frame,
+)
 from sync_dataset import Sync
 
 mpl.use("Agg")
@@ -212,6 +223,7 @@ def tiff_to_numpy(
         else arrays_to_stack[0]
     )
 
+
 def load_initial_frames(
     file_path: str,
     h5py_key: str,
@@ -293,8 +305,7 @@ def compute_residual_optical_flow(
 
 
 def compute_crispness(
-    mov_raw: Union[h5py.Dataset, np.ndarray],
-    mov_corr: Union[h5py.Dataset, np.ndarray]
+    mov_raw: Union[h5py.Dataset, np.ndarray], mov_corr: Union[h5py.Dataset, np.ndarray]
 ) -> List[float]:
     """Compute the crispness of the raw and corrected movie.
 
@@ -822,6 +833,7 @@ def check_and_warn_on_datatype(h5py_name: str, h5py_key: str, logger: Callable):
                 "crashes."
             )
 
+
 def _mean_of_batch(i, array):
     return array[i : i + 1000].mean(axis=(1, 2))
 
@@ -860,6 +872,10 @@ def find_movie_start_end_empty_frames(
         Tuple of the number of frames to cut from the start and end of the
         movie as (n_trim_start, n_trim_end).
     """
+    if isinstance(filepath, str):
+        array = h5py_to_numpy(filepath, h5py_key)
+    else:
+        array = tiff_to_numpy(filepath)
     # Find the midpoint of the movie.
     n_frames = array.shape[0]
     midpoint = n_frames // 2
@@ -873,7 +889,8 @@ def find_movie_start_end_empty_frames(
                 _mean_of_batch,
                 product(range(0, n_frames, 1000), [array]),
             )
-        mean_of_frames = means.mean()
+        )
+    mean_of_frames = means.mean()
 
     # Compute a robust standard deviation that is not sensitive to the
     # outliers we are attempting to find.
@@ -1117,7 +1134,8 @@ def write_output_metadata(
         output_dir = Path(output_dir)
     print(f"~~~~~~~~~~~~~~Writing output: {output_dir}")
     processing.write_standard_file(output_directory=output_dir)
-    
+
+
 def check_trim_frames(data):
     """Make sure that if the user sets auto_remove_empty_frames
     and timing frames is already requested, raise an error.
