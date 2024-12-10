@@ -1870,7 +1870,7 @@ if __name__ == "__main__":  # pragma: nocover
     args = vars(parser)
     if not frame_rate_hz:
         frame_rate_hz = parser.frame_rate
-        logging.warning("Using default frame rate of 31.0 Hz")
+        logging.warning("User input frame rate used. %s", frame_rate_hz)
     reference_image = None
     args["refImg"] = []
     if reference_image_fp:
