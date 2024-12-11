@@ -804,36 +804,43 @@ def compute_acutance(
     return (grady**2 + gradx**2).mean()
 
 
-def check_and_warn_on_datatype(h5py_name: str, h5py_key: str, logger: Callable):
+def check_and_warn_on_datatype(
+    filepath: Union[Path, list], logger: Callable, filetype: str = "h5", h5py_key: str = ""
+):
     """Suite2p assumes int16 types throughout code. Check that the input
     data is type int16 else throw a warning.
 
     Parameters
     ----------
-    h5py_name : str
+    filepath : Union[Path, list]
         Path to the HDF5 containing the data.
-    h5py_key : str
-        Name of the dataset to check.
     logger : Callable
         Logger to output logger warning to.
+    filetype : str
+        Type of file to check. Default is "h5".
+    h5py_key : str
+        Name of the dataset to check. Default is "".
+
     """
-    with h5py.File(h5py_name, "r") as h5_file:
-        dataset = h5_file[h5py_key]
-
-        if dataset.dtype.byteorder == ">":
-            logger(
-                "Data byteorder is big-endian which may cause issues in "
-                "suite2p. This may result in a crash or unexpected "
-                "results."
-            )
-        if dataset.dtype.name != "int16":
-            logger(
-                f"Data type is {dataset.dtype.name} and not int16. Suite2p "
-                "assumes int16 data as input and throughout codebase. "
-                "Non-int16 data may result in unexpected results or "
-                "crashes."
-            )
-
+    if filetype == "h5":
+        byteorder, name = h5py_byteorder_name(filepath, h5py_key)
+    elif filetype == "tiff":
+        byteorder, name = tiff_byteorder_name(filepath)
+    else:
+        raise ValueError("File type not supported")
+    if byteorder == ">":
+        logger(
+            "Data byteorder is big-endian which may cause issues in "
+            "suite2p. This may result in a crash or unexpected "
+            "results."
+        )
+    if name != "int16":
+        logger(
+            f"Data type is {name} and not int16. Suite2p "
+            "assumes int16 data as input and throughout codebase. "
+            "Non-int16 data may result in unexpected results or "
+            "crashes."
+        )
 
 def _mean_of_batch(i, array):
     return array[i : i + 1000].mean(axis=(1, 2))
@@ -1445,7 +1452,6 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
         with h5py.File(trimmed_fn, "w") as f:
             f.create_dataset("data", data=trimmed_data)
         h5_file = trimmed_fn
-    shutil.copy(h5_file, output_dir)
     return h5_file, output_dir, frame_rate_hz
 
 
@@ -1628,6 +1634,29 @@ def singleplane_motion_correction(
 
     return h5_file, output_dir, reference_image_fp
 
+def get_frame_rate(session: dict):
+    """Attempt to pull frame rate from session.json
+    Returns none if frame rate not in session.json
+
+    Parameters
+    ----------
+    session: dict
+        session metadata
+
+    Returns
+    -------
+    frame_rate: float
+        frame rate in Hz
+    """
+    frame_rate_hz = None
+    for i in session.get("data_streams", ""):
+        frame_rate_hz = [j["frame_rate"] for j in i["ophys_fovs"]]
+        frame_rate_hz = frame_rate_hz[0]
+        if frame_rate_hz:
+            break
+    if isinstance(frame_rate_hz, str):
+        frame_rate_hz = float(frame_rate_hz)
+    return frame_rate_hz
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments
@@ -1660,6 +1689,13 @@ def parse_args() -> argparse.Namespace:
         default="/scratch",
         help="Directory into which to write temporary files "
         "produced by Suite2P (default: /scratch)",
+    )
+
+    parser.add_argument(
+        "--data-type",
+        type=str,
+        default="h5",
+        help="Processing h5 (default) or TIFF timeseries"
     )
 
     parser.add_argument(
@@ -1812,22 +1848,42 @@ if __name__ == "__main__":  # pragma: nocover
         frame_rate_hz = float(frame_rate_hz)
     reference_image_fp = ""
     unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
-    if "Bergamo" in session["rig_id"]:
-        h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
-            data_dir, output_dir, session, unique_id, debug=args.debug
-        )
-    else:
-        h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
-            data_dir, output_dir, debug=args.debug
-        )
+    logger = logging.getLogger("Suite2P motion correction")
+    logger.setLevel(logging.INFO)
 
+    # Create an ArgumentParser object
+    parser = parse_args()
+    # General settings
+    data_dir = Path(parser.input)
+    output_dir = Path(parser.output_dir)
+    session_fp = next(data_dir.rglob("session.json"))
+    description_fp = next(data_dir.rglob("data_description.json"))
+    with open(session_fp, "r") as j:
+        session = json.load(j)
+    with open(description_fp, "r") as j:
+        data_description = json.load(j)
+    frame_rate_hz = get_frame_rate(session)
+    unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
+    reference_image_fp = ""
+
+    if parser.data_type == "TIFF":
+        input_file = next(data_dir.rglob("pophys"))
+    else:
+        if "Bergamo" in session.get("rig_id", ""):
+            h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
+                data_dir, output_dir, session, unique_id, debug=parser.debug
+            )
+        else:
+            h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
+                data_dir, output_dir, debug=parser.debug
+            )
+        input_file = str(h5_file)
     # We convert to dictionary
     args = vars(parser)
     if not frame_rate_hz:
         frame_rate_hz = parser.frame_rate
         logging.warning("User input frame rate used. %s", frame_rate_hz)
     reference_image = None
-    meta_jsons = list(data_dir.glob("*/*.json"))
     args["refImg"] = []
     if reference_image_fp:
         args["refImg"] = [reference_image_fp]
@@ -1847,9 +1903,7 @@ if __name__ == "__main__":  # pragma: nocover
         ("motion_correction_preview_output", "_motion_preview.webm"),
         ("output_json", "_motion_correction_output.json"),
     ):
-        args[key] = os.path.join(
-            output_dir, os.path.splitext(os.path.basename(h5_file))[0] + default
-        )
+        args[key] = os.path.join(output_dir, os.path.splitext(basename)[0] + default)
 
     # These are hardcoded parameters of the wrapper. Those are tracked but
     # not exposed.
@@ -1883,16 +1937,21 @@ if __name__ == "__main__":  # pragma: nocover
     # This is part of a complex scheme to pass an image that is a bit too
     # complicated. Will remove when tested.
 
-    # Set suite2p args.
+    # Set suite2p parser.
     suite2p_args = suite2p.default_ops()
 
     # Here we overwrite the parameters for suite2p that will not change in our
     # processing pipeline. These are parameters that are not exposed to
     # minimize code length. Those are not set to default.
-    suite2p_args["h5py"] = h5_file
+    if parser.data_type == "h5":
+        suite2p_args["h5py"] = input_file
+    else:
+        suite2p_args["data_path"] = str(input_file)
+        suite2p_args["look_one_level_down"] = True
+        suite2p_args["tiff_list"] = [str(i) for i in input_file.glob("*.tif*")]
     suite2p_args["roidetect"] = False
     suite2p_args["do_registration"] = 1
-    suite2p_args["data_path"] = []  # TODO: remove this if not needed by suite2p
+    # suite2p_args["data_path"] = []  # TODO: remove this if not needed by suite2p
     suite2p_args["reg_tif"] = False  # We save our own outputs here
     suite2p_args["nimg_init"] = (
         500  # Nb of images to compute reference. This value is a bit high. Suite2p has it at 300 normally
@@ -1907,7 +1966,8 @@ if __name__ == "__main__":  # pragma: nocover
         5.0  # Maximum shift allowed in pixels for a block in rigid registration.
     )
     suite2p_args["batch_size"] = 500  # Number of frames to process at once
-    suite2p_args["h5py_key"] = "data"  # h5 path in the file.
+    if suite2p_args.get("h5py", ""):
+        suite2p_args["h5py_key"] = "data"  # h5 path in the file.
     suite2p_args["smooth_sigma"] = (
         1.15  # Standard deviation in pixels of the gaussian used to smooth the phase correlation.
     )
@@ -1925,25 +1985,38 @@ if __name__ == "__main__":  # pragma: nocover
     suite2p_args["force_refImg"] = args["force_refImg"]
 
     # if data is in a S3 bucket, copy it to /scratch for faster access
-    if is_S3(suite2p_args["h5py"]):
-        dst = "/scratch/" + Path(suite2p_args["h5py"]).name
-        logger.info(f"copying {suite2p_args['h5py']} from S3 bucket to {dst}")
-        shutil.copy(suite2p_args["h5py"], dst)
-        suite2p_args["h5py"] = dst
+    if suite2p_args.get("h5py", ""):
+        if is_S3(suite2p_args["h5py"]):
+            dst = "/scratch/" + Path(suite2p_args["h5py"]).name
+            logger.info(f"copying {suite2p_args['h5py']} from S3 bucket to {dst}")
+            shutil.copy(suite2p_args["h5py"], dst)
+            suite2p_args["h5py"] = dst
 
-    check_and_warn_on_datatype(
-        h5py_name=suite2p_args["h5py"],
-        h5py_key=suite2p_args["h5py_key"],
-        logger=logger.warning,
-    )
+    if suite2p_args.get("tiff_list", ""):
+        check_and_warn_on_datatype(
+            filepath=suite2p_args["tiff_list"][0], logger=logger.warning, filetype="tiff"
+        )
+    else:
+        check_and_warn_on_datatype(
+            filepath=suite2p_args["h5py"],
+            logger=logger.warning,
+            filetype="h5",
+            h5py_key=suite2p_args["h5py_key"],
+        )
 
     if args["auto_remove_empty_frames"]:
         logger.info("Attempting to find empty frames at the start and end of the movie.")
-        lowside, highside = find_movie_start_end_empty_frames(
-            h5py_name=suite2p_args["h5py"],
-            h5py_key=suite2p_args["h5py_key"],
-            logger=logger.warning,
-        )
+        if suite2p_args.get("tiff_list", ""):
+            lowside, highside = find_movie_start_end_empty_frames(
+                filepath=suite2p_args["tiff_list"],
+                logger=logger.warning,
+            )
+        else:
+            lowside, highside = find_movie_start_end_empty_frames(
+                filepath=suite2p_args["h5py"],
+                h5py_key=suite2p_args["h5py_key"],
+                logger=logger.warning,
+            )
         args["trim_frames_start"] = lowside
         args["trim_frames_end"] = highside
         logger.info(f"Found ({lowside}, {highside}) at the start/end of the movie.")
@@ -1958,8 +2031,8 @@ if __name__ == "__main__":  # pragma: nocover
             suite2p_args, args, reference_image_fp=reference_image_fp
         )
 
-    # register with Suite2P
-    logger.info(f"attempting to motion correct {suite2p_args['h5py']}")
+        # register with Suite2P
+        logger.info(f"attempting to motion correct {suite2p_args['h5py']}")
     # make a tempdir for Suite2P's output
     tmp_dir = tempfile.TemporaryDirectory(dir=args["tmp_dir"])
     tdir = tmp_dir.name
@@ -1981,10 +2054,17 @@ if __name__ == "__main__":  # pragma: nocover
     if suite2p_args["force_refImg"]:
         logger.info(f"\tUsing custom reference image: {suite2p_args['refImg']}")
 
-    suite2p_args["h5py"] = [suite2p_args["h5py"]]
+    if suite2p_args.get("h5py", ""):
+        suite2p_args["h5py"] = suite2p_args["h5py"]
     suite2p.run_s2p(suite2p_args)
-    suite2p_args["h5py"] = suite2p_args["h5py"][0]
+    data_path = ""
+    if suite2p_args.get("h5py", ""):
+        data_path = suite2p_args["h5py"][0]
+    else:
+        data_path = suite2p_args["data_path"][0]
 
+    if not data_path:
+        raise ValueError("No data path found in suite2p_args")
     bin_path = list(Path(tdir).rglob("data.bin"))[0]
     ops_path = list(Path(tdir).rglob("ops.npy"))[0]
     # Suite2P ops file contains at least the following keys:
@@ -2077,8 +2157,12 @@ if __name__ == "__main__":  # pragma: nocover
     # make projections
     mx_proj = projection_process(data, projection="max")
     av_proj = projection_process(data, projection="avg")
+    if not suite2p_args.get("h5py", []):
+        filepath = suite2p_args["tiff_list"]
+    else:
+        filepath = suite2p_args["h5py"]
     write_output_metadata(
-        args_copy, Path(suite2p_args["h5py"]), args["motion_corrected_output"], output_dir
+        args_copy, suite2p_args["h5py"], args["motion_corrected_output"], output_dir
     )
     # TODO: normalize here, if desired
     # save projections
@@ -2196,13 +2280,25 @@ if __name__ == "__main__":  # pragma: nocover
         lower_quantile=args["movie_lower_quantile"],
         upper_quantile=args["movie_upper_quantile"],
     )
-    processed_vids = [
-        ds_partial(i)
-        for i in [
-            Path(h5_file),
-            Path(args["motion_corrected_output"]),
+    if suite2p_args.get("h5py", ""):
+        h5_file = suite2p_args["h5py"]
+        processed_vids = [
+            ds_partial(i)
+            for i in [
+                Path(h5_file),
+                Path(args["motion_corrected_output"]),
+            ]
         ]
-    ]
+    else:
+        tiff_array = tiff_to_numpy(suite2p_args["tiff_list"])
+        processed_vids = [
+            ds_partial(i)
+            for i in [
+                tiff_array,
+                Path(args["motion_corrected_output"]),
+            ]
+        ]
+
     logger.info("finished downsampling motion corrected and non-motion corrected movies")
 
     # tile into 1 movie, raw on left, motion corrected on right
@@ -2241,6 +2337,7 @@ if __name__ == "__main__":  # pragma: nocover
                 "appended additional registration metrics to"
                 f"{args['motion_corrected_output']}"
             )
+
     else:
         with h5py.File(args["motion_corrected_output"], "r+") as f:
             regDX = f["reg_metrics/regDX"][:]
