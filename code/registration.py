@@ -38,6 +38,7 @@ from aind_ophys_utils.video_utils import (
 )
 from matplotlib import pyplot as plt  # noqa: E402
 from PIL import Image
+from ScanImageTiffReader import ScanImageTiffReader
 from scipy.ndimage import median_filter
 from scipy.stats import sigmaclip
 from suite2p.registration.nonrigid import make_blocks
