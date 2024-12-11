@@ -1,4 +1,4 @@
-import argparse
+cimport argparse
 import copy
 import json
 import logging
@@ -143,16 +143,16 @@ def combine_images_with_individual_titles(image1_path, image2_path, output_path,
     bbox1 = draw.textbbox((0, 0), title1, font=font)
     text_width1 = bbox1[2] - bbox1[0]
     text_height1 = bbox1[3] - bbox1[1]
+    text_x1 = padding * 2 + img1.width + (img2.width - text_width1) // 2
     text_y1 = padding
-    text_x1 = padding + (img1.width - text_width1) // 2
     draw.text((text_x1, text_y1), title1, fill="black", font=font)
 
     # Title 2: Above the second image
     bbox2 = draw.textbbox((0, 0), title2, font=font)
     text_width2 = bbox2[2] - bbox2[0]
     text_height2 = bbox2[3] - bbox2[1]
-    text_x2 = padding * 2 + img1.width + (img2.width - text_width2) // 2
     text_y2 = padding
+    text_x2 = padding + (img1.width - text_width2) // 2
     draw.text((text_x2, text_y2), title2, fill="black", font=font)
 
     # Paste images into the new image
