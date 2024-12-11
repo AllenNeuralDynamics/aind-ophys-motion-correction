@@ -227,7 +227,7 @@ def tiff_to_numpy(
 
 
 def load_initial_frames(
-    file_path: str,
+    file_path: Union[str, list],
     h5py_key: str,
     n_frames: int,
     trim_frames_start: int = 0,
@@ -254,17 +254,18 @@ def load_initial_frames(
         time axis. If n_frames > tot_frames, a number of frames equal to
         tot_frames is returned.
     """
-    with h5py.File(file_path, "r") as hdf5_file:
-        # Load all frames as fancy indexing is slower than loading the full
-        # data.
-        max_frame = hdf5_file[h5py_key].shape[0] - trim_frames_end
-        frame_window = hdf5_file[h5py_key][trim_frames_start:max_frame]
-        # Total number of frames in the movie.
-        tot_frames = frame_window.shape[0]
-        requested_frames = np.linspace(
-            0, tot_frames, 1 + min(n_frames, tot_frames), dtype=int
-        )[:-1]
-        frames = frame_window[requested_frames]
+    if isinstance(file_path, str):
+        array = h5py_to_numpy(file_path, h5py_key, trim_frames_start, trim_frames_end)
+    elif isinstance(file_path, list):
+        array = tiff_to_numpy(file_path, trim_frames_start, trim_frames_end)
+    else:
+        raise ValueError("File type not supported")
+    # Total number of frames in the movie.
+    tot_frames = array.shape[0]
+    requested_frames = np.linspace(
+        0, tot_frames, 1 + min(n_frames, tot_frames), dtype=int
+    )[:-1]
+    frames = array[requested_frames]
     return frames
 
 
@@ -1459,6 +1460,24 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
 def update_suite2p_args_reference_image(
     suite2p_args: dict, args: dict, reference_image_fp=None
 ):
+    """Update the suite2p_args dictionary with the reference image.
+
+    Parameters
+    ----------
+    suite2p_args : dict
+        Suite2p ops dictionary.
+    args : dict
+        Dictionary of arguments from the command line.
+    reference_image_fp : Path
+        Path to the reference image to use. Default is None.
+    
+    Returns
+    -------
+    suite2p_args : dict
+        Updated suite2p_args dictionary.
+    args : dict
+        Updated args dictionary.
+    """
     # Use our own version of compute_reference to create the initial
     # reference image used by suite2p.
     logger.info(
@@ -1474,9 +1493,15 @@ def update_suite2p_args_reference_image(
         )
 
     else:
+        if suite2p_args.get("h5py", None):
+            file_path = suite2p_args["h5py"]
+            h5py_key = suite2p_args["h5py_key"]
+        else:
+            file_path = suite2p_args["tiff_list"]
+            h5py_key = None
         initial_frames = load_initial_frames(
-            file_path=suite2p_args["h5py"],
-            h5py_key=suite2p_args["h5py_key"],
+            file_path=file_path,
+            h5py_key=h5py_key,
             n_frames=suite2p_args["nimg_init"],
             trim_frames_start=args["trim_frames_start"],
             trim_frames_end=args["trim_frames_end"],
