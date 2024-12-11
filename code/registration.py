@@ -25,7 +25,7 @@ import suite2p
 from aind_data_schema.core.processing import DataProcess
 from aind_data_schema.core.quality_control import (QCEvaluation, QCMetric,
                                                    Stage, Status, QCStatus)
-from aind_qcportal_schema.metric_value import CheckboxMetric
+from aind_qcportal_schema.metric_value import DropdownMetric
 from aind_data_schema_models.modalities import Modality
 from aind_data_schema_models.process_names import ProcessName
 from aind_ophys_utils.array_utils import normalize_array
@@ -187,18 +187,18 @@ def serialize_registration_summary_qcmetric() -> None:
                 status=Status.PENDING
             )
         ],
-        value=CheckboxMetric(
+        value=DropdownMetric(
             value="Registration Summary",
             options=[
+                "Motion correction successful",
                 "No motion correction applied",
                 "Motion correction failed",
                 "Motion correction partially successful",
-                "Motion correction successful",
             ],
             status=[
-                Status.PASS,
-                Status.PASS,
-                Status.PASS,
+                Status.FAIL,
+                Status.FAIL,
+                Status.FAIL,
                 Status.PASS
             ]
         )
@@ -240,20 +240,21 @@ def serialize_fov_quality_qcmetric() -> None:
                 status=Status.PENDING
             )
         ],
-        value=CheckboxMetric(
+        value=DropdownMetric(
             value="FOV Quality", # TODO value?
             options=[
+                "Quality is sufficient"
                 "Timeseries shuffled between planes",
                 "Field of view associated with incorrect area and/or depth",
                 "Paired plane cross talk: Extreme",
                 "Paired plane cross-talk: Moderate",
             ],
-            # TODO status?
             status=[
                 Status.PASS,
-                Status.PASS,
-                Status.PASS,
-                Status.PASS
+                Status.FAIL,
+                Status.FAIL,
+                Status.FAIL,
+                Status.FAIL
             ]
         )
     )
