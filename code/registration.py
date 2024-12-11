@@ -1867,6 +1867,7 @@ if __name__ == "__main__":  # pragma: nocover
     reference_image_fp = ""
 
     if parser.data_type == "TIFF":
+        print(f"````````````````{data_dir}")
         input_file = next(data_dir.rglob("pophys"))
     else:
         if "Bergamo" in session.get("rig_id", ""):
