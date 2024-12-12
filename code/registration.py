@@ -196,10 +196,10 @@ def serialize_registration_summary_qcmetric() -> None:
                 "Motion correction partially successful",
             ],
             status=[
+                Status.PASS,
                 Status.FAIL,
                 Status.FAIL,
-                Status.FAIL,
-                Status.PASS
+                Status.FAIL
             ]
         )
     )
@@ -243,7 +243,7 @@ def serialize_fov_quality_qcmetric() -> None:
         value=DropdownMetric(
             value="FOV Quality", # TODO value?
             options=[
-                "Quality is sufficient"
+                "Quality is sufficient",
                 "Timeseries shuffled between planes",
                 "Field of view associated with incorrect area and/or depth",
                 "Paired plane cross talk: Extreme",
