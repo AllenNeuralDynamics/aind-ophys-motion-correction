@@ -1894,7 +1894,10 @@ if __name__ == "__main__":  # pragma: nocover
 
     if parser.data_type == "TIFF":
         print(f"````````````````{data_dir}")
-        input_file = next(data_dir.rglob("*/pophys"))
+        try:
+            input_file = next(data_dir.rglob("*/pophys"))
+        except StopIteration:
+            input_file = next(data_dir.rglob("pophys"))
     else:
         if "Bergamo" in session.get("rig_id", ""):
             h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
