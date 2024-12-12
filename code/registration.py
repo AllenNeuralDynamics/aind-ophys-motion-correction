@@ -1899,7 +1899,7 @@ if __name__ == "__main__":  # pragma: nocover
         except StopIteration:
             print("pophys")
             input_file = next(data_dir.rglob("pophys"))
-        make_output_directory(output_dir, unique_id)
+        output_dir = make_output_directory(output_dir, unique_id)
     else:
         if "Bergamo" in session.get("rig_id", ""):
             h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
