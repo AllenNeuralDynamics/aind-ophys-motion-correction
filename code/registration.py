@@ -1882,6 +1882,7 @@ if __name__ == "__main__":  # pragma: nocover
     # General settings
     data_dir = Path(parser.input)
     output_dir = Path(parser.output_dir)
+    print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{data_dir}")
     session_fp = next(data_dir.rglob("session.json"))
     description_fp = next(data_dir.rglob("data_description.json"))
     with open(session_fp, "r") as j:
