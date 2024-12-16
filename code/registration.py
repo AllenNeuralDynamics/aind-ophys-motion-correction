@@ -246,7 +246,7 @@ def serialize_fov_quality_qcmetric() -> None:
             )
         ],
         value=DropdownMetric(
-            value="FOV Quality", # TODO value?
+            value=["Quality is sufficient"],
             options=[
                 "Quality is sufficient",
                 "Timeseries shuffled between planes",
