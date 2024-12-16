@@ -23,15 +23,13 @@ import numpy as np
 import pandas as pd
 import suite2p
 from aind_data_schema.core.processing import DataProcess
-from aind_data_schema.core.quality_control import (QCEvaluation, QCMetric,
-                                                   Stage, Status, QCStatus)
+from aind_data_schema.core.quality_control import (QCMetric, Status, QCStatus)
 from aind_qcportal_schema.metric_value import DropdownMetric
-from aind_data_schema_models.modalities import Modality
 from aind_data_schema_models.process_names import ProcessName
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.video_utils import downsample_h5_video, encode_video
 from matplotlib import pyplot as plt  # noqa: E402
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from scipy.ndimage import median_filter
 from scipy.stats import sigmaclip
 from suite2p.registration.nonrigid import make_blocks
@@ -97,8 +95,6 @@ def load_initial_frames(
         frames = frame_window[requested_frames]
     return frames
 
-from PIL import Image, ImageDraw, ImageFont
-
 
 def combine_images_with_individual_titles(image1_path, image2_path, output_path, title1="", title2=""):
     """
@@ -141,7 +137,6 @@ def combine_images_with_individual_titles(image1_path, image2_path, output_path,
     # Title 1: Above the second image
     bbox1 = draw.textbbox((0, 0), title1, font=font)
     text_width1 = bbox1[2] - bbox1[0]
-    text_height1 = bbox1[3] - bbox1[1]
     text_y1 = padding
     text_x1 = padding + (img1.width - text_width1) // 2
     draw.text((text_x1, text_y1), title1, fill="black", font=font)
@@ -149,7 +144,6 @@ def combine_images_with_individual_titles(image1_path, image2_path, output_path,
     # Title 2: Above the first image
     bbox2 = draw.textbbox((0, 0), title2, font=font)
     text_width2 = bbox2[2] - bbox2[0]
-    text_height2 = bbox2[3] - bbox2[1]
     text_x2 = padding * 2 + img2.width + (img2.width - text_width2) // 2
     text_y2 = padding
     draw.text((text_x2, text_y2), title2, fill="black", font=font)
@@ -169,11 +163,10 @@ def serialize_registration_summary_qcmetric() -> None:
     """
     Serialize the registration summary QCMetric to registration_summary_metric.json.
     Placed in the same directory as *_registration_summary.png. Ex: /results/VISp_0/motion_correction/
-    
     """
 
     file_path = next(output_dir.rglob("*_registration_summary.png"))
-    
+
     # Remove '/results' from file_path
     reference_filepath = Path(*file_path.parts[2:])
     plane_name = reference_filepath.parts[0]
@@ -221,12 +214,12 @@ def serialize_fov_quality_qcmetric() -> None:
     max_projection_file_path = next(output_dir.rglob("*_maximum_projection.png"))
 
     file_path = Path(str(max_projection_file_path).replace("maximum", "combined"))
-    
+
     combine_images_with_individual_titles(
         avg_projection_file_path,
         max_projection_file_path,
         file_path,
-        title1="Average Projection", 
+        title1="Average Projection",
         title2="Maximum Projection"
     )
 
@@ -267,54 +260,6 @@ def serialize_fov_quality_qcmetric() -> None:
     with open(Path(file_path.parent) / "fov_quality_metric.json", "w") as f:
         json.dump(json.loads(metric.model_dump_json()), f, indent=4)
 
-
-def qc_evaluation(file_path: Path) -> None:
-    """QC evaluation of the motion corrected movie.
-
-    Parameters
-    ----------
-    file_path : Path
-        Location of the avg and max intensity plot with motion plot.
-
-    """
-    file_parts = file_path.parts[1:]
-    qc_evaluation = QCEvaluation(
-            name="Field of View Quality and Motion Correction",
-            stage=Stage.PROCESSING,
-            allow_failed_metrics=False,
-            modality=Modality.from_abbreviation("pophys"),
-            metrics=[
-                QCMetric(
-                    name="Field of View Quality and Motion Correction",
-                    description="Review the average and max projections to ensure that the FOV quality is sufficient.",
-                    reference=str(Path(*file_parts)),
-                    status_history=[                                
-                        QCStatus(
-                            evaluator='Pending review',
-                            timestamp=dt.now(),
-                            status=Status.PENDING
-                        )
-                    ],
-                    value=CheckboxMetric(
-                        value="Field of view integrity",
-                        options=[
-                            "Low experiment signal to noise",
-                            "Laser/scanner interference ",
-                            "No cells in field of view",
-                            "Uncorrected motion present",
-                        ],
-                        status=[
-                            Status.PASS,
-                            Status.PASS,
-                            Status.PASS,
-                            Status.PASS
-                        ]
-                    )
-                )
-            ]
-        )
-    with open(Path(file_path.parent) / "quality_evaluation.json", "w") as f:
-        json.dump(json.loads(qc_evaluation.model_dump_json()), f, indent=4)
 
 
 def compute_reference(
