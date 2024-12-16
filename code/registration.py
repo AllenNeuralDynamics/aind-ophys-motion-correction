@@ -99,7 +99,6 @@ def load_initial_frames(
 
 from PIL import Image, ImageDraw, ImageFont
 
-from PIL import Image, ImageDraw, ImageFont
 
 def combine_images_with_individual_titles(image1_path, image2_path, output_path, title1="", title2=""):
     """
@@ -139,20 +138,20 @@ def combine_images_with_individual_titles(image1_path, image2_path, output_path,
     except IOError:
         font = ImageFont.load_default()  # Fallback to default font; may not match expected size
 
-    # Title 1: Above the first image
+    # Title 1: Above the second image
     bbox1 = draw.textbbox((0, 0), title1, font=font)
     text_width1 = bbox1[2] - bbox1[0]
     text_height1 = bbox1[3] - bbox1[1]
-    text_x1 = padding * 2 + img1.width + (img2.width - text_width1) // 2
     text_y1 = padding
+    text_x1 = padding + (img1.width - text_width1) // 2
     draw.text((text_x1, text_y1), title1, fill="black", font=font)
 
-    # Title 2: Above the second image
+    # Title 2: Above the first image
     bbox2 = draw.textbbox((0, 0), title2, font=font)
     text_width2 = bbox2[2] - bbox2[0]
     text_height2 = bbox2[3] - bbox2[1]
+    text_x2 = padding * 2 + img2.width + (img2.width - text_width2) // 2
     text_y2 = padding
-    text_x2 = padding + (img1.width - text_width2) // 2
     draw.text((text_x2, text_y2), title2, fill="black", font=font)
 
     # Paste images into the new image
@@ -164,15 +163,18 @@ def combine_images_with_individual_titles(image1_path, image2_path, output_path,
 
     # Save the result
     combined_image.save(output_path)
-    print(f"Combined image with individual titles saved to {output_path}")
 
 
 def serialize_registration_summary_qcmetric() -> None:
-    """Serialize the registration summary QC metric to registration_summary_metric.json."""
+    """
+    Serialize the registration summary QCMetric to registration_summary_metric.json.
+    Placed in the same directory as *_registration_summary.png. Ex: /results/VISp_0/motion_correction/
+    
+    """
 
     file_path = next(output_dir.rglob("*_registration_summary.png"))
     
-    #remove '/results' from file_path
+    # Remove '/results' from file_path
     reference_filepath = Path(*file_path.parts[2:])
     plane_name = reference_filepath.parts[0]
 
@@ -188,7 +190,7 @@ def serialize_registration_summary_qcmetric() -> None:
             )
         ],
         value=DropdownMetric(
-            value="Registration Summary",
+            value=[],
             options=[
                 "Motion correction successful",
                 "No motion correction applied",
@@ -209,7 +211,11 @@ def serialize_registration_summary_qcmetric() -> None:
 
 
 def serialize_fov_quality_qcmetric() -> None:
-    """Serialize the registration summary QC metric to registration_summary_metric.json."""
+    """
+    Creates *_combined_projection.png with Average and Max intensity projections.
+    Serializes the FOV Quality QCMetric to fov_quality_metric.json.
+    Placed in the same directory as *_maximum_projection.png. Ex: /results/VISp_0/motion_correction/
+    """
 
     avg_projection_file_path = next(output_dir.rglob("*_average_projection.png"))
     max_projection_file_path = next(output_dir.rglob("*_maximum_projection.png"))
@@ -224,8 +230,7 @@ def serialize_fov_quality_qcmetric() -> None:
         title2="Maximum Projection"
     )
 
-    #remove /results from file_path
-    #TODO make this abstracted to output_dir?
+    # Remove /results from file_path
     reference_filepath = Path(*file_path.parts[2:])
     plane_name = reference_filepath.parts[0]
 
