@@ -2,10 +2,14 @@
 FROM registry.codeocean.allenneuraldynamics.org/codeocean/jupyterlab:3.4.4-miniconda4.12.0-python3.9-ubuntu20.04
 
 ARG DEBIAN_FRONTEND=noninteractive
-ENV PIPELINE_URL="https://codeocean.allenneuraldynamics.org/capsule/6127754/tree"
+ENV PIPELINE_URL="https://codeocean.allenneuraldynamics.org/capsule/5619253/tree"
 ENV PIPELINE_VERSION="1.0"
+<<<<<<< HEAD
 ENV VERSION="7.0"
 
+=======
+ENV VERSION="8.0"
+>>>>>>> 000a8dd92c7781816982ce786a0195e32d05247c
 ARG GIT_ASKPASS
 ARG GIT_ACCESS_TOKEN
 COPY git-askpass /
@@ -18,7 +22,13 @@ WORKDIR /
 RUN pip3 install -U --no-cache-dir \
     aind-ophys-utils \
     sbxreader \
+<<<<<<< HEAD
     git+https://github.com/arielleleon/suite2p@bug-pull-from-defined-h5py \
     aind-data-schema==1.1.0 \
     pydantic==2.8.1 \
     aind-qcportal-schema
+=======
+    suite2p \
+    aind-data-schema==0.22.0 \
+    pydantic==2.8.1
+>>>>>>> 000a8dd92c7781816982ce786a0195e32d05247c
