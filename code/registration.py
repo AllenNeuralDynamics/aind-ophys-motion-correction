@@ -1417,7 +1417,7 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
         frame rate in Hz
     """
     try:
-        unique_id = [i for i in data_dir.rglob("*") if "ophys_experiment" in str(i)][
+        unique_id = [i for i in data_dir.rglob("*") if "VI" in str(i)][
             0
         ].name.split("_")[-1]
         h5_file = [i for i in data_dir.rglob("*") if f"{unique_id}.h5" in str(i)][0]
