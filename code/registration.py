@@ -23,12 +23,10 @@ import matplotlib as mpl
 import numpy as np
 import pandas as pd
 import suite2p
-from aind_data_schema.core.processing import (
-    DataProcess,
-    PipelineProcess,
-    Processing,
-    ProcessName,
-)
+from aind_data_schema.core.processing import DataProcess
+from aind_data_schema.core.quality_control import (QCMetric, Status, QCStatus)
+from aind_qcportal_schema.metric_value import DropdownMetric
+from aind_data_schema_models.process_names import ProcessName
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.summary_images import mean_image
 from aind_ophys_utils.video_utils import (
@@ -37,19 +35,15 @@ from aind_ophys_utils.video_utils import (
     encode_video,
 )
 from matplotlib import pyplot as plt  # noqa: E402
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from ScanImageTiffReader import ScanImageTiffReader
 from scipy.ndimage import median_filter
 from scipy.stats import sigmaclip
 from suite2p.registration.nonrigid import make_blocks
-from suite2p.registration.register import pick_initial_reference, register_frames
-from suite2p.registration.rigid import (
-    apply_masks,
-    compute_masks,
-    phasecorr,
-    phasecorr_reference,
-    shift_frame,
-)
+from suite2p.registration.register import (pick_initial_reference,
+                                           register_frames)
+from suite2p.registration.rigid import (apply_masks, compute_masks, phasecorr,
+                                        phasecorr_reference, shift_frame)
 from sync_dataset import Sync
 
 mpl.use("Agg")
@@ -267,6 +261,171 @@ def load_initial_frames(
     )[:-1]
     frames = array[requested_frames]
     return frames
+
+
+def combine_images_with_individual_titles(image1_path, image2_path, output_path, title1="", title2=""):
+    """
+    Combine two images side-by-side with padding and add individual titles above each image.
+
+    Parameters:
+    - image1_path (str): Path to the first image.
+    - image2_path (str): Path to the second image.
+    - output_path (str): Path to save the combined image.
+    - title1 (str): Title text for the first image.
+    - title2 (str): Title text for the second image.
+    """
+    # Open both images
+    img1 = Image.open(image1_path)
+    img2 = Image.open(image2_path)
+
+    # Ensure both images have the same height
+    max_height = max(img1.height, img2.height)
+    img1 = img1.resize((img1.width, max_height), Image.Resampling.LANCZOS)
+    img2 = img2.resize((img2.width, max_height), Image.Resampling.LANCZOS)
+
+    # Set padding and title height
+    padding = 20
+    title_height = 50  # Space for the titles
+
+    # Calculate dimensions of the combined image
+    combined_width = img1.width + img2.width + padding * 3  # Padding between and around images
+    combined_height = max_height + padding * 2 + title_height
+
+    # Create a new blank image with padding and room for the titles
+    combined_image = Image.new('RGB', (combined_width, combined_height), (255, 255, 255))
+
+    # Draw the titles
+    draw = ImageDraw.Draw(combined_image)
+    try:
+        font = ImageFont.truetype("arial.ttf", 24)  # You can replace with a path to your desired font
+    except IOError:
+        font = ImageFont.load_default()  # Fallback to default font; may not match expected size
+
+    # Title 1: Above the second image
+    bbox1 = draw.textbbox((0, 0), title1, font=font)
+    text_width1 = bbox1[2] - bbox1[0]
+    text_y1 = padding
+    text_x1 = padding + (img1.width - text_width1) // 2
+    draw.text((text_x1, text_y1), title1, fill="black", font=font)
+
+    # Title 2: Above the first image
+    bbox2 = draw.textbbox((0, 0), title2, font=font)
+    text_width2 = bbox2[2] - bbox2[0]
+    text_x2 = padding * 2 + img2.width + (img2.width - text_width2) // 2
+    text_y2 = padding
+    draw.text((text_x2, text_y2), title2, fill="black", font=font)
+
+    # Paste images into the new image
+    img1_x = padding
+    img2_x = img1_x + img1.width + padding
+    img_y = padding + title_height
+    combined_image.paste(img1, (img1_x, img_y))
+    combined_image.paste(img2, (img2_x, img_y))
+
+    # Save the result
+    combined_image.save(output_path)
+
+
+def serialize_registration_summary_qcmetric() -> None:
+    """
+    Serialize the registration summary QCMetric to registration_summary_metric.json.
+    Placed in the same directory as *_registration_summary.png. Ex: /results/VISp_0/motion_correction/
+    """
+
+    file_path = next(output_dir.rglob("*_registration_summary.png"))
+
+    # Remove '/results' from file_path
+    reference_filepath = Path(*file_path.parts[2:])
+    plane_name = reference_filepath.parts[0]
+
+    metric = QCMetric(
+        name=f"{plane_name} Registration Summary",
+        description="Review the registration summary plot to ensure that the motion correction is accurate and sufficient.",
+        reference=str(reference_filepath),
+        status_history=[
+            QCStatus(
+                evaluator='Pending review',
+                timestamp=dt.now(),
+                status=Status.PENDING
+            )
+        ],
+        value=DropdownMetric(
+            value=[],
+            options=[
+                "Motion correction successful",
+                "No motion correction applied",
+                "Motion correction failed",
+                "Motion correction partially successful",
+            ],
+            status=[
+                Status.PASS,
+                Status.FAIL,
+                Status.FAIL,
+                Status.FAIL
+            ]
+        )
+    )
+
+    with open(Path(file_path.parent) / "registration_summary_metric.json", "w") as f:
+        json.dump(json.loads(metric.model_dump_json()), f, indent=4)
+
+
+def serialize_fov_quality_qcmetric() -> None:
+    """
+    Creates *_combined_projection.png with Average and Max intensity projections.
+    Serializes the FOV Quality QCMetric to fov_quality_metric.json.
+    Placed in the same directory as *_maximum_projection.png. Ex: /results/VISp_0/motion_correction/
+    """
+
+    avg_projection_file_path = next(output_dir.rglob("*_average_projection.png"))
+    max_projection_file_path = next(output_dir.rglob("*_maximum_projection.png"))
+
+    file_path = Path(str(max_projection_file_path).replace("maximum", "combined"))
+
+    combine_images_with_individual_titles(
+        avg_projection_file_path,
+        max_projection_file_path,
+        file_path,
+        title1="Average Projection",
+        title2="Maximum Projection"
+    )
+
+    # Remove /results from file_path
+    reference_filepath = Path(*file_path.parts[2:])
+    plane_name = reference_filepath.parts[0]
+
+    metric = QCMetric(
+        name=f"{plane_name} FOV Quality",
+        description="Review the avg. and max. projections to ensure that the FOV quality is sufficient.",
+        reference=str(reference_filepath),
+        status_history=[
+            QCStatus(
+                evaluator='Pending review',
+                timestamp=dt.now(),
+                status=Status.PENDING
+            )
+        ],
+        value=DropdownMetric(
+            value=["Quality is sufficient"],
+            options=[
+                "Quality is sufficient",
+                "Timeseries shuffled between planes",
+                "Field of view associated with incorrect area and/or depth",
+                "Paired plane cross talk: Extreme",
+                "Paired plane cross-talk: Moderate",
+            ],
+            status=[
+                Status.PASS,
+                Status.FAIL,
+                Status.FAIL,
+                Status.FAIL,
+                Status.FAIL
+            ]
+        )
+    )
+
+    with open(Path(file_path.parent) / "fov_quality_metric.json", "w") as f:
+        json.dump(json.loads(metric.model_dump_json()), f, indent=4)
 
 
 def compute_residual_optical_flow(
@@ -1105,11 +1264,13 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
         raise Exception(f"Error: {exc}")
 
 
-def write_output_metadata(
+def write_data_process(
     metadata: dict,
     raw_movie: Union[str, Path],
     motion_corrected_movie: Union[str, Path],
     output_dir: Union[str, Path],
+    start_time: dt,
+    end_time: dt,
 ) -> None:
     """Writes output metadata to plane processing.json
 
@@ -1122,32 +1283,23 @@ def write_output_metadata(
     motion_corrected_movie: str
         path to motion corrected movies
     """
-    processing = Processing(
-        processing_pipeline=PipelineProcess(
-            processor_full_name="Multplane Ophys Processing Pipeline",
-            pipeline_url=os.getenv("PIPELINE_URL", ""),
-            pipeline_version=os.getenv("PIPELINE_VERSION", ""),
-            data_processes=[
-                DataProcess(
-                    name=ProcessName.VIDEO_MOTION_CORRECTION,
-                    software_version=os.getenv("VERSION", ""),
-                    start_date_time=dt.now(),  # TODO: Add actual dt
-                    end_date_time=dt.now(),  # TODO: Add actual dt
-                    input_location=str(raw_movie),
-                    output_location=str(motion_corrected_movie),
-                    code_url=(
-                        "https://github.com/AllenNeuralDynamics/"
-                        "aind-ophys-motion-correction/tree/main/code"
-                    ),
-                    parameters=metadata,
-                )
-            ],
-        )
+    data_proc = DataProcess(
+        name=ProcessName.VIDEO_MOTION_CORRECTION,
+        software_version=os.getenv("VERSION", ""),
+        start_date_time=start_time.isoformat(),
+        end_date_time=end_time.isoformat(),
+        input_location=str(raw_movie),
+        output_location=str(motion_corrected_movie),
+        code_url=(
+            "https://github.com/AllenNeuralDynamics/"
+            "aind-ophys-motion-correction/tree/main/code"
+        ),
+        parameters=metadata,
     )
     if isinstance(output_dir, str):
         output_dir = Path(output_dir)
-    print(f"~~~~~~~~~~~~~~Writing output: {output_dir}")
-    processing.write_standard_file(output_directory=output_dir)
+    with open(output_dir / "data_process.json", "w") as f:
+        json.dump(json.loads(data_proc.model_dump_json()), f, indent=4)
 
 
 def check_trim_frames(data):
@@ -1703,7 +1855,7 @@ def parse_args() -> argparse.Namespace:
         default="../data/",
     )
     parser.add_argument(
-        "-o", "--output-dir", type=str, help="Output directory", default="../results/"
+        "-o", "--output-dir", type=str, help="Output directory", default="/results/"
     )
 
     parser.add_argument(
@@ -1855,6 +2007,7 @@ if __name__ == "__main__":  # pragma: nocover
     # Set the log level and name the logger
     logger = logging.getLogger("Suite2P motion correction")
     logger.setLevel(logging.INFO)
+    start_time = dt.now()
     # Parse command-line arguments
     args = parse_args()
     # General settings
@@ -1921,7 +2074,6 @@ if __name__ == "__main__":  # pragma: nocover
     args["refImg"] = []
     if reference_image_fp:
         args["refImg"] = [reference_image_fp]
-
     # We construct the paths to the outputs
     if isinstance(input_file, list):
         basename = unique_id
@@ -2191,12 +2343,13 @@ if __name__ == "__main__":  # pragma: nocover
     # make projections
     mx_proj = projection_process(data, projection="max")
     av_proj = projection_process(data, projection="avg")
-    if not suite2p_args.get("h5py", []):
-        filepath = suite2p_args["tiff_list"]
-    else:
-        filepath = suite2p_args["h5py"]
-    write_output_metadata(
-        args_copy, suite2p_args["h5py"], args["motion_corrected_output"], output_dir
+    write_data_process(
+        args_copy,
+        Path(suite2p_args["h5py"]),
+        args["motion_corrected_output"],
+        output_dir,
+        start_time,
+        end_time=dt.now(),
     )
     # TODO: normalize here, if desired
     # save projections
@@ -2212,7 +2365,7 @@ if __name__ == "__main__":  # pragma: nocover
         logger.info(f"wrote {dst_path}")
 
     # Save motion offset data to a csv file
-    # TODO: This *.csv file is being created to maintain compatibility
+    # TODO: This *.csv file is being created to maintain iompatibility
     # with current ophys processing pipeline. In the future this output
     # should be removed and a better data storage format used.
     # 01/25/2021 - NJM
@@ -2410,3 +2563,7 @@ if __name__ == "__main__":  # pragma: nocover
         logger.info(f"created images of PC_low, PC_high, and PC_rof for PC {iPC}")
     # Clean up temporary directory
     tmp_dir.cleanup()
+
+    # Write QC metrics
+    serialize_registration_summary_qcmetric()
+    serialize_fov_quality_qcmetric()
