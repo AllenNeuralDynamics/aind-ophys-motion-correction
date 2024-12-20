@@ -1874,7 +1874,7 @@ def parse_args() -> argparse.Namespace:
         "--data-type",
         type=str,
         default="h5",
-        help="Processing h5 (default) or TIFF timeseries",
+        help="Processing h5 (default) or TIFF timeseries"
     )
 
     parser.add_argument(
