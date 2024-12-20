@@ -2349,7 +2349,7 @@ if __name__ == "__main__":  # pragma: nocover
         args["motion_corrected_output"],
         output_dir,
         start_time,
-        end_time=dt.now(),
+        end_time=dt.now()
     )
     # TODO: normalize here, if desired
     # save projections
@@ -2365,7 +2365,7 @@ if __name__ == "__main__":  # pragma: nocover
         logger.info(f"wrote {dst_path}")
 
     # Save motion offset data to a csv file
-    # TODO: This *.csv file is being created to maintain iompatibility
+    # TODO: This *.csv file is being created to maintain compatibility
     # with current ophys processing pipeline. In the future this output
     # should be removed and a better data storage format used.
     # 01/25/2021 - NJM
