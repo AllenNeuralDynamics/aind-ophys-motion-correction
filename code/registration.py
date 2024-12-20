@@ -1283,6 +1283,10 @@ def write_data_process(
     motion_corrected_movie: str
         path to motion corrected movies
     """
+    if isinstance(raw_movie, Path):
+        raw_movie = str(raw_movie)
+    if isinstance(motion_corrected_movie, Path):
+        motion_corrected_movie = str(motion_corrected_movie) 
     data_proc = DataProcess(
         name=ProcessName.VIDEO_MOTION_CORRECTION,
         software_version=os.getenv("VERSION", ""),
@@ -2346,7 +2350,7 @@ if __name__ == "__main__":  # pragma: nocover
         input_file = input_file[0]
     write_data_process(
         args_copy,
-        Path(suite2p_args["h5py"]),
+        input_file,
         args["motion_corrected_output"],
         output_dir,
         start_time,
