@@ -1,0 +1,9 @@
+{
+	"version": 1,
+	"attached_datasets": [
+		{
+			"id": "61ec8617-51f5-45bf-a618-c6ecaeea5b86",
+			"mount": "multiplane-ophys_731328_2024-09-10_09-54-34"
+		}
+	]
+}

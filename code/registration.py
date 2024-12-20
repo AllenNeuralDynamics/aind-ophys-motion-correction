@@ -1416,33 +1416,27 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
     frame_rate_hz: float
         frame rate in Hz
     """
-    try:
-        unique_id = [i for i in data_dir.rglob("*") if "VI" in str(i)][
-            0
-        ].name.split("_")[-1]
-        h5_file = [i for i in data_dir.rglob("*") if f"{unique_id}.h5" in str(i)][0]
-    except IndexError:
-
-        unique_id = [i for i in data_dir.rglob("*") if i.is_dir()][0].name
-        h5_file = [i for i in data_dir.rglob("*") if f"{unique_id}.h5" in str(i)][0]
-    session_dir = h5_file.parent.parent
-    platform_json = next(session_dir.glob("*platform.json"))
-    # this file is required for paired plane registration but not for single plane
+    h5_dir = [i for i in data_dir.rglob("*VI*") if i.is_dir()][0]
+    unique_id = h5_dir.name.split("_")[0]
+    h5_file = [i for i in h5_dir.glob(f"{h5_dir.name}.h5")][0]
+    logging.info("Found raw time series to process %s", h5_file)
+    session_fp = next(data_dir.rglob("session.json"), "")
+    if not session_fp:
+        raise f"Could not locate session.json in {session_fp}"
+    with open(session_fp) as f:
+        session_data = json.load(f)
     # in the future, we should make this file accessible to the pipeline through channel connections
     # instead of needing to copy it from here
-    with open(platform_json, "r") as j:
-        platform_data = json.load(j)
     output_dir = make_output_directory(output_dir, unique_id)
     # try to get the framerate from the platform file else use sync file
     try:
-        frame_rate_hz = platform_data["imaging_plane_groups"][0][
-            "acquisition_framerate_Hz"
-        ]
+        frame_rate_hz = float(session_data["data_streams"][0]["ophys_fovs"][0]["frame_rate"])
     except KeyError:
-        try:
-            sync_file = [i for i in session_dir.glob(platform_data["sync_file"])][0]
-        except IndexError:
-            sync_file = next(data_dir.glob("*.h5"))
+        logging.warning("Frame rate not found in session.json, pulling from platform.json")
+        platform_json = next(data_dir.rglob("*platform.json"))
+        with open(platform_json, "r") as j:
+            platform_data = json.load(j)
+        sync_file = [i for i in data_dir.rglob("platform_data['sync_file']")][0]
         frame_rate_hz = get_frame_rate_from_sync(sync_file, platform_data)
     if debug:
         logging.info(f"Running in debug mode....")
