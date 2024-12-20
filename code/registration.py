@@ -2137,7 +2137,6 @@ if __name__ == "__main__":  # pragma: nocover
         suite2p_args["tiff_list"] = [str(i) for i in input_file.glob("*.tif*")]
     suite2p_args["roidetect"] = False
     suite2p_args["do_registration"] = 1
-    # suite2p_args["data_path"] = []  # TODO: remove this if not needed by suite2p
     suite2p_args["reg_tif"] = False  # We save our own outputs here
     suite2p_args["nimg_init"] = (
         500  # Nb of images to compute reference. This value is a bit high. Suite2p has it at 300 normally
@@ -2343,6 +2342,8 @@ if __name__ == "__main__":  # pragma: nocover
     # make projections
     mx_proj = projection_process(data, projection="max")
     av_proj = projection_process(data, projection="avg")
+    if isinstance(input_file, list):
+        input_file = input_file[0]
     write_data_process(
         args_copy,
         Path(suite2p_args["h5py"]),
