@@ -263,16 +263,31 @@ def load_initial_frames(
     return frames
 
 
-def combine_images_with_individual_titles(image1_path, image2_path, output_path, title1="", title2=""):
-    """
-    Combine two images side-by-side with padding and add individual titles above each image.
+def combine_images_with_individual_titles(
+    image1_path: Path,
+    image2_path: Path,
+    output_path: Path,
+    title1: str,
+    title2: str
+) -> None:
+    """Combine two images side-by-side with padding and titles above each image.
 
-    Parameters:
-    - image1_path (str): Path to the first image.
-    - image2_path (str): Path to the second image.
-    - output_path (str): Path to save the combined image.
-    - title1 (str): Title text for the first image.
-    - title2 (str): Title text for the second image.
+    Parameters
+    ----------
+    image1_path : Path
+        Path to the first image.
+    image2_path : Path
+        Path to the second image.
+    output_path : Path
+        Path to save the combined image.
+    title1 : str
+         Title text for the first image.
+    title2 - str
+        Title text for the second image.
+
+    Returns
+    -------
+    None
     """
     # Open both images
     img1 = Image.open(image1_path)
@@ -327,9 +342,13 @@ def combine_images_with_individual_titles(image1_path, image2_path, output_path,
 
 
 def serialize_registration_summary_qcmetric() -> None:
-    """
-    Serialize the registration summary QCMetric to registration_summary_metric.json.
-    Placed in the same directory as *_registration_summary.png. Ex: /results/VISp_0/motion_correction/
+    """Serialize the registration summary QCMetric 
+
+    This function does not take any parameters. 
+    
+    QCMetric is named 'registration_summary_metric.json' and is
+    saved to the same directory as *_registration_summary.png. 
+    Ex: '/results/VISp_0/motion_correction/'
     """
 
     file_path = next(output_dir.rglob("*_registration_summary.png"))
@@ -371,10 +390,13 @@ def serialize_registration_summary_qcmetric() -> None:
 
 
 def serialize_fov_quality_qcmetric() -> None:
-    """
-    Creates *_combined_projection.png with Average and Max intensity projections.
-    Serializes the FOV Quality QCMetric to fov_quality_metric.json.
-    Placed in the same directory as *_maximum_projection.png. Ex: /results/VISp_0/motion_correction/
+    """Serialize the FOV Quality QCMetric 
+
+    This function does not take any parameters. 
+    
+    QCMetric is named 'fov_quality_metric.json' and is
+    saved to the same directory as *_maximum_projection.png. 
+    Ex: '/results/VISp_0/motion_correction/'
     """
 
     avg_projection_file_path = next(output_dir.rglob("*_average_projection.png"))
@@ -1878,7 +1900,7 @@ def parse_args() -> argparse.Namespace:
         "--data-type",
         type=str,
         default="h5",
-        help="Processing h5 (default) or TIFF timeseries",
+        help="Processing h5 (default) or TIFF timeseries"
     )
 
     parser.add_argument(
@@ -2354,7 +2376,7 @@ if __name__ == "__main__":  # pragma: nocover
         args["motion_corrected_output"],
         output_dir,
         start_time,
-        end_time=dt.now(),
+        end_time=dt.now()
     )
     # TODO: normalize here, if desired
     # save projections
@@ -2370,7 +2392,7 @@ if __name__ == "__main__":  # pragma: nocover
         logger.info(f"wrote {dst_path}")
 
     # Save motion offset data to a csv file
-    # TODO: This *.csv file is being created to maintain iompatibility
+    # TODO: This *.csv file is being created to maintain compatibility
     # with current ophys processing pipeline. In the future this output
     # should be removed and a better data storage format used.
     # 01/25/2021 - NJM
