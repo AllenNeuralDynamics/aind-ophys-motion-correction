@@ -2030,7 +2030,7 @@ if __name__ == "__main__":  # pragma: nocover
         subject = json.load(j)
     subject_id = subject.get("subject_id", "")
     name = data_description.get("name", "")
-    setup_logging("aind-ophys-motion-correction", mouse_id=subject_id, name=name)
+    setup_logging("aind-ophys-motion-correction", mouse_id=subject_id, session=name)
     for i in session["data_streams"]:
         frame_rate_hz = [j["frame_rate"] for j in i["ophys_fovs"]]
         if frame_rate_hz:
