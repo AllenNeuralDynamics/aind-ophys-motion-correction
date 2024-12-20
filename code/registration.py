@@ -807,7 +807,10 @@ def compute_acutance(
 
 
 def check_and_warn_on_datatype(
-    filepath: Union[Path, list], logger: Callable, filetype: str = "h5", h5py_key: str = ""
+    filepath: Union[Path, list],
+    logger: Callable,
+    filetype: str = "h5",
+    h5py_key: str = "",
 ):
     """Suite2p assumes int16 types throughout code. Check that the input
     data is type int16 else throw a warning.
@@ -843,6 +846,7 @@ def check_and_warn_on_datatype(
             "Non-int16 data may result in unexpected results or "
             "crashes."
         )
+
 
 def _mean_of_batch(i, array):
     return array[i : i + 1000].mean(axis=(1, 2))
@@ -1425,14 +1429,15 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
         raise f"Could not locate session.json in {session_fp}"
     with open(session_fp) as f:
         session_data = json.load(f)
-    # in the future, we should make this file accessible to the pipeline through channel connections
-    # instead of needing to copy it from here
     output_dir = make_output_directory(output_dir, unique_id)
-    # try to get the framerate from the platform file else use sync file
     try:
-        frame_rate_hz = float(session_data["data_streams"][0]["ophys_fovs"][0]["frame_rate"])
+        frame_rate_hz = float(
+            session_data["data_streams"][0]["ophys_fovs"][0]["frame_rate"]
+        )
     except KeyError:
-        logging.warning("Frame rate not found in session.json, pulling from platform.json")
+        logging.warning(
+            "Frame rate not found in session.json, pulling from platform.json"
+        )
         platform_json = next(data_dir.rglob("*platform.json"))
         with open(platform_json, "r") as j:
             platform_data = json.load(j)
@@ -1464,7 +1469,7 @@ def update_suite2p_args_reference_image(
         Dictionary of arguments from the command line.
     reference_image_fp : Path
         Path to the reference image to use. Default is None.
-    
+
     Returns
     -------
     suite2p_args : dict
@@ -1654,6 +1659,7 @@ def singleplane_motion_correction(
 
     return h5_file, output_dir, reference_image_fp
 
+
 def get_frame_rate(session: dict):
     """Attempt to pull frame rate from session.json
     Returns none if frame rate not in session.json
@@ -1677,6 +1683,7 @@ def get_frame_rate(session: dict):
     if isinstance(frame_rate_hz, str):
         frame_rate_hz = float(frame_rate_hz)
     return frame_rate_hz
+
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments
@@ -1715,7 +1722,7 @@ def parse_args() -> argparse.Namespace:
         "--data-type",
         type=str,
         default="h5",
-        help="Processing h5 (default) or TIFF timeseries"
+        help="Processing h5 (default) or TIFF timeseries",
     )
 
     parser.add_argument(
