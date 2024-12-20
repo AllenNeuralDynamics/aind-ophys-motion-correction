@@ -2241,7 +2241,7 @@ if __name__ == "__main__":  # pragma: nocover
         logger.info(f"\tUsing custom reference image: {suite2p_args['refImg']}")
 
     if suite2p_args.get("h5py", ""):
-        suite2p_args["h5py"] = suite2p_args["h5py"]
+        suite2p_args["h5py"] = [suite2p_args["h5py"]]
     suite2p.run_s2p(suite2p_args)
     data_path = ""
     if suite2p_args.get("h5py", ""):
