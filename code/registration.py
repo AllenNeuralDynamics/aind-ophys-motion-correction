@@ -355,10 +355,10 @@ def serialize_registration_summary_qcmetric() -> None:
 
     # Remove '/results' from file_path
     reference_filepath = Path(*file_path.parts[2:])
-    plane_name = reference_filepath.parts[0]
+    unique_id = reference_filepath.parts[0]
 
     metric = QCMetric(
-        name=f"{plane_name} Registration Summary",
+        name=f"{unique_id} Registration Summary",
         description="Review the registration summary plot to ensure that the motion correction is accurate and sufficient.",
         reference=str(reference_filepath),
         status_history=[
@@ -385,7 +385,7 @@ def serialize_registration_summary_qcmetric() -> None:
         )
     )
 
-    with open(Path(file_path.parent) / "registration_summary_metric.json", "w") as f:
+    with open(Path(file_path.parent) / f"{unique_id}_registration_summary_metric.json", "w") as f:
         json.dump(json.loads(metric.model_dump_json()), f, indent=4)
 
 
@@ -414,10 +414,10 @@ def serialize_fov_quality_qcmetric() -> None:
 
     # Remove /results from file_path
     reference_filepath = Path(*file_path.parts[2:])
-    plane_name = reference_filepath.parts[0]
+    unique_id = reference_filepath.parts[0]
 
     metric = QCMetric(
-        name=f"{plane_name} FOV Quality",
+        name=f"{unique_id} FOV Quality",
         description="Review the avg. and max. projections to ensure that the FOV quality is sufficient.",
         reference=str(reference_filepath),
         status_history=[
@@ -446,7 +446,7 @@ def serialize_fov_quality_qcmetric() -> None:
         )
     )
 
-    with open(Path(file_path.parent) / "fov_quality_metric.json", "w") as f:
+    with open(Path(file_path.parent) / f"{unique_id}_fov_quality_metric.json", "w") as f:
         json.dump(json.loads(metric.model_dump_json()), f, indent=4)
 
 
