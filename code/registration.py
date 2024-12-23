@@ -348,7 +348,7 @@ def serialize_registration_summary_qcmetric() -> None:
     
     QCMetric is named 'registration_summary_metric.json' and is
     saved to the same directory as *_registration_summary.png. 
-    Ex: '/results/VISp_0/motion_correction/'
+    Ex: '/results/<unique_id>/motion_correction/'
     """
 
     file_path = next(output_dir.rglob("*_registration_summary.png"))
@@ -396,7 +396,7 @@ def serialize_fov_quality_qcmetric() -> None:
     
     QCMetric is named 'fov_quality_metric.json' and is
     saved to the same directory as *_maximum_projection.png. 
-    Ex: '/results/VISp_0/motion_correction/'
+    Ex: '/results/<unique_id>/motion_correction/'
     """
 
     avg_projection_file_path = next(output_dir.rglob("*_average_projection.png"))
