@@ -1792,7 +1792,6 @@ def singleplane_motion_correction(
     """
     if not h5_file.is_file():
         h5_file = [f for f in h5_file.rglob("*.h5") if unique_id in str(f)][0]
-    print(f"Running h5 file: {h5_file}")
     output_dir = make_output_directory(output_dir, unique_id)
     reference_image_fp = generate_single_plane_reference(h5_file, session)
     if debug:
@@ -2046,7 +2045,6 @@ if __name__ == "__main__":  # pragma: nocover
     # General settings
     data_dir = Path(parser.input)
     output_dir = Path(parser.output_dir)
-    print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{data_dir}")
     session_fp = next(data_dir.rglob("session.json"))
     description_fp = next(data_dir.rglob("data_description.json"))
     with open(session_fp, "r") as j:
@@ -2060,9 +2058,7 @@ if __name__ == "__main__":  # pragma: nocover
     if parser.data_type == "TIFF":
         try:
             input_file = next(data_dir.rglob("*/pophys"))
-            print("*/pophys")
         except StopIteration:
-            print("pophys")
             input_file = next(data_dir.rglob("pophys"))
         output_dir = make_output_directory(output_dir, unique_id)
     else:
