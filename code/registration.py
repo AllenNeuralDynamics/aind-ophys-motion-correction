@@ -1305,7 +1305,7 @@ def write_data_process(
     )
     if isinstance(output_dir, str):
         output_dir = Path(output_dir)
-    with open(output_dir / "data_process.json", "w") as f:
+    with open(output_dir / f"{unique_id}_data_process.json", "w") as f:
         json.dump(json.loads(data_proc.model_dump_json()), f, indent=4)
 
 
