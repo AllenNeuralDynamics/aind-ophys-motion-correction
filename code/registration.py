@@ -1275,6 +1275,7 @@ def write_data_process(
     raw_movie: Union[str, Path],
     motion_corrected_movie: Union[str, Path],
     output_dir: Union[str, Path],
+    unique_id: str,
     start_time: dt,
     end_time: dt,
 ) -> None:
@@ -2354,6 +2355,7 @@ if __name__ == "__main__":  # pragma: nocover
         Path(suite2p_args["h5py"]),
         args["motion_corrected_output"],
         output_dir,
+        unique_id,
         start_time,
         end_time=dt.now(),
     )
