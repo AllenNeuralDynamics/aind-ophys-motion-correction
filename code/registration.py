@@ -2355,7 +2355,7 @@ if __name__ == "__main__":  # pragma: nocover
         Path(suite2p_args["h5py"]),
         args["motion_corrected_output"],
         output_dir,
-        unique_id,
+        basename.split(".")[0],
         start_time,
         end_time=dt.now(),
     )
