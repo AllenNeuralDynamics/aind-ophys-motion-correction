@@ -8,14 +8,13 @@ import subprocess
 import tempfile
 import warnings
 from datetime import datetime as dt
-from functools import partial
+from functools import lru_cache, partial
 from glob import glob
 from itertools import product
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from time import time
-from typing import Callable, Optional, Tuple, Union, List
-from functools import lru_cache
+from typing import Callable, List, Optional, Tuple, Union
 
 import cv2
 import h5py
@@ -24,16 +23,14 @@ import numpy as np
 import pandas as pd
 import suite2p
 from aind_data_schema.core.processing import DataProcess
-from aind_data_schema.core.quality_control import (QCMetric, Status, QCStatus)
-from aind_qcportal_schema.metric_value import DropdownMetric
+from aind_data_schema.core.quality_control import QCMetric, QCStatus, Status
 from aind_data_schema_models.process_names import ProcessName
+from aind_log_utils.log import setup_logging
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.summary_images import mean_image
-from aind_ophys_utils.video_utils import (
-    downsample_array,
-    downsample_h5_video,
-    encode_video,
-)
+from aind_ophys_utils.video_utils import (downsample_array,
+                                          downsample_h5_video, encode_video)
+from aind_qcportal_schema.metric_value import DropdownMetric
 from matplotlib import pyplot as plt  # noqa: E402
 from PIL import Image, ImageDraw, ImageFont
 from ScanImageTiffReader import ScanImageTiffReader
@@ -264,11 +261,7 @@ def load_initial_frames(
 
 
 def combine_images_with_individual_titles(
-    image1_path: Path,
-    image2_path: Path,
-    output_path: Path,
-    title1: str,
-    title2: str
+    image1_path: Path, image2_path: Path, output_path: Path, title1: str, title2: str
 ) -> None:
     """Combine two images side-by-side with padding and titles above each image.
 
@@ -303,18 +296,24 @@ def combine_images_with_individual_titles(
     title_height = 50  # Space for the titles
 
     # Calculate dimensions of the combined image
-    combined_width = img1.width + img2.width + padding * 3  # Padding between and around images
+    combined_width = (
+        img1.width + img2.width + padding * 3
+    )  # Padding between and around images
     combined_height = max_height + padding * 2 + title_height
 
     # Create a new blank image with padding and room for the titles
-    combined_image = Image.new('RGB', (combined_width, combined_height), (255, 255, 255))
+    combined_image = Image.new("RGB", (combined_width, combined_height), (255, 255, 255))
 
     # Draw the titles
     draw = ImageDraw.Draw(combined_image)
     try:
-        font = ImageFont.truetype("arial.ttf", 24)  # You can replace with a path to your desired font
+        font = ImageFont.truetype(
+            "arial.ttf", 24
+        )  # You can replace with a path to your desired font
     except IOError:
-        font = ImageFont.load_default()  # Fallback to default font; may not match expected size
+        font = (
+            ImageFont.load_default()
+        )  # Fallback to default font; may not match expected size
 
     # Title 1: Above the second image
     bbox1 = draw.textbbox((0, 0), title1, font=font)
@@ -342,12 +341,12 @@ def combine_images_with_individual_titles(
 
 
 def serialize_registration_summary_qcmetric() -> None:
-    """Serialize the registration summary QCMetric 
+    """Serialize the registration summary QCMetric
 
-    This function does not take any parameters. 
-    
+    This function does not take any parameters.
+
     QCMetric is named 'registration_summary_metric.json' and is
-    saved to the same directory as *_registration_summary.png. 
+    saved to the same directory as *_registration_summary.png.
     Ex: '/results/VISp_0/motion_correction/'
     """
 
@@ -363,9 +362,7 @@ def serialize_registration_summary_qcmetric() -> None:
         reference=str(reference_filepath),
         status_history=[
             QCStatus(
-                evaluator='Pending review',
-                timestamp=dt.now(),
-                status=Status.PENDING
+                evaluator="Pending review", timestamp=dt.now(), status=Status.PENDING
             )
         ],
         value=DropdownMetric(
@@ -376,13 +373,8 @@ def serialize_registration_summary_qcmetric() -> None:
                 "Motion correction failed",
                 "Motion correction partially successful",
             ],
-            status=[
-                Status.PASS,
-                Status.FAIL,
-                Status.FAIL,
-                Status.FAIL
-            ]
-        )
+            status=[Status.PASS, Status.FAIL, Status.FAIL, Status.FAIL],
+        ),
     )
 
     with open(Path(file_path.parent) / "registration_summary_metric.json", "w") as f:
@@ -390,12 +382,12 @@ def serialize_registration_summary_qcmetric() -> None:
 
 
 def serialize_fov_quality_qcmetric() -> None:
-    """Serialize the FOV Quality QCMetric 
+    """Serialize the FOV Quality QCMetric
 
-    This function does not take any parameters. 
-    
+    This function does not take any parameters.
+
     QCMetric is named 'fov_quality_metric.json' and is
-    saved to the same directory as *_maximum_projection.png. 
+    saved to the same directory as *_maximum_projection.png.
     Ex: '/results/VISp_0/motion_correction/'
     """
 
@@ -409,7 +401,7 @@ def serialize_fov_quality_qcmetric() -> None:
         max_projection_file_path,
         file_path,
         title1="Average Projection",
-        title2="Maximum Projection"
+        title2="Maximum Projection",
     )
 
     # Remove /results from file_path
@@ -422,9 +414,7 @@ def serialize_fov_quality_qcmetric() -> None:
         reference=str(reference_filepath),
         status_history=[
             QCStatus(
-                evaluator='Pending review',
-                timestamp=dt.now(),
-                status=Status.PENDING
+                evaluator="Pending review", timestamp=dt.now(), status=Status.PENDING
             )
         ],
         value=DropdownMetric(
@@ -436,14 +426,8 @@ def serialize_fov_quality_qcmetric() -> None:
                 "Paired plane cross talk: Extreme",
                 "Paired plane cross-talk: Moderate",
             ],
-            status=[
-                Status.PASS,
-                Status.FAIL,
-                Status.FAIL,
-                Status.FAIL,
-                Status.FAIL
-            ]
-        )
+            status=[Status.PASS, Status.FAIL, Status.FAIL, Status.FAIL, Status.FAIL],
+        ),
     )
 
     with open(Path(file_path.parent) / "fov_quality_metric.json", "w") as f:
@@ -1291,6 +1275,7 @@ def write_data_process(
     raw_movie: Union[str, Path],
     motion_corrected_movie: Union[str, Path],
     output_dir: Union[str, Path],
+    unique_id: str,
     start_time: dt,
     end_time: dt,
 ) -> None:
@@ -1324,7 +1309,7 @@ def write_data_process(
     )
     if isinstance(output_dir, str):
         output_dir = Path(output_dir)
-    with open(output_dir / "data_process.json", "w") as f:
+    with open(output_dir / f"{unique_id}_motion_correction_data_process.json", "w") as f:
         json.dump(json.loads(data_proc.model_dump_json()), f, indent=4)
 
 
@@ -1599,7 +1584,7 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
         frame rate in Hz
     """
     h5_dir = [i for i in data_dir.rglob("*VI*") if i.is_dir()][0]
-    unique_id = h5_dir.name.split("_")[0]
+    unique_id = h5_dir.name
     h5_file = [i for i in h5_dir.glob(f"{h5_dir.name}.h5")][0]
     logging.info("Found raw time series to process %s", h5_file)
     session_fp = next(data_dir.rglob("session.json"), "")
@@ -1812,7 +1797,6 @@ def singleplane_motion_correction(
     """
     if not h5_file.is_file():
         h5_file = [f for f in h5_file.rglob("*.h5") if unique_id in str(f)][0]
-    print(f"Running h5 file: {h5_file}")
     output_dir = make_output_directory(output_dir, unique_id)
     reference_image_fp = generate_single_plane_reference(h5_file, session)
     if debug:
@@ -1900,7 +1884,7 @@ def parse_args() -> argparse.Namespace:
         "--data-type",
         type=str,
         default="h5",
-        help="Processing h5 (default) or TIFF timeseries"
+        help="Processing h5 (default) or TIFF timeseries",
     )
 
     parser.add_argument(
@@ -2041,10 +2025,16 @@ if __name__ == "__main__":  # pragma: nocover
     data_dir = Path("../data")
     session_fp = next(data_dir.rglob("session.json"))
     description_fp = next(data_dir.rglob("data_description.json"))
+    subject_fp = next(data_dir.rglob("subject.json"))
     with open(session_fp, "r") as j:
         session = json.load(j)
     with open(description_fp, "r") as j:
         data_description = json.load(j)
+    with open(subject_fp, "r") as j:
+        subject = json.load(j)
+    subject_id = subject.get("subject_id", "")
+    name = data_description.get("name", "")
+    setup_logging("aind-ophys-motion-correction", mouse_id=subject_id, session_name=name)
     for i in session["data_streams"]:
         frame_rate_hz = [j["frame_rate"] for j in i["ophys_fovs"]]
         if frame_rate_hz:
@@ -2054,15 +2044,12 @@ if __name__ == "__main__":  # pragma: nocover
         frame_rate_hz = float(frame_rate_hz)
     reference_image_fp = ""
     unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
-    logger = logging.getLogger("Suite2P motion correction")
-    logger.setLevel(logging.INFO)
 
     # Create an ArgumentParser object
     parser = parse_args()
     # General settings
     data_dir = Path(parser.input)
     output_dir = Path(parser.output_dir)
-    print(f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{data_dir}")
     session_fp = next(data_dir.rglob("session.json"))
     description_fp = next(data_dir.rglob("data_description.json"))
     with open(session_fp, "r") as j:
@@ -2076,9 +2063,7 @@ if __name__ == "__main__":  # pragma: nocover
     if parser.data_type == "TIFF":
         try:
             input_file = next(data_dir.rglob("*/pophys"))
-            print("*/pophys")
         except StopIteration:
-            print("pophys")
             input_file = next(data_dir.rglob("pophys"))
         output_dir = make_output_directory(output_dir, unique_id)
     else:
@@ -2375,8 +2360,9 @@ if __name__ == "__main__":  # pragma: nocover
         input_file,
         args["motion_corrected_output"],
         output_dir,
+        basename.split(".")[0],
         start_time,
-        end_time=dt.now()
+        end_time=dt.now(),
     )
     # TODO: normalize here, if desired
     # save projections
