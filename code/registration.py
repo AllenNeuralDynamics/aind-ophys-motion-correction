@@ -23,6 +23,9 @@ import numpy as np
 import pandas as pd
 import suite2p
 from aind_data_schema.core.processing import DataProcess
+from aind_data_schema.core.data_description import DerivedDataDescriptionfrom aind_metadata_upgrader.data_description_upgrade import \
+    DataDescriptionUpgrade
+
 from aind_data_schema.core.quality_control import QCMetric, QCStatus, Status
 from aind_data_schema_models.process_names import ProcessName
 from aind_log_utils.log import setup_logging
@@ -1821,6 +1824,22 @@ def singleplane_motion_correction(
 
     return h5_file, output_dir, reference_image_fp
 
+def generate_derived_data_description(data_description: dict, output_dir: Path) -> None:
+    """Generate data description for derived data
+    
+    Parameters
+    ----------
+    data_description: dict
+        data description
+    output_dir: Path
+        output directory
+    """
+    data_description_upgrader = DataDescriptionUpgrade(old_data_description_dict=data_description)
+    data_upgrader = data_description_upgrader.upgrade()
+    derived_data_description = DerivedDataDescription.from_data_description(
+        data_description=data_upgrader, process_name="processed"
+    )
+    derived_data_description.write_standard_file(output_directory=output_dir)
 
 def get_frame_rate(session: dict):
     """Attempt to pull frame rate from session.json
@@ -2032,6 +2051,7 @@ if __name__ == "__main__":  # pragma: nocover
         data_description = json.load(j)
     with open(subject_fp, "r") as j:
         subject = json.load(j)
+    generate_derived_data_description(data_description, output_dir)
     subject_id = subject.get("subject_id", "")
     name = data_description.get("name", "")
     setup_logging("aind-ophys-motion-correction", mouse_id=subject_id, session_name=name)
