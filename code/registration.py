@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 import suite2p
 from aind_data_schema.core.processing import DataProcess
-from aind_data_schema.core.data_description import DerivedDataDescriptionfrom
+from aind_data_schema.core.data_description import DerivedDataDescription
 from aind_metadata_upgrader.data_description_upgrade import DataDescriptionUpgrade
 
 from aind_data_schema.core.quality_control import QCMetric, QCStatus, Status
