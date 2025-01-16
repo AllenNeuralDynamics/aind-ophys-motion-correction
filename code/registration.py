@@ -23,13 +23,19 @@ import numpy as np
 import pandas as pd
 import suite2p
 from aind_data_schema.core.processing import DataProcess
+from aind_data_schema.core.data_description import DerivedDataDescription
+from aind_metadata_upgrader.data_description_upgrade import DataDescriptionUpgrade
+
 from aind_data_schema.core.quality_control import QCMetric, QCStatus, Status
 from aind_data_schema_models.process_names import ProcessName
 from aind_log_utils.log import setup_logging
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.summary_images import mean_image
-from aind_ophys_utils.video_utils import (downsample_array,
-                                          downsample_h5_video, encode_video)
+from aind_ophys_utils.video_utils import (
+    downsample_array,
+    downsample_h5_video,
+    encode_video,
+)
 from aind_qcportal_schema.metric_value import DropdownMetric
 from matplotlib import pyplot as plt  # noqa: E402
 from PIL import Image, ImageDraw, ImageFont
@@ -37,10 +43,14 @@ from ScanImageTiffReader import ScanImageTiffReader
 from scipy.ndimage import median_filter
 from scipy.stats import sigmaclip
 from suite2p.registration.nonrigid import make_blocks
-from suite2p.registration.register import (pick_initial_reference,
-                                           register_frames)
-from suite2p.registration.rigid import (apply_masks, compute_masks, phasecorr,
-                                        phasecorr_reference, shift_frame)
+from suite2p.registration.register import pick_initial_reference, register_frames
+from suite2p.registration.rigid import (
+    apply_masks,
+    compute_masks,
+    phasecorr,
+    phasecorr_reference,
+    shift_frame,
+)
 from sync_dataset import Sync
 
 mpl.use("Agg")
@@ -346,7 +356,7 @@ def serialize_registration_summary_qcmetric() -> None:
     This function does not take any parameters.
 
     QCMetric is named 'registration_summary_metric.json' and is
-    saved to the same directory as *_registration_summary.png. 
+    saved to the same directory as *_registration_summary.png.
     Ex: '/results/<unique_id>/motion_correction/'
     """
 
@@ -377,7 +387,9 @@ def serialize_registration_summary_qcmetric() -> None:
         ),
     )
 
-    with open(Path(file_path.parent) / f"{unique_id}_registration_summary_metric.json", "w") as f:
+    with open(
+        Path(file_path.parent) / f"{unique_id}_registration_summary_metric.json", "w"
+    ) as f:
         json.dump(json.loads(metric.model_dump_json()), f, indent=4)
 
 
@@ -387,7 +399,7 @@ def serialize_fov_quality_qcmetric() -> None:
     This function does not take any parameters.
 
     QCMetric is named 'fov_quality_metric.json' and is
-    saved to the same directory as *_maximum_projection.png. 
+    saved to the same directory as *_maximum_projection.png.
     Ex: '/results/<unique_id>/motion_correction/'
     """
 
@@ -1293,7 +1305,7 @@ def write_data_process(
     if isinstance(raw_movie, Path):
         raw_movie = str(raw_movie)
     if isinstance(motion_corrected_movie, Path):
-        motion_corrected_movie = str(motion_corrected_movie) 
+        motion_corrected_movie = str(motion_corrected_movie)
     data_proc = DataProcess(
         name=ProcessName.VIDEO_MOTION_CORRECTION,
         software_version=os.getenv("VERSION", ""),
@@ -1822,6 +1834,26 @@ def singleplane_motion_correction(
     return h5_file, output_dir, reference_image_fp
 
 
+def generate_derived_data_description(data_description: dict, output_dir: Path) -> None:
+    """Generate data description for derived data
+
+    Parameters
+    ----------
+    data_description: dict
+        data description
+    output_dir: Path
+        output directory
+    """
+    data_description_upgrader = DataDescriptionUpgrade(
+        old_data_description_dict=data_description
+    )
+    data_upgrader = data_description_upgrader.upgrade()
+    derived_data_description = DerivedDataDescription.from_data_description(
+        data_description=data_upgrader, process_name="processed"
+    )
+    derived_data_description.write_standard_file(output_directory=output_dir)
+
+
 def get_frame_rate(session: dict):
     """Attempt to pull frame rate from session.json
     Returns none if frame rate not in session.json
@@ -2032,6 +2064,7 @@ if __name__ == "__main__":  # pragma: nocover
         data_description = json.load(j)
     with open(subject_fp, "r") as j:
         subject = json.load(j)
+    generate_derived_data_description(data_description, output_dir)
     subject_id = subject.get("subject_id", "")
     name = data_description.get("name", "")
     setup_logging("aind-ophys-motion-correction", mouse_id=subject_id, session_name=name)
