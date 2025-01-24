@@ -21,5 +21,4 @@ RUN pip3 install -U --no-cache-dir \
     aind-data-schema==1.1.0 \
     pydantic==2.8.1 \
     aind-qcportal-schema \
-    aind-metadata-upgrader \
     aind-log-utils
