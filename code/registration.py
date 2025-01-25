@@ -23,8 +23,6 @@ import numpy as np
 import pandas as pd
 import suite2p
 from aind_data_schema.core.processing import DataProcess
-from aind_data_schema.core.data_description import DerivedDataDescription
-from aind_metadata_upgrader.data_description_upgrade import DataDescriptionUpgrade
 
 from aind_data_schema.core.quality_control import QCMetric, QCStatus, Status
 from aind_data_schema_models.process_names import ProcessName
@@ -312,7 +310,9 @@ def combine_images_with_individual_titles(
     combined_height = max_height + padding * 2 + title_height
 
     # Create a new blank image with padding and room for the titles
-    combined_image = Image.new("RGB", (combined_width, combined_height), (255, 255, 255))
+    combined_image = Image.new(
+        "RGB", (combined_width, combined_height), (255, 255, 255)
+    )
 
     # Draw the titles
     draw = ImageDraw.Draw(combined_image)
@@ -442,7 +442,9 @@ def serialize_fov_quality_qcmetric() -> None:
         ),
     )
 
-    with open(Path(file_path.parent) / f"{unique_id}_fov_quality_metric.json", "w") as f:
+    with open(
+        Path(file_path.parent) / f"{unique_id}_fov_quality_metric.json", "w"
+    ) as f:
         json.dump(json.loads(metric.model_dump_json()), f, indent=4)
 
 
@@ -978,7 +980,9 @@ def compute_acutance(
     """
     im_max_y, im_max_x = image.shape
 
-    cut_image = image[min_cut_y : im_max_y - max_cut_y, min_cut_x : im_max_x - max_cut_x]
+    cut_image = image[
+        min_cut_y : im_max_y - max_cut_y, min_cut_x : im_max_x - max_cut_x
+    ]
     grady, gradx = np.gradient(cut_image)
     return (grady**2 + gradx**2).mean()
 
@@ -1321,7 +1325,9 @@ def write_data_process(
     )
     if isinstance(output_dir, str):
         output_dir = Path(output_dir)
-    with open(output_dir / f"{unique_id}_motion_correction_data_process.json", "w") as f:
+    with open(
+        output_dir / f"{unique_id}_motion_correction_data_process.json", "w"
+    ) as f:
         json.dump(json.loads(data_proc.model_dump_json()), f, indent=4)
 
 
@@ -1481,7 +1487,9 @@ def downsample_normalize(
             movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size
         )
     else:
-        ds = downsample_array(movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size)
+        ds = downsample_array(
+            movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size
+        )
     avg_projection = ds.mean(axis=0)
     lower_cutoff, upper_cutoff = np.quantile(
         avg_projection.flatten(), (lower_quantile, upper_quantile)
@@ -1496,7 +1504,10 @@ def flow_png(output_path: Path, dst_path: str, iPC: int = 0):
         tPC = f["reg_metrics/tPC"]
         flows = f["reg_metrics/farnebackROF"]
         flow_ds = np.array(
-            [cv2.resize(flows[iPC, :, :, a], dsize=None, fx=0.1, fy=0.1) for a in (0, 1)]
+            [
+                cv2.resize(flows[iPC, :, :, a], dsize=None, fx=0.1, fy=0.1)
+                for a in (0, 1)
+            ]
         )
         flow_ds_norm = np.sqrt(np.sum(flow_ds**2, 0))
         # redo Suite2p's PCA-based frame selection
@@ -1571,7 +1582,9 @@ def get_frame_rate_from_sync(sync_file, platform_data) -> float:
             pass
     sync_data.close()
     if not frame_rate_hz:
-        raise ValueError(f"Frame rate no acquired, line labels: {sync_data.line_labels}")
+        raise ValueError(
+            f"Frame rate no acquired, line labels: {sync_data.line_labels}"
+        )
     return frame_rate_hz
 
 
@@ -1834,26 +1847,6 @@ def singleplane_motion_correction(
     return h5_file, output_dir, reference_image_fp
 
 
-def generate_derived_data_description(data_description: dict, output_dir: Path) -> None:
-    """Generate data description for derived data
-
-    Parameters
-    ----------
-    data_description: dict
-        data description
-    output_dir: Path
-        output directory
-    """
-    data_description_upgrader = DataDescriptionUpgrade(
-        old_data_description_dict=data_description
-    )
-    data_upgrader = data_description_upgrader.upgrade()
-    derived_data_description = DerivedDataDescription.from_data_description(
-        data_description=data_upgrader, process_name="processed"
-    )
-    derived_data_description.write_standard_file(output_directory=output_dir)
-
-
 def get_frame_rate(session: dict):
     """Attempt to pull frame rate from session.json
     Returns none if frame rate not in session.json
@@ -2064,10 +2057,11 @@ if __name__ == "__main__":  # pragma: nocover
         data_description = json.load(j)
     with open(subject_fp, "r") as j:
         subject = json.load(j)
-    generate_derived_data_description(data_description, output_dir)
     subject_id = subject.get("subject_id", "")
     name = data_description.get("name", "")
-    setup_logging("aind-ophys-motion-correction", mouse_id=subject_id, session_name=name)
+    setup_logging(
+        "aind-ophys-motion-correction", mouse_id=subject_id, session_name=name
+    )
     for i in session["data_streams"]:
         frame_rate_hz = [j["frame_rate"] for j in i["ophys_fovs"]]
         if frame_rate_hz:
@@ -2223,7 +2217,9 @@ if __name__ == "__main__":  # pragma: nocover
 
     if suite2p_args.get("tiff_list", ""):
         check_and_warn_on_datatype(
-            filepath=suite2p_args["tiff_list"][0], logger=logger.warning, filetype="tiff"
+            filepath=suite2p_args["tiff_list"][0],
+            logger=logger.warning,
+            filetype="tiff",
         )
     else:
         check_and_warn_on_datatype(
@@ -2234,7 +2230,9 @@ if __name__ == "__main__":  # pragma: nocover
         )
 
     if args["auto_remove_empty_frames"]:
-        logger.info("Attempting to find empty frames at the start and end of the movie.")
+        logger.info(
+            "Attempting to find empty frames at the start and end of the movie."
+        )
         if suite2p_args.get("tiff_list", ""):
             lowside, highside = find_movie_start_end_empty_frames(
                 filepath=suite2p_args["tiff_list"],
@@ -2532,14 +2530,18 @@ if __name__ == "__main__":  # pragma: nocover
             ]
         ]
 
-    logger.info("finished downsampling motion corrected and non-motion corrected movies")
+    logger.info(
+        "finished downsampling motion corrected and non-motion corrected movies"
+    )
 
     # tile into 1 movie, raw on left, motion corrected on right
     try:
         tiled_vids = np.block(processed_vids)
 
         # make into a viewable artifact
-        playback_fps = args["preview_playback_factor"] / args["preview_frame_bin_seconds"]
+        playback_fps = (
+            args["preview_playback_factor"] / args["preview_frame_bin_seconds"]
+        )
         encode_video(tiled_vids, args["motion_correction_preview_output"], playback_fps)
         logger.info("wrote " f"{args['motion_correction_preview_output']}")
     except:
@@ -2554,11 +2556,15 @@ if __name__ == "__main__":  # pragma: nocover
             mov = f["data"]
             regDX = f["reg_metrics/regDX"][:]
             crispness = compute_crispness(mov_raw, mov)
-            logger.info("computed crispness of mean image before and after registration")
+            logger.info(
+                "computed crispness of mean image before and after registration"
+            )
 
             # compute residual optical flow using Farneback method
             if f["reg_metrics/regPC"][:].any():
-                flows, farnebackDX = compute_residual_optical_flow(f["reg_metrics/regPC"])
+                flows, farnebackDX = compute_residual_optical_flow(
+                    f["reg_metrics/regPC"]
+                )
                 f.create_dataset("reg_metrics/farnebackROF", data=flows)
                 f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
                 logger.info(
@@ -2575,7 +2581,9 @@ if __name__ == "__main__":  # pragma: nocover
         with h5py.File(args["motion_corrected_output"], "r+") as f:
             regDX = f["reg_metrics/regDX"][:]
             crispness = compute_crispness(tiff_array, f["data"])
-            logger.info("computed crispness of mean image before and after registration")
+            logger.info(
+                "computed crispness of mean image before and after registration"
+            )
             if f["reg_metrics/regPC"][:].any():
                 regPC = f["reg_metrics/regPC"]
 
