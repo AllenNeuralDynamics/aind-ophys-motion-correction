@@ -1611,6 +1611,7 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
     """
     pattern = re.compile(r"^V.*\d+$")
     test = [d for d in data_dir.rglob("*.txt")]
+    print(f"TEST>>>>>>>>>>>>>>>>>>>{test}")
     matching_files = [
         d for d in data_dir.rglob("*.txt") if pattern.match(d.name)
     ]
