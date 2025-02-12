@@ -3,6 +3,7 @@ import copy
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -1608,9 +1609,17 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
     frame_rate_hz: float
         frame rate in Hz
     """
-    h5_dir = [i for i in data_dir.rglob("*VI*") if i.is_dir()][0]
-    unique_id = h5_dir.name
-    h5_file = [i for i in h5_dir.glob(f"{h5_dir.name}.h5")][0]
+    pattern = re.compile(r"^V.*\d+$")
+    matching_files = [
+        d for d in data_dir.rglob("*.txt") if pattern.match(d.name)
+    ]
+    if len(matching_files) > 1:
+        h5_file = matching_files[0]
+        unique_id = h5_file.stem
+    else:
+        h5_dir = [i for i in data_dir.rglob("*VI*") if i.is_dir()][0]
+        unique_id = h5_dir.name
+        h5_file = [i for i in h5_dir.glob(f"{h5_dir.name}.h5")][0]
     logging.info("Found raw time series to process %s", h5_file)
     session_fp = next(data_dir.rglob("session.json"), "")
     if not session_fp:
