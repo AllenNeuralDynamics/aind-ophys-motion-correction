@@ -1614,7 +1614,7 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
         d for d in data_dir.rglob("*.txt") if pattern.match(d.name)
     ]
     if len(matching_files) > 1:
-        h5_file = matching_files[0]
+        h5_file = data_dir.rglob(matching_files[0])
         unique_id = h5_file.stem
     else:
         h5_dir = [i for i in data_dir.rglob("*VI*") if i.is_dir()][0]
