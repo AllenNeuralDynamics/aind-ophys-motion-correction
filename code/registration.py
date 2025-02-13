@@ -1613,7 +1613,7 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
     test = [d for d in data_dir.rglob("*.txt")]
     print(f"TEST>>>>>>>>>>>>>>>>>>>{test}")
     matching_files = [
-        d for d in data_dir.rglob("*.txt") if pattern.match(d.name)
+        d for d in data_dir.rglob("*.txt") if pattern.match(d.stem)
     ]
     if len(matching_files) > 1:
         h5_file = data_dir.rglob(matching_files[0])
