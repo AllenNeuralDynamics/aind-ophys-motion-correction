@@ -1610,7 +1610,6 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
         frame rate in Hz
     """
     pattern = re.compile(r"^V.*\d+$")
-    test = [d for d in data_dir.rglob("*.txt")]
     matching_files = [
         d for d in data_dir.rglob("*.txt") if pattern.match(d.stem)
     ]
