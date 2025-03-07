@@ -1807,11 +1807,11 @@ def singleplane_motion_correction(
 
     Returns
     -------
-    h5_file: Path
+    h5_file: str
         path to h5 file
     output_dir: Path
         output directory
-    reference_image_fp: Path
+    reference_image_fp: str
         path to reference image
     """
     if not h5_file.is_file():
@@ -1838,7 +1838,7 @@ def singleplane_motion_correction(
     with open(output_dir / "epoch_locations.json", "w") as j:
         json.dump(epoch_locations, j)
 
-    return h5_file, output_dir, reference_image_fp
+    return str(h5_file), output_dir, str(reference_image_fp)
 
 
 def get_frame_rate(session: dict):
