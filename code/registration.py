@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import warnings
 from datetime import datetime as dt
@@ -24,7 +25,6 @@ import numpy as np
 import pandas as pd
 import suite2p
 from aind_data_schema.core.processing import DataProcess
-
 from aind_data_schema.core.quality_control import QCMetric, QCStatus, Status
 from aind_data_schema_models.process_names import ProcessName
 from aind_log_utils.log import setup_logging
@@ -446,7 +446,7 @@ def serialize_fov_quality_qcmetric() -> None:
 
 
 def compute_residual_optical_flow(
-    reg_pc: Union[h5py.Dataset, np.ndarray]
+    reg_pc: Union[h5py.Dataset, np.ndarray],
 ) -> tuple[np.ndarray, np.ndarray]:
     """Compute the residual optical flow from the registration principal
     components.
@@ -2041,6 +2041,8 @@ if __name__ == "__main__":  # pragma: nocover
     # General settings
     output_dir = Path(args.output_dir)
     data_dir = Path("../data")
+    if next(data_dir.glob("output"), ""):
+        sys.exit()
     session_fp = next(data_dir.rglob("session.json"))
     description_fp = next(data_dir.rglob("data_description.json"))
     subject_fp = next(data_dir.rglob("subject.json"))
