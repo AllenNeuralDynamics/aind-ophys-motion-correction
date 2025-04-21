@@ -446,7 +446,7 @@ def serialize_fov_quality_qcmetric() -> None:
 
 
 def compute_residual_optical_flow(
-    reg_pc: Union[h5py.Dataset, np.ndarray]
+    reg_pc: Union[h5py.Dataset, np.ndarray],
 ) -> tuple[np.ndarray, np.ndarray]:
     """Compute the residual optical flow from the registration principal
     components.
@@ -1233,22 +1233,25 @@ def identify_and_clip_outliers(
     return data, indices
 
 
-def make_output_directory(output_dir: Path, experiment_id: str) -> str:
+def make_output_directory(output_dir: Path, plane: str = "") -> str:
     """Creates the output directory if it does not exist
 
     Parameters
     ----------
     output_dir: Path
         output directory
-    experiment_id: str
-        experiment_id number
+    plane: str
+        plane number
 
     Returns
     -------
     output_dir: Path
         output directory
     """
-    output_dir = output_dir / experiment_id / "motion_correction"
+    if not plane:
+        output_dir = output_dir / "motion_correction"
+    else:
+        output_dir = output_dir / plane / "motion_correction"
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
 
@@ -1816,7 +1819,7 @@ def singleplane_motion_correction(
     """
     if not h5_file.is_file():
         h5_file = [f for f in h5_file.rglob("*.h5") if unique_id in str(f)][0]
-    output_dir = make_output_directory(output_dir, unique_id)
+    output_dir = make_output_directory(output_dir)
     reference_image_fp = generate_single_plane_reference(h5_file, session)
     if debug:
         stem = h5_file.stem
@@ -2061,7 +2064,6 @@ if __name__ == "__main__":  # pragma: nocover
     if isinstance(frame_rate_hz, str):
         frame_rate_hz = float(frame_rate_hz)
     reference_image_fp = ""
-    unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
 
     # Create an ArgumentParser object
     parser = parse_args()
@@ -2083,7 +2085,7 @@ if __name__ == "__main__":  # pragma: nocover
             input_file = next(data_dir.rglob("*/pophys"))
         except StopIteration:
             input_file = next(data_dir.rglob("pophys"))
-        output_dir = make_output_directory(output_dir, unique_id)
+        output_dir = make_output_directory(output_dir)
     else:
         if "Bergamo" in session.get("rig_id", ""):
             h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
