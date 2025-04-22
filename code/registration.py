@@ -2077,21 +2077,24 @@ if __name__ == "__main__":  # pragma: nocover
     with open(description_fp, "r") as j:
         data_description = json.load(j)
     frame_rate_hz = get_frame_rate(session)
-    unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
+
     reference_image_fp = ""
 
     if parser.data_type == "TIFF":
+        unique_id = "plane_0"
         try:
             input_file = next(data_dir.rglob("*/pophys"))
         except StopIteration:
             input_file = next(data_dir.rglob("pophys"))
         output_dir = make_output_directory(output_dir)
     else:
+        unique_id = "MOp2/3"
         if "Bergamo" in session.get("rig_id", ""):
             h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
                 data_dir, output_dir, session, unique_id, debug=parser.debug
             )
         else:
+            unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
             h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
                 data_dir, output_dir, debug=parser.debug
             )
