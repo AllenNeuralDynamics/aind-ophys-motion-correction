@@ -2088,7 +2088,7 @@ if __name__ == "__main__":  # pragma: nocover
             input_file = next(data_dir.rglob("pophys"))
         output_dir = make_output_directory(output_dir)
     else:
-        unique_id = "MOp2/3"
+        unique_id = "MOp2_3_0" # TODO: remove when upgrade to data-schema v2
         if "Bergamo" in session.get("rig_id", ""):
             h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
                 data_dir, output_dir, session, unique_id, debug=parser.debug
