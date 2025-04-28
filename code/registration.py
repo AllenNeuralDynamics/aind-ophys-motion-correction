@@ -1819,7 +1819,7 @@ def singleplane_motion_correction(
     """
     if not h5_file.is_file():
         h5_file = [f for f in h5_file.rglob("*.h5") if unique_id in str(f)][0]
-    output_dir = make_output_directory(output_dir)
+    output_dir = make_output_directory(output_dir, unique_id)
     reference_image_fp = generate_single_plane_reference(h5_file, session)
     if debug:
         stem = h5_file.stem
