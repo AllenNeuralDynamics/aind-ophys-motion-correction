@@ -1605,7 +1605,7 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
         h5_file = next(data_dir.rglob(h5_file))
         unique_id = h5_file.stem
     else:
-        h5_dir = [i for i in data_dir.rglob("*VI*") if i.is_dir()][0]
+        h5_dir = [i for i in data_dir.rglob("*V*") if i.is_dir()][0]
         unique_id = h5_dir.name
         h5_file = [i for i in h5_dir.glob(f"{h5_dir.name}.h5")][0]
     logging.info("Found raw time series to process %s", h5_file)
