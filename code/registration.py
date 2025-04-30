@@ -1605,7 +1605,7 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
         h5_file = next(data_dir.rglob(h5_file))
         unique_id = h5_file.stem
     else:
-        h5_dir = [i for i in data_dir.rglob("*VI*") if i.is_dir()][0]
+        h5_dir = [i for i in data_dir.rglob("*V*") if i.is_dir()][0]
         unique_id = h5_dir.name
         h5_file = [i for i in h5_dir.glob(f"{h5_dir.name}.h5")][0]
     logging.info("Found raw time series to process %s", h5_file)
@@ -1819,7 +1819,7 @@ def singleplane_motion_correction(
     """
     if not h5_file.is_file():
         h5_file = [f for f in h5_file.rglob("*.h5") if unique_id in str(f)][0]
-    output_dir = make_output_directory(output_dir)
+    output_dir = make_output_directory(output_dir, unique_id)
     reference_image_fp = generate_single_plane_reference(h5_file, session)
     if debug:
         stem = h5_file.stem
@@ -2077,21 +2077,24 @@ if __name__ == "__main__":  # pragma: nocover
     with open(description_fp, "r") as j:
         data_description = json.load(j)
     frame_rate_hz = get_frame_rate(session)
-    unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
+
     reference_image_fp = ""
 
     if parser.data_type == "TIFF":
+        unique_id = "plane_0"
         try:
             input_file = next(data_dir.rglob("*/pophys"))
         except StopIteration:
             input_file = next(data_dir.rglob("pophys"))
         output_dir = make_output_directory(output_dir)
     else:
+        unique_id = "MOp2_3_0"  # TODO: remove when upgrade to data-schema v2
         if "Bergamo" in session.get("rig_id", ""):
             h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
                 data_dir, output_dir, session, unique_id, debug=parser.debug
             )
         else:
+            unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
             h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
                 data_dir, output_dir, debug=parser.debug
             )
