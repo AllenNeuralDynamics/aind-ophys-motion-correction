@@ -2007,9 +2007,9 @@ if __name__ == "__main__":  # pragma: nocover
     logger.setLevel(logging.INFO)
     start_time = dt.now()
     # Parse command-line arguments
-    args = MotionCorrectionSettings()
+    parser = MotionCorrectionSettings()
     # General settings
-    output_dir = Path(args.output_dir)
+    output_dir = Path(parser.output_dir)
     data_dir = Path("../data")
     session_fp = next(data_dir.rglob("session.json"))
     description_fp = next(data_dir.rglob("data_description.json"))
@@ -2033,7 +2033,7 @@ if __name__ == "__main__":  # pragma: nocover
     reference_image_fp = ""
 
     # Create an ArgumentParser object
-    parser = parse_args()
+    
     # General settings
     data_dir = Path(parser.input)
     output_dir = Path(parser.output_dir)
