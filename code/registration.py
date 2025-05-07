@@ -56,7 +56,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
-class MotionCorrectionSettings(BaseSettings, cli_parsee_args=True):
+class MotionCorrectionSettings(BaseSettings, cli_parse_args=True):
     """Settings for Suite2P motion correction.
 
     This class defines all configuration parameters for motion correction using Suite2P.
