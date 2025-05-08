@@ -48,13 +48,6 @@ from sync_dataset import Sync
 
 mpl.use("Agg")
 
-import os
-from pathlib import Path
-from typing import Optional
-
-from pydantic import Field
-from pydantic_settings import BaseSettings
-
 
 class MotionCorrectionSettings(BaseSettings, cli_parsee_args=True):
     """Settings for Suite2P motion correction.
