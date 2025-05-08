@@ -2025,21 +2025,6 @@ if __name__ == "__main__":  # pragma: nocover
         frame_rate_hz = float(frame_rate_hz)
     reference_image_fp = ""
 
-    # Create an ArgumentParser object
-    
-    # General settings
-    data_dir = Path(parser.input)
-    output_dir = Path(parser.output_dir)
-    session_fp = next(data_dir.rglob("session.json"))
-    description_fp = next(data_dir.rglob("data_description.json"))
-    with open(session_fp, "r") as j:
-        session = json.load(j)
-    with open(description_fp, "r") as j:
-        data_description = json.load(j)
-    frame_rate_hz = get_frame_rate(session)
-
-    reference_image_fp = ""
-
     if parser.data_type == "TIFF":
         unique_id = "plane_0"
         try:
