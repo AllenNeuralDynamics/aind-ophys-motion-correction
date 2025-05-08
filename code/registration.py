@@ -56,7 +56,7 @@ class MotionCorrectionSettings(BaseSettings, cli_parse_args=True):
     Values can be provided via constructor, environment variables, or .env file.
     """
 
-    input: Path = Field(
+    input_dir: Path = Field(
         default=Path("/data/"), description="File or directory where h5 file is stored"
     )
     output_dir: Path = Field(default=Path("/results/"), description="Output directory")
@@ -2002,8 +2002,8 @@ if __name__ == "__main__":  # pragma: nocover
     # Parse command-line arguments
     parser = MotionCorrectionSettings()
     # General settings
-    output_dir = Path(parser.output_dir)
-    data_dir = Path("../data")
+    data_dir = parser.input_dir
+    output_dir = parser.output_dir
     session_fp = next(data_dir.rglob("session.json"))
     description_fp = next(data_dir.rglob("data_description.json"))
     subject_fp = next(data_dir.rglob("subject.json"))
