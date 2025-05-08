@@ -56,13 +56,13 @@ class MotionCorrectionSettings(BaseSettings, cli_parse_args=True):
     Values can be provided via constructor, environment variables, or .env file.
     """
 
-    input: Union[str, Path] = Field(
-        default="../data/", description="File or directory where h5 file is stored"
+    input: Path = Field(
+        default=Path("/data/"), description="File or directory where h5 file is stored"
     )
-    output_dir: str = Field(default="/results/", description="Output directory")
+    output_dir: Path = Field(default=Path("/results/"), description="Output directory")
     debug: bool = Field(default=False, description="Run with partial dataset")
-    tmp_dir: str = Field(
-        default="/scratch",
+    tmp_dir: Path = Field(
+        default=Path("/scratch"),
         description="Directory into which to write temporary files produced by Suite2P",
     )
     data_type: str = Field(
