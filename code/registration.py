@@ -2016,13 +2016,8 @@ if __name__ == "__main__":  # pragma: nocover
     subject_id = subject.get("subject_id", "")
     name = data_description.get("name", "")
     setup_logging("aind-ophys-motion-correction", mouse_id=subject_id, session_name=name)
-    for i in session["data_streams"]:
-        frame_rate_hz = [j["frame_rate"] for j in i["ophys_fovs"]]
-        if frame_rate_hz:
-            break
-    frame_rate_hz = frame_rate_hz[0]
-    if isinstance(frame_rate_hz, str):
-        frame_rate_hz = float(frame_rate_hz)
+    frame_rate_hz = get_frame_rate(session)
+
     reference_image_fp = ""
 
     if parser.data_type == "TIFF":
