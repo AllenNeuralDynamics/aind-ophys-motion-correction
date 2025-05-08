@@ -56,7 +56,7 @@ class MotionCorrectionSettings(BaseSettings, cli_parsee_args=True):
     Values can be provided via constructor, environment variables, or .env file.
     """
 
-    input: str = Field(
+    input: Union[str, Path] = Field(
         default="../data/", description="File or directory where h5 file is stored"
     )
     output_dir: str = Field(default="/results/", description="Output directory")
