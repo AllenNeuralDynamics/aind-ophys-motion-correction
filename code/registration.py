@@ -2104,7 +2104,7 @@ if __name__ == "__main__":  # pragma: nocover
     # processing pipeline. These are parameters that are not exposed to
     # minimize code length. Those are not set to default.
     if parser.data_type == "h5":
-        suite2p_args["h5py"] = input_file
+        suite2p_args["h5py"] = str(input_file)
     else:
         suite2p_args["data_path"] = str(input_file)
         suite2p_args["look_one_level_down"] = True
