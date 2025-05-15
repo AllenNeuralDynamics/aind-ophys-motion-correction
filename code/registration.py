@@ -2063,7 +2063,7 @@ if __name__ == "__main__":  # pragma: nocover
         ("motion_correction_preview_output", "_motion_preview.webm"),
         ("output_json", "_motion_correction_output.json"),
     ):
-        args[key] = os.path.join(output_dir, os.path.splitext(basename)[0] + default)
+        args[key] = os.path.join(str(output_dir), os.path.splitext(basename)[0] + default)
 
     # These are hardcoded parameters of the wrapper. Those are tracked but
     # not exposed.
