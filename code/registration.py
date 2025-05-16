@@ -24,35 +24,161 @@ import numpy as np
 import pandas as pd
 import suite2p
 from aind_data_schema.core.processing import DataProcess
-
 from aind_data_schema.core.quality_control import QCMetric, QCStatus, Status
 from aind_data_schema_models.process_names import ProcessName
 from aind_log_utils.log import setup_logging
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.summary_images import mean_image
-from aind_ophys_utils.video_utils import (
-    downsample_array,
-    downsample_h5_video,
-    encode_video,
-)
+from aind_ophys_utils.video_utils import (downsample_array,
+                                          downsample_h5_video, encode_video)
 from aind_qcportal_schema.metric_value import DropdownMetric
 from matplotlib import pyplot as plt  # noqa: E402
 from PIL import Image, ImageDraw, ImageFont
+from pydantic import Field
+from pydantic_settings import BaseSettings
 from ScanImageTiffReader import ScanImageTiffReader
 from scipy.ndimage import median_filter
 from scipy.stats import sigmaclip
 from suite2p.registration.nonrigid import make_blocks
-from suite2p.registration.register import pick_initial_reference, register_frames
-from suite2p.registration.rigid import (
-    apply_masks,
-    compute_masks,
-    phasecorr,
-    phasecorr_reference,
-    shift_frame,
-)
+from suite2p.registration.register import (pick_initial_reference,
+                                           register_frames)
+from suite2p.registration.rigid import (apply_masks, compute_masks, phasecorr,
+                                        phasecorr_reference, shift_frame)
 from sync_dataset import Sync
 
 mpl.use("Agg")
+
+
+class MotionCorrectionSettings(BaseSettings, cli_parse_args=True):
+    """Settings for Suite2P motion correction.
+
+    This class defines all configuration parameters for motion correction using Suite2P.
+    Values can be provided via constructor, environment variables, or .env file.
+    """
+
+    input_dir: Path = Field(
+        default=Path("/data/"), description="File or directory where h5 file is stored"
+    )
+    output_dir: Path = Field(default=Path("/results/"), description="Output directory")
+    debug: bool = Field(default=False, description="Run with partial dataset")
+    tmp_dir: Path = Field(
+        default=Path("/scratch"),
+        description="Directory into which to write temporary files produced by Suite2P",
+    )
+    data_type: str = Field(
+        default="h5", description="Processing h5 (default) or TIFF timeseries"
+    )
+    force_refImg: bool = Field(
+        default=True, description="Force the use of an external reference image"
+    )
+    outlier_detrend_window: float = Field(
+        default=3.0,
+        description="For outlier rejection in the xoff/yoff outputs of suite2p, the offsets are first de-trended "
+        "with a median filter of this duration [seconds]. "
+        "This value is ~30 or 90 samples in size for 11 and 31 Hz sampling rates respectively.",
+    )
+    outlier_maxregshift: float = Field(
+        default=0.05,
+        description="Units [fraction FOV dim]. After median-filter detrending, outliers more than this value are "
+        "clipped to this value in x and y offset, independently. "
+        "This is similar to Suite2P's internal maxregshift, but allows for low-frequency drift. "
+        "Default value of 0.05 is typically clipping outliers to 512 * 0.05 = 25 pixels above or below the median trend.",
+    )
+    clip_negative: bool = Field(
+        default=False,
+        description="Whether or not to clip negative pixel values in output. Because the pixel values "
+        "in the raw movies are set by the current coming off a photomultiplier tube, there can "
+        "be pixels with negative values (current has a sign), possibly due to noise in the rig. "
+        "Some segmentation algorithms cannot handle negative values in the movie, so we have this "
+        "option to artificially set those pixels to zero.",
+    )
+    max_reference_iterations: int = Field(
+        default=8,
+        description="Maximum number of iterations for creating a reference image",
+    )
+    auto_remove_empty_frames: bool = Field(
+        default=True,
+        description="Automatically detect empty noise frames at the start and end of the movie. Overrides values set in "
+        "trim_frames_start and trim_frames_end. Some movies arrive with otherwise quality data but contain a set of "
+        "frames that are empty and contain pure noise. When processed, these frames tend to receive "
+        "large random shifts that throw off motion border calculation. Turning on this setting automatically "
+        "detects these frames before processing and removes them from reference image creation, automated smoothing "
+        "parameter searches, and finally the motion border calculation. The frames are still written however any "
+        "shift estimated is removed and their shift is set to 0 to avoid large motion borders.",
+    )
+    trim_frames_start: int = Field(
+        default=0,
+        description="Number of frames to remove from the start of the movie if known. Removes frames from motion border calculation "
+        "and resets the frame shifts found. Frames are still written to motion correction. Raises an error if "
+        "auto_remove_empty_frames is set and trim_frames_start > 0",
+    )
+    trim_frames_end: int = Field(
+        default=0,
+        description="Number of frames to remove from the end of the movie if known. Removes frames from motion border calculation "
+        "and resets the frame shifts found. Frames are still written to motion correction. Raises an error if "
+        "auto_remove_empty_frames is set and trim_frames_start > 0",
+    )
+    do_optimize_motion_params: bool = Field(
+        default=False,
+        description="Do a search for best parameters of smooth_sigma and smooth_sigma_time. Adds significant runtime cost to "
+        "motion correction and should only be run once per experiment with the resulting parameters being stored "
+        "for later use.",
+    )
+    use_ave_image_as_reference: bool = Field(
+        default=False,
+        description="Only available if `do_optimize_motion_params` is set. After the a best set of smoothing parameters is found, "
+        "use the resulting average image as the reference for the full registration. This can be used as two step "
+        "registration by setting by setting smooth_sigma_min=smooth_sigma_max and "
+        "smooth_sigma_time_min=smooth_sigma_time_max and steps=1.",
+    )
+    # Additional parameters that were hardcoded in the original code
+    movie_lower_quantile: float = Field(
+        default=0.1,
+        description="Lower quantile threshold for avg projection histogram adjustment of movie",
+    )
+    movie_upper_quantile: float = Field(
+        default=0.999,
+        description="Upper quantile threshold for avg projection histogram adjustment of movie",
+    )
+    preview_frame_bin_seconds: float = Field(
+        default=2.0,
+        description="Before creating the webm, the movies will be averaged into bins of this many seconds",
+    )
+    preview_playback_factor: float = Field(
+        default=10.0,
+        description="The preview movie will playback at this factor times real-time",
+    )
+    n_batches: int = Field(
+        default=20,
+        description="Number of batches to load from the movie for smoothing parameter testing. Batches are evenly spaced throughout the movie.",
+    )
+    smooth_sigma_min: float = Field(
+        default=0.65, description="Minimum value of the parameter search for smooth_sigma"
+    )
+    smooth_sigma_max: float = Field(
+        default=2.15, description="Maximum value of the parameter search for smooth_sigma"
+    )
+    smooth_sigma_steps: int = Field(
+        default=4,
+        description="Number of steps to grid between smooth_sigma and smooth_sigma_max",
+    )
+    smooth_sigma_time_min: float = Field(
+        default=0,
+        description="Minimum value of the parameter search for smooth_sigma_time",
+    )
+    smooth_sigma_time_max: float = Field(
+        default=6,
+        description="Maximum value of the parameter search for smooth_sigma_time",
+    )
+    smooth_sigma_time_steps: int = Field(
+        default=7,
+        description="Number of steps to grid between smooth_sigma and smooth_sigma_time_max. Large values will add significant time to motion correction",
+    )
+
+    class Config:
+        env_prefix = "MOTION_CORRECTION_"
+        case_sensitive = False
+        env_file = ".env"
 
 
 def is_S3(file_path: str):
@@ -1868,182 +1994,16 @@ def get_frame_rate(session: dict):
     return frame_rate_hz
 
 
-def parse_args() -> argparse.Namespace:
-    """Parse command line arguments
-
-    Returns
-    -------
-    args: argparse.Namespace
-        parsed arguments
-    """
-
-    parser = argparse.ArgumentParser(description="Suite2P motion correction")
-    parser.add_argument(
-        "-i",
-        "--input",
-        type=str,
-        help="File or directory where h5 file is stored",
-        default="../data/",
-    )
-    parser.add_argument(
-        "-o", "--output-dir", type=str, help="Output directory", default="/results/"
-    )
-
-    parser.add_argument(
-        "-d", "--debug", action="store_true", help="Run with only partial dset"
-    )
-
-    parser.add_argument(
-        "--tmp_dir",
-        type=str,
-        default="/scratch",
-        help="Directory into which to write temporary files "
-        "produced by Suite2P (default: /scratch)",
-    )
-
-    parser.add_argument(
-        "--data-type",
-        type=str,
-        default="h5",
-        help="Processing h5 (default) or TIFF timeseries",
-    )
-
-    parser.add_argument(
-        "--force_refImg",
-        action="store_true",
-        default=True,
-        help="Force the use of an external reference image (default: True)",
-    )
-
-    parser.add_argument(
-        "--outlier_detrend_window",
-        type=float,
-        default=3.0,
-        help="for outlier rejection in the xoff/yoff outputs "
-        "of suite2p, the offsets are first de-trended "
-        "with a median filter of this duration [seconds]. "
-        "This value is ~30 or 90 samples in size for 11 and 31"
-        "Hz sampling rates respectively.",
-    )
-
-    parser.add_argument(
-        "--outlier_maxregshift",
-        type=float,
-        default=0.05,
-        help="units [fraction FOV dim]. After median-filter "
-        "detrending, outliers more than this value are "
-        "clipped to this value in x and y offset, independently."
-        "This is similar to Suite2P's internal maxregshift, but"
-        "allows for low-frequency drift. Default value of 0.05 "
-        "is typically clipping outliers to 512 * 0.05 = 25 "
-        "pixels above or below the median trend.",
-    )
-
-    parser.add_argument(
-        "--clip_negative",
-        action="store_true",
-        default=False,
-        help="Whether or not to clip negative pixel "
-        "values in output. Because the pixel values "
-        "in the raw  movies are set by the current "
-        "coming off a photomultiplier tube, there can "
-        "be pixels with negative values (current has a "
-        "sign), possibly due to noise in the rig. "
-        "Some segmentation algorithms cannot handle "
-        "negative values in the movie, so we have this "
-        "option to artificially set those pixels to zero.",
-    )
-
-    parser.add_argument(
-        "--max_reference_iterations",
-        type=int,
-        default=8,
-        help="Maximum number of iterations for creating "
-        "a reference image (default: 8)",
-    )
-
-    parser.add_argument(
-        "--auto_remove_empty_frames",
-        action="store_true",
-        default=True,
-        help="Automatically detect empty noise frames at the start and "
-        "end of the movie. Overrides values set in "
-        "trim_frames_start and trim_frames_end. Some movies "
-        "arrive with otherwise quality data but contain a set of "
-        "frames that are empty and contain pure noise. When "
-        "processed, these frames tend to receive "
-        "large random shifts that throw off motion border "
-        "calculation. Turning on this setting automatically "
-        "detects these frames before processing and removes them "
-        "from reference image creation,  automated smoothing "
-        "parameter searches, and finally the motion border "
-        "calculation. The frames are still written however any "
-        "shift estimated is removed and their shift is set to 0 "
-        "to avoid large motion borders.",
-    )
-
-    parser.add_argument(
-        "--trim_frames_start",
-        type=int,
-        default=0,
-        help="Number of frames to remove from the start of the movie "
-        "if known. Removes frames from motion border calculation "
-        "and resets the frame shifts found. Frames are still "
-        "written to motion correction. Raises an error if "
-        "auto_remove_empty_frames is set and "
-        "trim_frames_start > 0",
-    )
-
-    parser.add_argument(
-        "--trim_frames_end",
-        type=int,
-        default=0,
-        help="Number of frames to remove from the end of the movie "
-        "if known. Removes frames from motion border calculation "
-        "and resets the frame shifts found. Frames are still "
-        "written to motion correction. Raises an error if "
-        "auto_remove_empty_frames is set and "
-        "trim_frames_start > 0",
-    )
-
-    parser.add_argument(
-        "--do_optimize_motion_params",
-        action="store_true",
-        default=False,
-        help="Do a search for best parameters of smooth_sigma and "
-        "smooth_sigma_time. Adds significant runtime cost to "
-        "motion correction and should only be run once per "
-        "experiment with the resulting parameters being stored "
-        "for later use.",
-    )
-
-    parser.add_argument(
-        "--use_ave_image_as_reference",
-        action="store_true",
-        default=False,
-        help="Only available if `do_optimize_motion_params` is set. "
-        "After the a best set of smoothing parameters is found, "
-        "use the resulting average image as the reference for the "
-        "full registration. This can be used as two step "
-        "registration by setting by setting "
-        "smooth_sigma_min=smooth_sigma_max and "
-        "smooth_sigma_time_min=smooth_sigma_time_max and "
-        "steps=1.",
-    )
-
-    return parser.parse_args()
-
-
 if __name__ == "__main__":  # pragma: nocover
     # Set the log level and name the logger
     logger = logging.getLogger("Suite2P motion correction")
     logger.setLevel(logging.INFO)
     start_time = dt.now()
     # Parse command-line arguments
-    args = parse_args()
+    parser = MotionCorrectionSettings()
     # General settings
-    output_dir = Path(args.output_dir)
-    data_dir = Path("../data")
+    data_dir = parser.input_dir
+    output_dir = parser.output_dir
     session_fp = next(data_dir.rglob("session.json"))
     description_fp = next(data_dir.rglob("data_description.json"))
     subject_fp = next(data_dir.rglob("subject.json"))
@@ -2056,26 +2016,6 @@ if __name__ == "__main__":  # pragma: nocover
     subject_id = subject.get("subject_id", "")
     name = data_description.get("name", "")
     setup_logging("aind-ophys-motion-correction", mouse_id=subject_id, session_name=name)
-    for i in session["data_streams"]:
-        frame_rate_hz = [j["frame_rate"] for j in i["ophys_fovs"]]
-        if frame_rate_hz:
-            break
-    frame_rate_hz = frame_rate_hz[0]
-    if isinstance(frame_rate_hz, str):
-        frame_rate_hz = float(frame_rate_hz)
-    reference_image_fp = ""
-
-    # Create an ArgumentParser object
-    parser = parse_args()
-    # General settings
-    data_dir = Path(parser.input)
-    output_dir = Path(parser.output_dir)
-    session_fp = next(data_dir.rglob("session.json"))
-    description_fp = next(data_dir.rglob("data_description.json"))
-    with open(session_fp, "r") as j:
-        session = json.load(j)
-    with open(description_fp, "r") as j:
-        data_description = json.load(j)
     frame_rate_hz = get_frame_rate(session)
 
     reference_image_fp = ""
@@ -2099,8 +2039,11 @@ if __name__ == "__main__":  # pragma: nocover
                 data_dir, output_dir, debug=parser.debug
             )
         input_file = str(h5_file)
+    
     # We convert to dictionary
     args = vars(parser)
+    args['input_dir'] = str(args['input_dir'])
+    args['output_dir'] = str(args['output_dir'])
     if not frame_rate_hz:
         frame_rate_hz = parser.frame_rate
         logging.warning("User input frame rate used. %s", frame_rate_hz)
@@ -2123,7 +2066,7 @@ if __name__ == "__main__":  # pragma: nocover
         ("motion_correction_preview_output", "_motion_preview.webm"),
         ("output_json", "_motion_correction_output.json"),
     ):
-        args[key] = os.path.join(output_dir, os.path.splitext(basename)[0] + default)
+        args[key] = os.path.join(str(output_dir), os.path.splitext(basename)[0] + default)
 
     # These are hardcoded parameters of the wrapper. Those are tracked but
     # not exposed.
@@ -2164,7 +2107,7 @@ if __name__ == "__main__":  # pragma: nocover
     # processing pipeline. These are parameters that are not exposed to
     # minimize code length. Those are not set to default.
     if parser.data_type == "h5":
-        suite2p_args["h5py"] = input_file
+        suite2p_args["h5py"] = str(input_file)
     else:
         suite2p_args["data_path"] = str(input_file)
         suite2p_args["look_one_level_down"] = True
@@ -2259,7 +2202,7 @@ if __name__ == "__main__":  # pragma: nocover
     tdir = tmp_dir.name
     suite2p_args["save_path0"] = tdir
     logger.info(f"Running Suite2P with output going to {tdir}")
-
+    args["tmp_dir"] = str(args["tmp_dir"])
     # Make a copy of the args to remove the NumpyArray, refImg, as
     # numpy.ndarray can't be serialized with json. Converting to list
     # and writing to the logger causes the output to be unreadable.
