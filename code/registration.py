@@ -2039,8 +2039,11 @@ if __name__ == "__main__":  # pragma: nocover
                 data_dir, output_dir, debug=parser.debug
             )
         input_file = str(h5_file)
+    
     # We convert to dictionary
     args = vars(parser)
+    args['input_dir'] = str(args['input_dir'])
+    args['output_dir'] = str(args['output_dir'])
     if not frame_rate_hz:
         frame_rate_hz = parser.frame_rate
         logging.warning("User input frame rate used. %s", frame_rate_hz)
@@ -2199,7 +2202,7 @@ if __name__ == "__main__":  # pragma: nocover
     tdir = tmp_dir.name
     suite2p_args["save_path0"] = tdir
     logger.info(f"Running Suite2P with output going to {tdir}")
-
+    args["tmp_dir"] = str(args["tmp_dir"])
     # Make a copy of the args to remove the NumpyArray, refImg, as
     # numpy.ndarray can't be serialized with json. Converting to list
     # and writing to the logger causes the output to be unreadable.
