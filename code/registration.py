@@ -2026,7 +2026,7 @@ if __name__ == "__main__":  # pragma: nocover
             input_file = next(data_dir.rglob("*/pophys"))
         except StopIteration:
             input_file = next(data_dir.rglob("pophys"))
-        output_dir = make_output_directory(output_dir)
+        output_dir = make_output_directory(output_dir, unique_id)
     else:
         unique_id = "MOp2_3_0"  # TODO: remove when upgrade to data-schema v2
         if "Bergamo" in session.get("rig_id", ""):
