@@ -2052,7 +2052,7 @@ if __name__ == "__main__":  # pragma: nocover
     if reference_image_fp:
         args["refImg"] = [reference_image_fp]
     # We construct the paths to the outputs
-    if isinstance(input_file, list):
+    if parser.data_type == "TIFF":
         basename = unique_id
     else:
         basename = os.path.basename(input_file)
