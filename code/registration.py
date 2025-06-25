@@ -2321,7 +2321,7 @@ if __name__ == "__main__":  # pragma: nocover
     # make projections
     mx_proj = projection_process(data, projection="max")
     av_proj = projection_process(data, projection="avg")
-    if isinstance(input_file, list):
+    if parser.data_type == "TIFF":
         input_file = input_file[0]
     write_data_process(
         args_copy,
