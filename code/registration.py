@@ -98,8 +98,8 @@ class MotionCorrectionSettings(BaseSettings, cli_parse_args=True):
     nonrigid: bool = Field(
         default=True, description="Whether to use non-rigid registration"
     )
-    block_size: Annotated[list, Field(action="append", default_factory=lambda: [128, 128],
-        description="Block size for non-rigid registration.")]
+    block_size: list = Field(default_factory=lambda: [128, 128],
+        description="Block size for non-rigid registration.")
     snr_thresh: float = Field(
         default=1.2,
         description="if any nonrigid block is below this threshold, it gets smoothed "
