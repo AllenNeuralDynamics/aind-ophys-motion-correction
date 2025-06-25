@@ -68,9 +68,20 @@ class MotionCorrectionSettings(BaseSettings, cli_parse_args=True):
     data_type: str = Field(
         default="h5", description="Processing h5 (default) or TIFF timeseries"
     )
+    do_registration: bool = Field(default="true", description="whether to register data (2 forces re-registration)")
+    batch_size: int = Field(default=500, description="Number of frames per batch")
+    align_by_chan: int = Field(default=1, description="when multi-channel, you can align by non-functional channel "
+                               "(1-based)")
+    maxregshift: float = Field(default=0.1, description="max allowed registration shift, as a fraction of "
+                               "frame max(width and height). This will be ignored if force_refImg is set to True")
     force_refImg: bool = Field(
         default=True, description="Force the use of an external reference image"
     )
+    nonrigid: bool = Field(default=True, description="Whether to use non-rigid registration")
+    block_size: list = Field(default_factory=lambda: [128, 128], description="Block size for non-rigid registration.")
+    snr_thresh: float = Field(default=1.2, description="if any nonrigid block is below this threshold, it gets smoothed "
+                              "until above this threshold. 1.0 results in no smoothing")
+    maxregshiftNR: int = Field(default=5, description="maximum pixel shift allowed for nonrigid, relative to rigid")
     outlier_detrend_window: float = Field(
         default=3.0,
         description="For outlier rejection in the xoff/yoff outputs of suite2p, the offsets are first de-trended "
@@ -124,6 +135,8 @@ class MotionCorrectionSettings(BaseSettings, cli_parse_args=True):
         "motion correction and should only be run once per experiment with the resulting parameters being stored "
         "for later use.",
     )
+    smooth_sigma_time: int = Field(default=0, description="gaussian smoothing in time. If do_optimize_motion_params is set, this will be overridden")
+    smooth_sigma: float = Field(default=1.15, description="~1 good for 2P recordings, recommend 3-5 for 1P recordings. If do_optimize_motion_params is set, this will be overridden")
     use_ave_image_as_reference: bool = Field(
         default=False,
         description="Only available if `do_optimize_motion_params` is set. After the a best set of smoothing parameters is found, "
@@ -2113,33 +2126,34 @@ if __name__ == "__main__":  # pragma: nocover
         suite2p_args["look_one_level_down"] = True
         suite2p_args["tiff_list"] = [str(i) for i in input_file.glob("*.tif*")]
     suite2p_args["roidetect"] = False
-    suite2p_args["do_registration"] = 1
+    suite2p_args["do_registration"] = parser.do_registration
+    suite2p_args["align_by_chan"] = parser.align_by_chan
     suite2p_args["reg_tif"] = False  # We save our own outputs here
     suite2p_args["nimg_init"] = (
         500  # Nb of images to compute reference. This value is a bit high. Suite2p has it at 300 normally
     )
     suite2p_args["maxregshift"] = (
-        0.2  # Max allowed registration shift as a fraction of frame max(width and height)
+        parser.maxregshift  # Max allowed registration shift as a fraction of frame max(width and height)
     )
     # These parameters are at the same value as suite2p default. This is just here
     # to make it clear we need those parameters to be at the same value as
     # suite2p default but those lines could be deleted.
     suite2p_args["maxregshiftNR"] = (
-        5.0  # Maximum shift allowed in pixels for a block in rigid registration.
+        params.maxregshiftNR  # Maximum shift allowed in pixels for a block in rigid registration.
     )
-    suite2p_args["batch_size"] = 500  # Number of frames to process at once
+    suite2p_args["batch_size"] = parser.batch_size  # Number of frames to process at once
     if suite2p_args.get("h5py", ""):
         suite2p_args["h5py_key"] = "data"  # h5 path in the file.
     suite2p_args["smooth_sigma"] = (
-        1.15  # Standard deviation in pixels of the gaussian used to smooth the phase correlation.
+        parser.smooth_sigma  # Standard deviation in pixels of the gaussian used to smooth the phase correlation.
     )
     suite2p_args["smooth_sigma_time"] = (
-        0.0  # "Standard deviation in time frames of the gaussian used to smooth the data before phase correlation is computed
+        parser.smooth_sigma_time  # "Standard deviation in time frames of the gaussian used to smooth the data before phase correlation is computed
     )
-    suite2p_args["nonrigid"] = True
-    suite2p_args["block_size"] = [128, 128]  # Block dimensions in y, x in pixels.
+    suite2p_args["nonrigid"] = parser.nonrigid  # If True, non-rigid registration is performed.
+    suite2p_args["block_size"] = parser.block_size  # Block dimensions in y, x in pixels.
     suite2p_args["snr_thresh"] = (
-        1.2  # If a block is below the above snr threshold. Apply smoothing to the block.
+        params.snr_thresh  # If a block is below the above snr threshold. Apply smoothing to the block.
     )
 
     # This is to overwrite image reference creation.
