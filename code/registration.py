@@ -2213,7 +2213,7 @@ if __name__ == "__main__":  # pragma: nocover
         parser.block_size
     )  # Block dimensions in y, x in pixels.
     suite2p_args["snr_thresh"] = (
-        params.snr_thresh  # If a block is below the above snr threshold. Apply smoothing to the block.
+        parser.snr_thresh  # If a block is below the above snr threshold. Apply smoothing to the block.
     )
 
     # This is to overwrite image reference creation.
