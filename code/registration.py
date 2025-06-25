@@ -2193,7 +2193,7 @@ if __name__ == "__main__":  # pragma: nocover
     # to make it clear we need those parameters to be at the same value as
     # suite2p default but those lines could be deleted.
     suite2p_args["maxregshiftNR"] = (
-        params.maxregshiftNR  # Maximum shift allowed in pixels for a block in rigid registration.
+        parser.maxregshiftNR  # Maximum shift allowed in pixels for a block in rigid registration.
     )
     suite2p_args["batch_size"] = (
         parser.batch_size
