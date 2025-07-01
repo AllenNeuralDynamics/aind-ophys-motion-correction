@@ -29,8 +29,11 @@ from aind_data_schema_models.process_names import ProcessName
 from aind_log_utils.log import setup_logging
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.summary_images import mean_image
-from aind_ophys_utils.video_utils import (downsample_array,
-                                          downsample_h5_video, encode_video)
+from aind_ophys_utils.video_utils import (
+    downsample_array,
+    downsample_h5_video,
+    encode_video,
+)
 from aind_qcportal_schema.metric_value import DropdownMetric
 from matplotlib import pyplot as plt  # noqa: E402
 from PIL import Image, ImageDraw, ImageFont
@@ -40,11 +43,17 @@ from ScanImageTiffReader import ScanImageTiffReader
 from scipy.ndimage import median_filter
 from scipy.stats import sigmaclip
 from suite2p.registration.nonrigid import make_blocks
-from suite2p.registration.register import (pick_initial_reference,
-                                           register_frames)
-from suite2p.registration.rigid import (apply_masks, compute_masks, phasecorr,
-                                        phasecorr_reference, shift_frame)
+from suite2p.registration.register import pick_initial_reference, register_frames
+from suite2p.registration.rigid import (
+    apply_masks,
+    compute_masks,
+    phasecorr,
+    phasecorr_reference,
+    shift_frame,
+)
 from sync_dataset import Sync
+from typing import Annotated
+from pydantic import Field
 
 mpl.use("Agg")
 
@@ -68,8 +77,37 @@ class MotionCorrectionSettings(BaseSettings, cli_parse_args=True):
     data_type: str = Field(
         default="h5", description="Processing h5 (default) or TIFF timeseries"
     )
+    do_registration: bool = Field(
+        default="true",
+        description="whether to register data (2 forces re-registration)",
+    )
+    batch_size: int = Field(default=500, description="Number of frames per batch")
+    align_by_chan: int = Field(
+        default=1,
+        description="when multi-channel, you can align by non-functional channel "
+        "(1-based)",
+    )
+    maxregshift: float = Field(
+        default=0.1,
+        description="max allowed registration shift, as a fraction of "
+        "frame max(width and height). This will be ignored if force_refImg is set to True",
+    )
     force_refImg: bool = Field(
         default=True, description="Force the use of an external reference image"
+    )
+    nonrigid: bool = Field(
+        default=True, description="Whether to use non-rigid registration"
+    )
+    block_size: list = Field(default_factory=lambda: [128, 128],
+        description="Block size for non-rigid registration.")
+    snr_thresh: float = Field(
+        default=1.2,
+        description="if any nonrigid block is below this threshold, it gets smoothed "
+        "until above this threshold. 1.0 results in no smoothing",
+    )
+    maxregshiftNR: int = Field(
+        default=5,
+        description="maximum pixel shift allowed for nonrigid, relative to rigid",
     )
     outlier_detrend_window: float = Field(
         default=3.0,
@@ -124,6 +162,14 @@ class MotionCorrectionSettings(BaseSettings, cli_parse_args=True):
         "motion correction and should only be run once per experiment with the resulting parameters being stored "
         "for later use.",
     )
+    smooth_sigma_time: int = Field(
+        default=0,
+        description="gaussian smoothing in time. If do_optimize_motion_params is set, this will be overridden",
+    )
+    smooth_sigma: float = Field(
+        default=1.15,
+        description="~1 good for 2P recordings, recommend 3-5 for 1P recordings. If do_optimize_motion_params is set, this will be overridden",
+    )
     use_ave_image_as_reference: bool = Field(
         default=False,
         description="Only available if `do_optimize_motion_params` is set. After the a best set of smoothing parameters is found, "
@@ -153,10 +199,12 @@ class MotionCorrectionSettings(BaseSettings, cli_parse_args=True):
         description="Number of batches to load from the movie for smoothing parameter testing. Batches are evenly spaced throughout the movie.",
     )
     smooth_sigma_min: float = Field(
-        default=0.65, description="Minimum value of the parameter search for smooth_sigma"
+        default=0.65,
+        description="Minimum value of the parameter search for smooth_sigma",
     )
     smooth_sigma_max: float = Field(
-        default=2.15, description="Maximum value of the parameter search for smooth_sigma"
+        default=2.15,
+        description="Maximum value of the parameter search for smooth_sigma",
     )
     smooth_sigma_steps: int = Field(
         default=4,
@@ -437,7 +485,9 @@ def combine_images_with_individual_titles(
     combined_height = max_height + padding * 2 + title_height
 
     # Create a new blank image with padding and room for the titles
-    combined_image = Image.new("RGB", (combined_width, combined_height), (255, 255, 255))
+    combined_image = Image.new(
+        "RGB", (combined_width, combined_height), (255, 255, 255)
+    )
 
     # Draw the titles
     draw = ImageDraw.Draw(combined_image)
@@ -567,7 +617,9 @@ def serialize_fov_quality_qcmetric() -> None:
         ),
     )
 
-    with open(Path(file_path.parent) / f"{unique_id}_fov_quality_metric.json", "w") as f:
+    with open(
+        Path(file_path.parent) / f"{unique_id}_fov_quality_metric.json", "w"
+    ) as f:
         json.dump(json.loads(metric.model_dump_json()), f, indent=4)
 
 
@@ -1103,7 +1155,9 @@ def compute_acutance(
     """
     im_max_y, im_max_x = image.shape
 
-    cut_image = image[min_cut_y : im_max_y - max_cut_y, min_cut_x : im_max_x - max_cut_x]
+    cut_image = image[
+        min_cut_y : im_max_y - max_cut_y, min_cut_x : im_max_x - max_cut_x
+    ]
     grady, gradx = np.gradient(cut_image)
     return (grady**2 + gradx**2).mean()
 
@@ -1449,7 +1503,9 @@ def write_data_process(
     )
     if isinstance(output_dir, str):
         output_dir = Path(output_dir)
-    with open(output_dir / f"{unique_id}_motion_correction_data_process.json", "w") as f:
+    with open(
+        output_dir / f"{unique_id}_motion_correction_data_process.json", "w"
+    ) as f:
         json.dump(json.loads(data_proc.model_dump_json()), f, indent=4)
 
 
@@ -1609,7 +1665,9 @@ def downsample_normalize(
             movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size
         )
     else:
-        ds = downsample_array(movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size)
+        ds = downsample_array(
+            movie_path, input_fps=frame_rate, output_fps=1.0 / bin_size
+        )
     avg_projection = ds.mean(axis=0)
     lower_cutoff, upper_cutoff = np.quantile(
         avg_projection.flatten(), (lower_quantile, upper_quantile)
@@ -1624,7 +1682,10 @@ def flow_png(output_path: Path, dst_path: str, iPC: int = 0):
         tPC = f["reg_metrics/tPC"]
         flows = f["reg_metrics/farnebackROF"]
         flow_ds = np.array(
-            [cv2.resize(flows[iPC, :, :, a], dsize=None, fx=0.1, fy=0.1) for a in (0, 1)]
+            [
+                cv2.resize(flows[iPC, :, :, a], dsize=None, fx=0.1, fy=0.1)
+                for a in (0, 1)
+            ]
         )
         flow_ds_norm = np.sqrt(np.sum(flow_ds**2, 0))
         # redo Suite2p's PCA-based frame selection
@@ -1699,7 +1760,9 @@ def get_frame_rate_from_sync(sync_file, platform_data) -> float:
             pass
     sync_data.close()
     if not frame_rate_hz:
-        raise ValueError(f"Frame rate no acquired, line labels: {sync_data.line_labels}")
+        raise ValueError(
+            f"Frame rate no acquired, line labels: {sync_data.line_labels}"
+        )
     return frame_rate_hz
 
 
@@ -2015,7 +2078,9 @@ if __name__ == "__main__":  # pragma: nocover
         subject = json.load(j)
     subject_id = subject.get("subject_id", "")
     name = data_description.get("name", "")
-    setup_logging("aind-ophys-motion-correction", mouse_id=subject_id, session_name=name)
+    setup_logging(
+        "aind-ophys-motion-correction", mouse_id=subject_id, session_name=name
+    )
     frame_rate_hz = get_frame_rate(session)
 
     reference_image_fp = ""
@@ -2027,7 +2092,7 @@ if __name__ == "__main__":  # pragma: nocover
         except StopIteration:
             input_file = next(data_dir.rglob("pophys"))
         output_dir = make_output_directory(output_dir, unique_id)
-    else:
+    elif parser.data_type.lower() == "h5":
         unique_id = "MOp2_3_0"  # TODO: remove when upgrade to data-schema v2
         if "Bergamo" in session.get("rig_id", ""):
             h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
@@ -2039,11 +2104,16 @@ if __name__ == "__main__":  # pragma: nocover
                 data_dir, output_dir, debug=parser.debug
             )
         input_file = str(h5_file)
-    
+    else:
+        raise ValueError(
+            f"Data type {parser.data_type} not supported. "
+            "Please use 'TIFF' or 'h5'."
+        )
+
     # We convert to dictionary
     args = vars(parser)
-    args['input_dir'] = str(args['input_dir'])
-    args['output_dir'] = str(args['output_dir'])
+    args["input_dir"] = str(args["input_dir"])
+    args["output_dir"] = str(args["output_dir"])
     if not frame_rate_hz:
         frame_rate_hz = parser.frame_rate
         logging.warning("User input frame rate used. %s", frame_rate_hz)
@@ -2066,7 +2136,9 @@ if __name__ == "__main__":  # pragma: nocover
         ("motion_correction_preview_output", "_motion_preview.webm"),
         ("output_json", "_motion_correction_output.json"),
     ):
-        args[key] = os.path.join(str(output_dir), os.path.splitext(basename)[0] + default)
+        args[key] = os.path.join(
+            str(output_dir), os.path.splitext(basename)[0] + default
+        )
 
     # These are hardcoded parameters of the wrapper. Those are tracked but
     # not exposed.
@@ -2113,33 +2185,40 @@ if __name__ == "__main__":  # pragma: nocover
         suite2p_args["look_one_level_down"] = True
         suite2p_args["tiff_list"] = [str(i) for i in input_file.glob("*.tif*")]
     suite2p_args["roidetect"] = False
-    suite2p_args["do_registration"] = 1
+    suite2p_args["do_registration"] = parser.do_registration
+    suite2p_args["align_by_chan"] = parser.align_by_chan
     suite2p_args["reg_tif"] = False  # We save our own outputs here
     suite2p_args["nimg_init"] = (
         500  # Nb of images to compute reference. This value is a bit high. Suite2p has it at 300 normally
     )
     suite2p_args["maxregshift"] = (
-        0.2  # Max allowed registration shift as a fraction of frame max(width and height)
+        parser.maxregshift  # Max allowed registration shift as a fraction of frame max(width and height)
     )
     # These parameters are at the same value as suite2p default. This is just here
     # to make it clear we need those parameters to be at the same value as
     # suite2p default but those lines could be deleted.
     suite2p_args["maxregshiftNR"] = (
-        5.0  # Maximum shift allowed in pixels for a block in rigid registration.
+        parser.maxregshiftNR  # Maximum shift allowed in pixels for a block in rigid registration.
     )
-    suite2p_args["batch_size"] = 500  # Number of frames to process at once
+    suite2p_args["batch_size"] = (
+        parser.batch_size
+    )  # Number of frames to process at once
     if suite2p_args.get("h5py", ""):
         suite2p_args["h5py_key"] = "data"  # h5 path in the file.
     suite2p_args["smooth_sigma"] = (
-        1.15  # Standard deviation in pixels of the gaussian used to smooth the phase correlation.
+        parser.smooth_sigma  # Standard deviation in pixels of the gaussian used to smooth the phase correlation.
     )
     suite2p_args["smooth_sigma_time"] = (
-        0.0  # "Standard deviation in time frames of the gaussian used to smooth the data before phase correlation is computed
+        parser.smooth_sigma_time  # "Standard deviation in time frames of the gaussian used to smooth the data before phase correlation is computed
     )
-    suite2p_args["nonrigid"] = True
-    suite2p_args["block_size"] = [128, 128]  # Block dimensions in y, x in pixels.
+    suite2p_args["nonrigid"] = (
+        parser.nonrigid
+    )  # If True, non-rigid registration is performed.
+    suite2p_args["block_size"] = (
+        parser.block_size
+    )  # Block dimensions in y, x in pixels.
     suite2p_args["snr_thresh"] = (
-        1.2  # If a block is below the above snr threshold. Apply smoothing to the block.
+        parser.snr_thresh  # If a block is below the above snr threshold. Apply smoothing to the block.
     )
 
     # This is to overwrite image reference creation.
@@ -2169,7 +2248,9 @@ if __name__ == "__main__":  # pragma: nocover
         )
 
     if args["auto_remove_empty_frames"]:
-        logger.info("Attempting to find empty frames at the start and end of the movie.")
+        logger.info(
+            "Attempting to find empty frames at the start and end of the movie."
+        )
         if suite2p_args.get("tiff_list", ""):
             lowside, highside = find_movie_start_end_empty_frames(
                 filepath=suite2p_args["tiff_list"],
@@ -2321,7 +2402,7 @@ if __name__ == "__main__":  # pragma: nocover
     # make projections
     mx_proj = projection_process(data, projection="max")
     av_proj = projection_process(data, projection="avg")
-    if isinstance(input_file, list):
+    if parser.data_type == "TIFF":
         input_file = input_file[0]
     write_data_process(
         args_copy,
@@ -2467,14 +2548,18 @@ if __name__ == "__main__":  # pragma: nocover
             ]
         ]
 
-    logger.info("finished downsampling motion corrected and non-motion corrected movies")
+    logger.info(
+        "finished downsampling motion corrected and non-motion corrected movies"
+    )
 
     # tile into 1 movie, raw on left, motion corrected on right
     try:
         tiled_vids = np.block(processed_vids)
 
         # make into a viewable artifact
-        playback_fps = args["preview_playback_factor"] / args["preview_frame_bin_seconds"]
+        playback_fps = (
+            args["preview_playback_factor"] / args["preview_frame_bin_seconds"]
+        )
         encode_video(tiled_vids, args["motion_correction_preview_output"], playback_fps)
         logger.info("wrote " f"{args['motion_correction_preview_output']}")
     except:
@@ -2489,11 +2574,15 @@ if __name__ == "__main__":  # pragma: nocover
             mov = f["data"]
             regDX = f["reg_metrics/regDX"][:]
             crispness = compute_crispness(mov_raw, mov)
-            logger.info("computed crispness of mean image before and after registration")
+            logger.info(
+                "computed crispness of mean image before and after registration"
+            )
 
             # compute residual optical flow using Farneback method
             if f["reg_metrics/regPC"][:].any():
-                flows, farnebackDX = compute_residual_optical_flow(f["reg_metrics/regPC"])
+                flows, farnebackDX = compute_residual_optical_flow(
+                    f["reg_metrics/regPC"]
+                )
                 f.create_dataset("reg_metrics/farnebackROF", data=flows)
                 f.create_dataset("reg_metrics/farnebackDX", data=farnebackDX)
                 logger.info(
@@ -2510,7 +2599,9 @@ if __name__ == "__main__":  # pragma: nocover
         with h5py.File(args["motion_corrected_output"], "r+") as f:
             regDX = f["reg_metrics/regDX"][:]
             crispness = compute_crispness(tiff_array, f["data"])
-            logger.info("computed crispness of mean image before and after registration")
+            logger.info(
+                "computed crispness of mean image before and after registration"
+            )
             if f["reg_metrics/regPC"][:].any():
                 regPC = f["reg_metrics/regPC"]
 
