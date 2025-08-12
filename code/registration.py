@@ -1964,7 +1964,7 @@ def generate_single_plane_reference(fp: Path, session) -> Path:
             for i in session["stimulus_epochs"]
             if i["stimulus_name"] == "single neuron BCI conditioning"
         ]
-        bci_epoch_loc = [i["output_parameters"]["tiff_stem"] for i in bci_epochs][0]
+        bci_epoch_loc = [i["output_parameters"]["tiff_stem"] for i in bci_epochs if bci_epochs.get("output_paramters", "")][0]
         frame_length = tiff_stems[bci_epoch_loc][1] - tiff_stems[bci_epoch_loc][0]
         vsource = h5py.VirtualSource(f["data"])
         layout = h5py.VirtualLayout(
