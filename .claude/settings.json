@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//data/**)",
+      "Bash(find /data/ -name \"*.json\" -exec echo \"=== {} ===\" \\\\; -exec head -c 500 {} \\\\;)",
+      "Read(//scratch/**)",
+      "Bash(python3 -c ':*)"
+    ]
+  }
+}

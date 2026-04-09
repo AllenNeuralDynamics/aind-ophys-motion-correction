@@ -2,8 +2,16 @@
 	"version": 1,
 	"attached_datasets": [
 		{
-			"id": "8219dd46-a1ea-4f06-83a8-226878d6e0c9",
-			"mount": "multiplane-ophys_721291_2024-05-08_08-05-54"
+			"id": "72aee116-7616-477d-9424-cbb7d6b7d322",
+			"mount": "multiplane-ophys_839909_2026-02-26_15-11-01_v2_converted"
+		},
+		{
+			"id": "e37129e2-7666-47b6-8f10-b086cd3b30f8",
+			"mount": "multiplane-ophys_839909_2026-02-26_15-11-01_v2"
+		},
+		{
+			"id": "eb71665c-d69c-4ba0-8d99-a169a4f284d5",
+			"mount": "single-plane-ophys_767715_2025-07-25_17-40-22_v2"
 		}
 	]
 }

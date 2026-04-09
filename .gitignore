@@ -149,3 +149,4 @@ dmypy.json
 !.vscode/extensions.json
 !.vscode/*.code-snippets
 data/Untitled.ipynb
+.vscode

@@ -1,25 +1,26 @@
-# hash:sha256:99280683fb763da41f3d9cf24ffdb942310963bc393cfb11c0445b591bf7a603
-FROM registry.codeocean.allenneuraldynamics.org/codeocean/jupyterlab:3.4.4-miniconda4.12.0-python3.9-ubuntu20.04
+# hash:sha256:72a559889ab06e5d2f2295a53762ab1a65607e96bd3592eb3bd962907b192ac5
+ARG REGISTRY_HOST
+FROM $REGISTRY_HOST/codeocean/mambaforge3:24.5.0-0-python3.12.4-ubuntu22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
-ENV PIPELINE_URL="https://codeocean.allenneuraldynamics.org/capsule/5619253/tree"
-ENV PIPELINE_VERSION="1.0"
-ENV VERSION="8.0"
 ARG GIT_ASKPASS
-ARG GIT_ACCESS_TOKEN
-COPY git-askpass /
+COPY git-ask-pass /
 
-RUN ["apt-get", "update"]
-RUN ["apt-get", "install", "-y", "vim"]
 RUN pip3 install -U --no-cache-dir \
-    torch --index-url https://download.pytorch.org/whl/cpu
-WORKDIR /
-RUN pip3 install -U --no-cache-dir \
-    aind-ophys-utils \
-    sbxreader \
-    suite2p \
-    aind-data-schema==1.1.0 \
-    pydantic==2.8.1 \
-    aind-qcportal-schema \
-    aind-log-utils \
-    pydantic-settings
+    aind-data-schema==2.6.0 \
+    aind-data-schema-models==5.4.1 \
+    aind-log-utils==0.2.6 \
+    suite2p==0.14.6
+
+ADD "https://github.com/coder/code-server/releases/download/v4.100.3/code-server-4.100.3-linux-amd64.tar.gz" /.code-server/code-server.tar.gz
+
+RUN cd /.code-server \
+    && tar -xvf code-server.tar.gz \
+    && rm code-server.tar.gz \
+    && ln -s /.code-server/code-server-4.100.3-linux-amd64/bin/code-server /usr/bin/code-server \
+    && mkdir -p /.vscode/extensions
+
+RUN code-server --extensions-dir="/.vscode/extensions" --install-extension ms-python.python@2025.14.0 \
+    && code-server --extensions-dir="/.vscode/extensions" --install-extension ms-toolsai.jupyter@2025.4.1 \
+    && code-server --extensions-dir="/.vscode/extensions" --install-extension reditorsupport.r@2.8.6 \
+    && code-server --extensions-dir="/.vscode/extensions" --install-extension saoudrizwan.claude-dev@3.35.1
