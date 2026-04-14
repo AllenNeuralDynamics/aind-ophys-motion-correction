@@ -35,9 +35,6 @@
 			],
 			"options": {},
 			"pre_install_options": {}
-		},
-		"vscode": {
-			"version": "4.100.3"
 		}
 	}
 }
