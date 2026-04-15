@@ -61,6 +61,7 @@ from suite2p.registration.rigid import (
 from sync_dataset import Sync
 from typing import Annotated
 from pydantic import Field
+from pydantic import field_validator
 
 mpl.use("Agg")
 
@@ -229,6 +230,13 @@ class MotionCorrectionSettings(BaseSettings, cli_parse_args=True):
         default=7,
         description="Number of steps to grid between smooth_sigma and smooth_sigma_time_max. Large values will add significant time to motion correction",
     )
+
+    @field_validator("block_size", mode="before")
+    @classmethod
+    def coerce_block_size(cls, v):
+        if isinstance(v, list):
+            return [int(x) for x in v]
+        return v
 
     class Config:
         env_prefix = "MOTION_CORRECTION_"
