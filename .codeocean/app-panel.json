@@ -30,7 +30,7 @@
 			"help_text": "Run with partial dataset",
 			"type": "text",
 			"value_type": "integer",
-			"default_value": "0"
+			"default_value": "1"
 		},
 		{
 			"id": "iCDYNRvQqwqjgPOk",
@@ -60,7 +60,7 @@
 			"help_text": "whether to register data (2 forces re-registration)",
 			"type": "text",
 			"value_type": "integer",
-			"default_value": "true"
+			"default_value": "1"
 		},
 		{
 			"id": "kmofIW9QFgbkRi3i",
@@ -196,8 +196,8 @@
 			"id": "P20sUtC3TbloROY9",
 			"name": "trim_frames_start",
 			"param_name": "trim_frames_start",
-			"description": "Number of frames to remove from the start of the movie if known. Removes frames from motion border calculation and resets the frame shifts found. Frames are still written to motion correction. Raises an error if auto_remove_empty_frames is set and trim_frames_start > 0",
-			"help_text": "Number of frames to remove from the start of the movie if known. Removes frames from motion border calculation and resets the frame shifts found. Frames are still written to motion correction. Raises an error if auto_remove_empty_frames is set and trim_frames_start > 0",
+			"description": "Number of frames to remove from the start of the movie if known. Removes frames from motion border calculation and resets the frame shifts found. Frames are still written to motion correction. Raises an error if auto_remove_empty_frames is set and trim_frames_start \u003e 0",
+			"help_text": "Number of frames to remove from the start of the movie if known. Removes frames from motion border calculation and resets the frame shifts found. Frames are still written to motion correction. Raises an error if auto_remove_empty_frames is set and trim_frames_start \u003e 0",
 			"type": "text",
 			"value_type": "integer",
 			"default_value": "0"
@@ -206,8 +206,8 @@
 			"id": "Ma86rzIDlRc1BVqV",
 			"name": "trim_frames_end",
 			"param_name": "trim_frames_end",
-			"description": "Number of frames to remove from the end of the movie if known. Removes frames from motion border calculation and resets the frame shifts found. Frames are still written to motion correction. Raises an error if auto_remove_empty_frames is set and trim_frames_start > 0",
-			"help_text": "Number of frames to remove from the end of the movie if known. Removes frames from motion border calculation and resets the frame shifts found. Frames are still written to motion correction. Raises an error if auto_remove_empty_frames is set and trim_frames_start > 0",
+			"description": "Number of frames to remove from the end of the movie if known. Removes frames from motion border calculation and resets the frame shifts found. Frames are still written to motion correction. Raises an error if auto_remove_empty_frames is set and trim_frames_start \u003e 0",
+			"help_text": "Number of frames to remove from the end of the movie if known. Removes frames from motion border calculation and resets the frame shifts found. Frames are still written to motion correction. Raises an error if auto_remove_empty_frames is set and trim_frames_start \u003e 0",
 			"type": "text",
 			"value_type": "integer",
 			"default_value": "0"

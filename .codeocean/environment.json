@@ -10,6 +10,9 @@
 		"pip3": {
 			"packages": [
 				{
+					"name": "aind-data-schema"
+				},
+				{
 					"name": "aind-data-schema-models",
 					"version": "5.4.1"
 				},
