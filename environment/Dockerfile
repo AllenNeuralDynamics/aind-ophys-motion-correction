@@ -1,4 +1,4 @@
-# hash:sha256:748aa74ce54358177c4a4781ff53215288207d8998bd2e2f9db7fc2d8eaea851
+# hash:sha256:4b0fd627a69d229ff2edad74427683b4b853d106459beaf8e886ba6a9dde20fa
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/code-server-python-extensions-pack:v5.0
 
@@ -7,7 +7,7 @@ ARG GIT_ASKPASS
 COPY git-ask-pass /
 
 RUN pip3 install -U --no-cache-dir \
-    aind-data-schema \
+    aind-data-schema==2.6.0 \
     aind-data-schema-models==5.4.1 \
     aind-ophys-utils==0.0.8 \
     aind-qcportal-schema==0.6.4 \
