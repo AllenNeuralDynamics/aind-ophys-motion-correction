@@ -23,10 +23,6 @@ import matplotlib as mpl
 import numpy as np
 import pandas as pd
 import suite2p
-from aind_data_schema.core.processing import DataProcess
-from aind_data_schema.core.quality_control import QCMetric, QCStatus, Status
-from aind_data_schema_models.process_names import ProcessName
-from aind_log_utils.log import setup_logging
 from aind_ophys_utils.array_utils import normalize_array
 from aind_ophys_utils.summary_images import mean_image
 from aind_ophys_utils.video_utils import (
@@ -34,9 +30,20 @@ from aind_ophys_utils.video_utils import (
     downsample_h5_video,
     encode_video,
 )
-from aind_qcportal_schema.metric_value import DropdownMetric
+from utils.logging_utils import LoggingStream, setup_logging
+from utils.metadata_utils import (
+    build_data_process,
+    get_frame_rate as get_frame_rate_from_acquisition,
+    load_acquisition,
+    load_data_description,
+    write_processing,
+)
+from utils.qc import (
+    write_fov_quality_metric,
+    write_registration_summary_metric,
+)
 from matplotlib import pyplot as plt  # noqa: E402
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 from pydantic import Field
 from pydantic_settings import BaseSettings
 from ScanImageTiffReader import ScanImageTiffReader
@@ -443,184 +450,6 @@ def load_initial_frames(
     return frames
 
 
-def combine_images_with_individual_titles(
-    image1_path: Path, image2_path: Path, output_path: Path, title1: str, title2: str
-) -> None:
-    """Combine two images side-by-side with padding and titles above each image.
-
-    Parameters
-    ----------
-    image1_path : Path
-        Path to the first image.
-    image2_path : Path
-        Path to the second image.
-    output_path : Path
-        Path to save the combined image.
-    title1 : str
-         Title text for the first image.
-    title2 - str
-        Title text for the second image.
-
-    Returns
-    -------
-    None
-    """
-    # Open both images
-    img1 = Image.open(image1_path)
-    img2 = Image.open(image2_path)
-
-    # Ensure both images have the same height
-    max_height = max(img1.height, img2.height)
-    img1 = img1.resize((img1.width, max_height), Image.Resampling.LANCZOS)
-    img2 = img2.resize((img2.width, max_height), Image.Resampling.LANCZOS)
-
-    # Set padding and title height
-    padding = 20
-    title_height = 50  # Space for the titles
-
-    # Calculate dimensions of the combined image
-    combined_width = (
-        img1.width + img2.width + padding * 3
-    )  # Padding between and around images
-    combined_height = max_height + padding * 2 + title_height
-
-    # Create a new blank image with padding and room for the titles
-    combined_image = Image.new(
-        "RGB", (combined_width, combined_height), (255, 255, 255)
-    )
-
-    # Draw the titles
-    draw = ImageDraw.Draw(combined_image)
-    try:
-        font = ImageFont.truetype(
-            "arial.ttf", 24
-        )  # You can replace with a path to your desired font
-    except IOError:
-        font = (
-            ImageFont.load_default()
-        )  # Fallback to default font; may not match expected size
-
-    # Title 1: Above the second image
-    bbox1 = draw.textbbox((0, 0), title1, font=font)
-    text_width1 = bbox1[2] - bbox1[0]
-    text_y1 = padding
-    text_x1 = padding + (img1.width - text_width1) // 2
-    draw.text((text_x1, text_y1), title1, fill="black", font=font)
-
-    # Title 2: Above the first image
-    bbox2 = draw.textbbox((0, 0), title2, font=font)
-    text_width2 = bbox2[2] - bbox2[0]
-    text_x2 = padding * 2 + img2.width + (img2.width - text_width2) // 2
-    text_y2 = padding
-    draw.text((text_x2, text_y2), title2, fill="black", font=font)
-
-    # Paste images into the new image
-    img1_x = padding
-    img2_x = img1_x + img1.width + padding
-    img_y = padding + title_height
-    combined_image.paste(img1, (img1_x, img_y))
-    combined_image.paste(img2, (img2_x, img_y))
-
-    # Save the result
-    combined_image.save(output_path)
-
-
-def serialize_registration_summary_qcmetric() -> None:
-    """Serialize the registration summary QCMetric
-
-    This function does not take any parameters.
-
-    QCMetric is named 'registration_summary_metric.json' and is
-    saved to the same directory as *_registration_summary.png.
-    Ex: '/results/<unique_id>/motion_correction/'
-    """
-
-    file_path = next(output_dir.rglob("*_registration_summary.png"))
-
-    # Remove '/results' from file_path
-    reference_filepath = Path(*file_path.parts[2:])
-    unique_id = reference_filepath.parts[0]
-
-    metric = QCMetric(
-        name=f"{unique_id} Registration Summary",
-        description="Review the registration summary plot to ensure that the motion correction is accurate and sufficient.",
-        reference=str(reference_filepath),
-        status_history=[
-            QCStatus(
-                evaluator="Pending review", timestamp=dt.now(), status=Status.PENDING
-            )
-        ],
-        value=DropdownMetric(
-            value=[],
-            options=[
-                "Motion correction successful",
-                "No motion correction applied",
-                "Motion correction failed",
-                "Motion correction partially successful",
-            ],
-            status=[Status.PASS, Status.FAIL, Status.FAIL, Status.FAIL],
-        ),
-    )
-
-    with open(
-        Path(file_path.parent) / f"{unique_id}_registration_summary_metric.json", "w"
-    ) as f:
-        json.dump(json.loads(metric.model_dump_json()), f, indent=4)
-
-
-def serialize_fov_quality_qcmetric() -> None:
-    """Serialize the FOV Quality QCMetric
-
-    This function does not take any parameters.
-
-    QCMetric is named 'fov_quality_metric.json' and is
-    saved to the same directory as *_maximum_projection.png.
-    Ex: '/results/<unique_id>/motion_correction/'
-    """
-
-    avg_projection_file_path = next(output_dir.rglob("*_average_projection.png"))
-    max_projection_file_path = next(output_dir.rglob("*_maximum_projection.png"))
-
-    file_path = Path(str(max_projection_file_path).replace("maximum", "combined"))
-
-    combine_images_with_individual_titles(
-        avg_projection_file_path,
-        max_projection_file_path,
-        file_path,
-        title1="Average Projection",
-        title2="Maximum Projection",
-    )
-
-    # Remove /results from file_path
-    reference_filepath = Path(*file_path.parts[2:])
-    unique_id = reference_filepath.parts[0]
-
-    metric = QCMetric(
-        name=f"{unique_id} FOV Quality",
-        description="Review the avg. and max. projections to ensure that the FOV quality is sufficient.",
-        reference=str(reference_filepath),
-        status_history=[
-            QCStatus(
-                evaluator="Pending review", timestamp=dt.now(), status=Status.PENDING
-            )
-        ],
-        value=DropdownMetric(
-            value=["Quality is sufficient"],
-            options=[
-                "Quality is sufficient",
-                "Timeseries shuffled between planes",
-                "Field of view associated with incorrect area and/or depth",
-                "Paired plane cross talk: Extreme",
-                "Paired plane cross-talk: Moderate",
-            ],
-            status=[Status.PASS, Status.FAIL, Status.FAIL, Status.FAIL, Status.FAIL],
-        ),
-    )
-
-    with open(
-        Path(file_path.parent) / f"{unique_id}_fov_quality_metric.json", "w"
-    ) as f:
-        json.dump(json.loads(metric.model_dump_json()), f, indent=4)
 
 
 def compute_residual_optical_flow(
@@ -1464,49 +1293,6 @@ def get_frame_rate_platform_json(input_dir: str) -> float:
         raise Exception(f"Error: {exc}")
 
 
-def write_data_process(
-    metadata: dict,
-    raw_movie: Union[str, Path],
-    motion_corrected_movie: Union[str, Path],
-    output_dir: Union[str, Path],
-    unique_id: str,
-    start_time: dt,
-    end_time: dt,
-) -> None:
-    """Writes output metadata to plane processing.json
-
-    Parameters
-    ----------
-    metadata: dict
-        parameters from suite2p motion correction
-    raw_movie: str
-        path to raw movies
-    motion_corrected_movie: str
-        path to motion corrected movies
-    """
-    if isinstance(raw_movie, Path):
-        raw_movie = str(raw_movie)
-    if isinstance(motion_corrected_movie, Path):
-        motion_corrected_movie = str(motion_corrected_movie)
-    data_proc = DataProcess(
-        name=ProcessName.VIDEO_MOTION_CORRECTION,
-        software_version=os.getenv("VERSION", ""),
-        start_date_time=start_time.isoformat(),
-        end_date_time=end_time.isoformat(),
-        input_location=str(raw_movie),
-        output_location=str(motion_corrected_movie),
-        code_url=(
-            "https://github.com/AllenNeuralDynamics/"
-            "aind-ophys-motion-correction/tree/main/code"
-        ),
-        parameters=metadata,
-    )
-    if isinstance(output_dir, str):
-        output_dir = Path(output_dir)
-    with open(
-        output_dir / f"{unique_id}_motion_correction_data_process.json", "w"
-    ) as f:
-        json.dump(json.loads(data_proc.model_dump_json()), f, indent=4)
 
 
 def check_trim_frames(data):
@@ -1766,7 +1552,9 @@ def get_frame_rate_from_sync(sync_file, platform_data) -> float:
     return frame_rate_hz
 
 
-def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool = False):
+def multiplane_motion_correction(
+    data_dir: Path, output_dir: Path, frame_rate_hz: float, debug: bool = False
+):
     """Process multiplane data for suite2p parameters
 
     Parameters
@@ -1775,6 +1563,8 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
         path to h5 file
     output_dir: Path
         output directory
+    frame_rate_hz: float
+        frame rate in Hz
     debug: bool
         run in debug mode
     Returns
@@ -1783,8 +1573,6 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
         path to h5 file
     output_dir: Path
         output directory
-    frame_rate_hz: float
-        frame rate in Hz
     """
     pattern = re.compile(r"^V.*\d+$")
     matching_files = [d for d in data_dir.rglob("*.txt") if pattern.match(d.stem)]
@@ -1798,25 +1586,7 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
         unique_id = h5_dir.name
         h5_file = [i for i in h5_dir.glob(f"{h5_dir.name}.h5")][0]
     logging.info("Found raw time series to process %s", h5_file)
-    session_fp = next(data_dir.rglob("session.json"), "")
-    if not session_fp:
-        raise f"Could not locate session.json in {session_fp}"
-    with open(session_fp) as f:
-        session_data = json.load(f)
     output_dir = make_output_directory(output_dir, unique_id)
-    try:
-        frame_rate_hz = float(
-            session_data["data_streams"][0]["ophys_fovs"][0]["frame_rate"]
-        )
-    except KeyError:
-        logging.warning(
-            "Frame rate not found in session.json, pulling from platform.json"
-        )
-        platform_json = next(data_dir.rglob("*platform.json"))
-        with open(platform_json, "r") as j:
-            platform_data = json.load(j)
-        sync_file = [i for i in data_dir.rglob("platform_data['sync_file']")][0]
-        frame_rate_hz = get_frame_rate_from_sync(sync_file, platform_data)
     if debug:
         logging.info(f"Running in debug mode....")
         raw_data = h5py.File(h5_file, "r")
@@ -1827,7 +1597,7 @@ def multiplane_motion_correction(data_dir: Path, output_dir: Path, debug: bool =
         with h5py.File(trimmed_fn, "w") as f:
             f.create_dataset("data", data=trimmed_data)
         h5_file = trimmed_fn
-    return h5_file, output_dir, frame_rate_hz
+    return h5_file, output_dir
 
 
 def update_suite2p_args_reference_image(
@@ -1942,36 +1712,37 @@ def update_suite2p_args_reference_image(
     return suite2p_args, args
 
 
-def generate_single_plane_reference(fp: Path, session) -> Path:
-    """Generate virtual movies for Bergamo data
+def generate_single_plane_reference(fp: Path) -> Path:
+    """Generate a reference image from the first spontaneous epoch.
+
+    Selects the first epoch whose key starts with 'spont' to avoid
+    using photostimulation epochs for the reference image.
 
     Parameters
     ----------
     fp: Path
         path to h5 file
-    session: dict
-        session metadata
     Returns
     -------
     Path
         path to reference image
     """
     with h5py.File(fp, "r") as f:
-        # take the first bci epoch to save out reference image TODO
         tiff_stems = json.loads(f["epoch_locations"][:][0])
-        bci_epochs = [
-            i
-            for i in session["stimulus_epochs"]
-            if i["stimulus_name"] == "single neuron BCI conditioning"
-        ]
-        bci_epoch_loc = [i["output_parameters"]["tiff_stem"] for i in bci_epochs][0]
-        frame_length = tiff_stems[bci_epoch_loc][1] - tiff_stems[bci_epoch_loc][0]
+        spont_epochs = [k for k in tiff_stems if k.startswith("spont")]
+        if not spont_epochs:
+            raise ValueError(
+                f"No spontaneous epoch found in {fp}. "
+                f"Available epochs: {list(tiff_stems.keys())}"
+            )
+        epoch_key = spont_epochs[0]
+        frame_length = tiff_stems[epoch_key][1] - tiff_stems[epoch_key][0]
         vsource = h5py.VirtualSource(f["data"])
         layout = h5py.VirtualLayout(
             shape=(frame_length, *f["data"].shape[1:]), dtype=f["data"].dtype
         )
         layout[0:frame_length] = vsource[
-            tiff_stems[bci_epoch_loc][0] : tiff_stems[bci_epoch_loc][1]
+            tiff_stems[epoch_key][0] : tiff_stems[epoch_key][1]
         ]
 
         with h5py.File("../scratch/reference_image.h5", "w") as ref:
@@ -1981,20 +1752,18 @@ def generate_single_plane_reference(fp: Path, session) -> Path:
 
 
 def singleplane_motion_correction(
-    h5_file: Path, output_dir: Path, session, unique_id: str, debug: bool = False
+    data_dir: Path, output_dir: Path, acquisition, debug: bool = False
 ):
     """Process single plane data for suite2p parameters
 
     Parameters
     ----------
-    h5_file: Path
-        path to h5 file
+    data_dir: Path
+        path to data directory
     output_dir: Path
         output directory
-    session: dict
-        session metadata
-    unique_id: str
-        experiment id from data description
+    acquisition: Acquisition
+        acquisition metadata
     debug: bool
 
     Returns
@@ -2006,10 +1775,10 @@ def singleplane_motion_correction(
     reference_image_fp: str
         path to reference image
     """
-    if not h5_file.is_file():
-        h5_file = [f for f in h5_file.rglob("*.h5") if unique_id in str(f)][0]
+    h5_file = next(data_dir.rglob("*.h5"))
+    unique_id = h5_file.stem
     output_dir = make_output_directory(output_dir, unique_id)
-    reference_image_fp = generate_single_plane_reference(h5_file, session)
+    reference_image_fp = generate_single_plane_reference(h5_file)
     if debug:
         stem = h5_file.stem
         debug_file = Path("../scratch") / f"{stem}_debug.h5"
@@ -2033,55 +1802,12 @@ def singleplane_motion_correction(
     return str(h5_file), output_dir, str(reference_image_fp)
 
 
-def get_frame_rate(session: dict):
-    """Attempt to pull frame rate from session.json
-    Returns none if frame rate not in session.json
 
-    Parameters
-    ----------
-    session: dict
-        session metadata
-
-    Returns
-    -------
-    frame_rate: float
-        frame rate in Hz
-    """
-    frame_rate_hz = None
-    for i in session.get("data_streams", ""):
-        if i.get("ophys_fovs", ""):
-            frame_rate_hz = i["ophys_fovs"][0]["frame_rate"]
-            break
-    if isinstance(frame_rate_hz, str):
-        frame_rate_hz = float(frame_rate_hz)
-    return frame_rate_hz
-
-
-if __name__ == "__main__":  # pragma: nocover
-    # Set the log level and name the logger
-    logger = logging.getLogger("Suite2P motion correction")
-    logger.setLevel(logging.INFO)
+def run(parser, acquisition):
     start_time = dt.now()
-    # Parse command-line arguments
-    parser = MotionCorrectionSettings()
-    # General settings
     data_dir = parser.input_dir
     output_dir = parser.output_dir
-    session_fp = next(data_dir.rglob("session.json"))
-    description_fp = next(data_dir.rglob("data_description.json"))
-    subject_fp = next(data_dir.rglob("subject.json"))
-    with open(session_fp, "r") as j:
-        session = json.load(j)
-    with open(description_fp, "r") as j:
-        data_description = json.load(j)
-    with open(subject_fp, "r") as j:
-        subject = json.load(j)
-    subject_id = subject.get("subject_id", "")
-    name = data_description.get("name", "")
-    setup_logging(
-        "aind-ophys-motion-correction", mouse_id=subject_id, session_name=name
-    )
-    frame_rate_hz = get_frame_rate(session)
+    frame_rate_hz = get_frame_rate_from_acquisition(acquisition)
 
     reference_image_fp = ""
 
@@ -2093,15 +1819,13 @@ if __name__ == "__main__":  # pragma: nocover
             input_file = next(data_dir.rglob("pophys"))
         output_dir = make_output_directory(output_dir, unique_id)
     elif parser.data_type.lower() == "h5":
-        unique_id = "MOp2_3_0"  # TODO: remove when upgrade to data-schema v2
-        if "Bergamo" in session.get("rig_id", ""):
+        if "Bergamo" in acquisition.instrument_id:
             h5_file, output_dir, reference_image_fp = singleplane_motion_correction(
-                data_dir, output_dir, session, unique_id, debug=parser.debug
+                data_dir, output_dir, acquisition, debug=parser.debug
             )
         else:
-            unique_id = "_".join(str(data_description["name"]).split("_")[-3:])
-            h5_file, output_dir, frame_rate_hz = multiplane_motion_correction(
-                data_dir, output_dir, debug=parser.debug
+            h5_file, output_dir = multiplane_motion_correction(
+                data_dir, output_dir, frame_rate_hz, debug=parser.debug
             )
         input_file = str(h5_file)
     else:
@@ -2114,9 +1838,11 @@ if __name__ == "__main__":  # pragma: nocover
     args = vars(parser)
     args["input_dir"] = str(args["input_dir"])
     args["output_dir"] = str(args["output_dir"])
-    if not frame_rate_hz:
-        frame_rate_hz = parser.frame_rate
-        logging.warning("User input frame rate used. %s", frame_rate_hz)
+    # Capture capsule parameters before args gets mutated with derived values
+    capsule_parameters = {
+        k: str(v) if isinstance(v, Path) else v
+        for k, v in vars(parser).items()
+    }
     reference_image = None
     args["refImg"] = []
     if reference_image_fp:
@@ -2290,18 +2016,25 @@ if __name__ == "__main__":  # pragma: nocover
     copy_of_args = copy.deepcopy(suite2p_args)
     copy_of_args.pop("refImg")
 
-    msg = f"running Suite2P v{suite2p.version} with args\n"
-    msg += f"{json.dumps(copy_of_args, indent=2, sort_keys=True)}\n"
-    logger.info(msg)
+    logger.info(f"running Suite2P v{suite2p.version} with args: {repr(copy_of_args)}")
 
     # If we are using a external reference image (including our own
     # produced by compute_referece) communicate this in the log.
     if suite2p_args["force_refImg"]:
-        logger.info(f"\tUsing custom reference image: {suite2p_args['refImg']}")
+        logger.info("Using custom reference image")
 
     if suite2p_args.get("h5py", ""):
         suite2p_args["h5py"] = suite2p_args["h5py"]
-    suite2p.run_s2p(suite2p_args)
+    # Capture Suite2P's print() output into structured JSON logs
+    import sys
+
+    old_stdout, old_stderr = sys.stdout, sys.stderr
+    sys.stdout = LoggingStream(logger, logging.INFO)
+    sys.stderr = LoggingStream(logger, logging.WARNING)
+    try:
+        suite2p.run_s2p(suite2p_args)
+    finally:
+        sys.stdout, sys.stderr = old_stdout, old_stderr
     data_path = ""
     if suite2p_args.get("h5py", ""):
         data_path = suite2p_args["h5py"][0]
@@ -2338,7 +2071,10 @@ if __name__ == "__main__":  # pragma: nocover
     logger.info(f"{len(clipped_indices)} frames will be adjusted for clipping")
 
     # accumulate data from Suite2P's binary file
-    data = suite2p.io.BinaryFile(ops["Ly"], ops["Lx"], bin_path).data
+    # Copy data and close to release mmap before tmp_dir cleanup
+    bin_file = suite2p.io.BinaryFile(ops["Ly"], ops["Lx"], bin_path)
+    data = bin_file.data.copy()
+    bin_file.close()
 
     if args["clip_negative"]:
         data[data < 0] = 0
@@ -2404,15 +2140,6 @@ if __name__ == "__main__":  # pragma: nocover
     av_proj = projection_process(data, projection="avg")
     if parser.data_type == "TIFF":
         input_file = input_file[0]
-    write_data_process(
-        args_copy,
-        input_file,
-        args["motion_corrected_output"],
-        output_dir,
-        basename.split(".")[0],
-        start_time,
-        end_time=dt.now(),
-    )
     # TODO: normalize here, if desired
     # save projections
     for im, dst_path in zip(
@@ -2637,5 +2364,53 @@ if __name__ == "__main__":  # pragma: nocover
     tmp_dir.cleanup()
 
     # Write QC metrics
-    serialize_registration_summary_qcmetric()
-    serialize_fov_quality_qcmetric()
+    write_registration_summary_metric(output_dir)
+    write_fov_quality_metric(output_dir)
+
+    # Write processing.json
+    metrics = {
+        "frames_clipped": len(clipped_indices),
+        "trim_frames_start": args["trim_frames_start"],
+        "trim_frames_end": args["trim_frames_end"],
+    }
+    if "crispness" in dir():
+        metrics["crispness"] = crispness
+    data_proc = build_data_process(
+        parameters=capsule_parameters,
+        start_time=start_time,
+        end_time=dt.now(),
+        output_path=str(output_dir),
+        output_parameters={
+            "args": args_copy,
+            "metrics": metrics,
+        },
+    )
+    write_processing(data_proc, output_dir)
+
+
+if __name__ == "__main__":  # pragma: nocover
+    logger = logging.getLogger("Suite2P motion correction")
+    logger.setLevel(logging.INFO)
+
+    parser = MotionCorrectionSettings()
+    data_dir = parser.input_dir
+
+    acquisition_fp = next(data_dir.rglob("acquisition.json"))
+    description_fp = next(data_dir.rglob("data_description.json"))
+
+    acquisition = load_acquisition(acquisition_fp)
+    data_description = load_data_description(description_fp)
+
+    setup_logging(
+        "aind-ophys-motion-correction",
+        subject_id=data_description.subject_id or "",
+        acquisition_name=data_description.name or "",
+    )
+
+    logger.info("Starting motion correction", extra={"event_type": "stage_start"})
+    try:
+        run(parser, acquisition)
+        logger.info("Motion correction complete", extra={"event_type": "stage_complete"})
+    except Exception:
+        logger.exception("Motion correction failed", extra={"event_type": "stage_error"})
+        raise

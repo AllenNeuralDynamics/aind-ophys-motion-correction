@@ -1,0 +1,51 @@
+# AIND logging configuration (logging.config.dictConfig format)
+#
+# Fields emitted per log record are controlled by the `fields` list below.
+# Add or remove entries to change what appears in each JSON log line.
+# Standard LogRecord attributes (lineno, process, processName, thread,
+# threadName) can be added by name. Custom fields injected by the filter
+# (acquisition_name, process_name) are also referenced by name here.
+#
+# Special fields handled by the formatter:
+#   timestamp  - ISO8601 local time derived from record.created
+#   level      - maps to record.levelname
+#   message    - maps to record.getMessage()
+#
+# The formatter and filter classes live in logging.py (same folder).
+# Load this file with setup_logging() from logging.py.
+
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  aind_json:
+    # () tells dictConfig to instantiate this class directly
+    (): utils.logging_utils.AindJsonFormatter
+    fields:
+      - timestamp
+      - level
+      - message
+      - acquisition_name
+      - process_name
+      - event_type
+
+filters:
+  aind_fields:
+    (): utils.logging_utils.AindContextFilter
+    # Override these values at runtime by passing **fields to setup_logging()
+    acquisition_name: "undefined"
+    process_name: "undefined"
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: aind_json
+    filters:
+      - aind_fields
+    stream: ext://sys.stdout
+    level: DEBUG
+
+root:
+  level: INFO
+  handlers:
+    - console

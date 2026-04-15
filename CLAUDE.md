@@ -113,9 +113,20 @@ Also add `import pytz` near the top for timezone-aware timestamps.
 - Add `tags={"evaluation": "FOV Quality", "type": "Operational QC"}`
 - Fix `QCStatus` timestamp
 
-#### 4. DataProcess (lines 1467-1509)
+#### 4. DataProcess (lines 1467-1509) — MAJOR BREAKING CHANGE
 
-`write_data_process()` — uses `DataProcess` and `ProcessName.VIDEO_MOTION_CORRECTION`. Verify these still exist and have the same signature in v2. This is likely a **minor or no-change** item, but check the import path and constructor.
+`DataProcess` constructor changed significantly in v2. This was flagged as "likely compatible" but is NOT.
+
+**v2 required new fields:** `process_type` (was `name`), `stage` (`ProcessStage.PROCESSING`), `code` (`Code` object), `experimenters` (list)
+**v2 removed fields:** `software_version`, `input_location`, `output_location`, `code_url`, `parameters` — all now **extra forbidden**
+**v2 moved:** `software_version` → `Code.version`, `code_url` → `Code.url`, `parameters` → `Code.parameters`
+**v2 timestamps:** `start_date_time` now requires timezone-aware datetime
+
+New imports needed:
+```python
+from aind_data_schema.components.identifiers import Code
+from aind_data_schema.core.processing import DataProcess, ProcessStage
+```
 
 #### 5. session.json → acquisition.json (MULTIPLE LOCATIONS)
 

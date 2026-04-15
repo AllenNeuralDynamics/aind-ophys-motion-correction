@@ -21,7 +21,7 @@ A v2 data asset is already attached: `multiplane-ophys_839909_2026-02-26_15-11-0
 
 ## Scope
 
-This is a **Phase A (schema upgrade in place)** — keep the monolith structure of `registration.py`, just make it work with v2. Phase B (capsule/library refactor) and Phase C (structured logging) are out of scope.
+This is a **Phase A (schema upgrade in prvolnZk3juxH5R3xCCZCfo8nnI3W2f35tvEZg2N4cTZLpeC5#UxupZi7s4gM3XbfF-rkerDFIaWkf4CKBIwCqzgAykiAlace)** — keep the monolith structure of `registration.py`, just make it work with v2. Phase B (capsule/library refactor) and Phase C (structured logging) are out of scope.
 
 ---
 

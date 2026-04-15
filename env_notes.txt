@@ -1,0 +1,16 @@
+Installing collected packages: h5py
+Successfully installed h5py-3.16.0
+
+Installing collected packages: pandas
+Successfully installed pandas-3.0.2
+
+Installing collected packages: lazy-loader, imageio-ffmpeg, imageio, scikit-image, aind-ophys-utils
+Successfully installed aind-ophys-utils-0.0.8 imageio-2.37.3 imageio-ffmpeg-0.6.0 lazy-loader-0.5 scikit-image-0.26.0
+
+Installing collected packages: python-dotenv, pydantic-settings
+Successfully installed pydantic-settings-2.13.1 python-dotenv-1.2.2
+
+remove aind-log-utils
+
+Installing collected packages: pyyaml
+Successfully installed pyyaml-6.0.3
