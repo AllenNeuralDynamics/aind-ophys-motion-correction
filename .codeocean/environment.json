@@ -18,16 +18,27 @@
 					"version": "5.4.1"
 				},
 				{
-					"name": "aind-log-utils",
-					"version": "0.2.6"
+					"name": "aind-ophys-utils"
 				},
 				{
 					"name": "aind-qcportal-schema",
 					"version": "0.6.4"
 				},
 				{
+					"name": "h5py"
+				},
+				{
+					"name": "pandas"
+				},
+				{
+					"name": "pydantic-settings"
+				},
+				{
 					"name": "pytz",
 					"version": "2026.1.post1"
+				},
+				{
+					"name": "pyyaml"
 				},
 				{
 					"name": "suite2p",
