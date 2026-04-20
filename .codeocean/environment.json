@@ -30,6 +30,9 @@
 					"version": "3.16.0"
 				},
 				{
+					"name": "numpy"
+				},
+				{
 					"name": "pandas",
 					"version": "3.0.2"
 				},

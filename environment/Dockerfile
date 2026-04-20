@@ -1,4 +1,4 @@
-# hash:sha256:4b0fd627a69d229ff2edad74427683b4b853d106459beaf8e886ba6a9dde20fa
+# hash:sha256:04027cc7cf1b157dd90bb64a19d401606686cc8aa4be6b4eaf6e0cd8a21b1edd
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/code-server-python-extensions-pack:v5.0
 
@@ -12,6 +12,7 @@ RUN pip3 install -U --no-cache-dir \
     aind-ophys-utils==0.0.8 \
     aind-qcportal-schema==0.6.4 \
     h5py==3.16.0 \
+    numpy \
     pandas==3.0.2 \
     pydantic-settings==2.13.1 \
     pytz==2026.1.post1 \
