@@ -75,7 +75,7 @@ class MotionCorrectionSettings(BaseSettings, cli_parse_args=True):
         description="Directory into which to write temporary files produced by Suite2P",
     )
     data_type: str = Field(
-        default="h5", description="Processing h5 (default) or TIFF timeseries"
+        default="bruker", description="bruker, tif, or h5"
     )
     do_registration: bool = Field(
         default="true",
@@ -2085,7 +2085,7 @@ if __name__ == "__main__":  # pragma: nocover
 
     reference_image_fp = ""
 
-    if parser.data_type == "TIFF":
+    if parser.data_type.lower() == "tif" or parser.data_type.lower() == "bruker":
         unique_id = "plane_0"
         try:
             input_file = next(data_dir.rglob("*/pophys"))
@@ -2122,7 +2122,7 @@ if __name__ == "__main__":  # pragma: nocover
     if reference_image_fp:
         args["refImg"] = [reference_image_fp]
     # We construct the paths to the outputs
-    if parser.data_type == "TIFF":
+    if parser.data_type.lower() == "tif" or parser.data_type.lower() == "bruker":
         basename = unique_id
     else:
         basename = os.path.basename(input_file)
@@ -2184,6 +2184,7 @@ if __name__ == "__main__":  # pragma: nocover
         suite2p_args["data_path"] = str(input_file)
         suite2p_args["look_one_level_down"] = True
         suite2p_args["tiff_list"] = [str(i) for i in input_file.glob("*.tif*")]
+
     suite2p_args["roidetect"] = False
     suite2p_args["do_registration"] = parser.do_registration
     suite2p_args["align_by_chan"] = parser.align_by_chan
@@ -2247,7 +2248,7 @@ if __name__ == "__main__":  # pragma: nocover
             h5py_key=suite2p_args["h5py_key"],
         )
 
-    if args["auto_remove_empty_frames"]:
+    if args["auto_remove_empty_frames"] and not parser.data_type.lower() == "bruker":
         logger.info(
             "Attempting to find empty frames at the start and end of the movie."
         )
@@ -2265,7 +2266,8 @@ if __name__ == "__main__":  # pragma: nocover
         args["trim_frames_start"] = lowside
         args["trim_frames_end"] = highside
         logger.info(f"Found ({lowside}, {highside}) at the start/end of the movie.")
-
+    if parser.data_type.lower() == "bruker":
+        suite2p_args["force_refImg"] = False
     if suite2p_args["force_refImg"] and len(suite2p_args["refImg"]) == 0:
         suite2p_args, args = update_suite2p_args_reference_image(
             suite2p_args,
@@ -2402,8 +2404,10 @@ if __name__ == "__main__":  # pragma: nocover
     # make projections
     mx_proj = projection_process(data, projection="max")
     av_proj = projection_process(data, projection="avg")
-    if parser.data_type == "TIFF":
+    if parser.data_type.lower() == "tif":
         input_file = input_file[0]
+    if parser.data_type.lower() == "bruker":
+        input_file = str(input_file)
     write_data_process(
         args_copy,
         input_file,
@@ -2634,8 +2638,10 @@ if __name__ == "__main__":  # pragma: nocover
             )
         logger.info(f"created images of PC_low, PC_high, and PC_rof for PC {iPC}")
     # Clean up temporary directory
-    tmp_dir.cleanup()
-
+    try:
+        tmp_dir.cleanup()
+    except:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
     # Write QC metrics
     serialize_registration_summary_qcmetric()
     serialize_fov_quality_qcmetric()
