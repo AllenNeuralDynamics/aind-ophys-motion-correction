@@ -75,7 +75,7 @@ class MotionCorrectionSettings(BaseSettings, cli_parse_args=True):
         description="Directory into which to write temporary files produced by Suite2P",
     )
     data_type: str = Field(
-        default="bruker", description="bruker, tif, or h5"
+        default="h5", description="bruker, tif, or h5"
     )
     do_registration: bool = Field(
         default="true",
