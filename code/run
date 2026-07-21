@@ -3,4 +3,6 @@ set -ex
 
 ls ../data
 
-python registration.py "$@"
+pip list 2>&1 | tee -a /results/pip_list.log
+
+python -u registration.py "$@" 2>&1 | tee -a /results/capsule_output.log
