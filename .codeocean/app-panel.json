@@ -1,0 +1,375 @@
+{
+	"version": 1,
+	"named_parameters": true,
+	"parameters": [
+		{
+			"id": "yvdz7du7Kq6pZ2xq",
+			"name": "input_dir",
+			"param_name": "input_dir",
+			"description": "File or directory where the h5 file is stored",
+			"help_text": "File or directory where the h5 file is stored",
+			"type": "text",
+			"value_type": "string",
+			"default_value": "/data"
+		},
+		{
+			"id": "Y7ymj00LIJJ7QhlL",
+			"name": "output_dir",
+			"param_name": "output_dir",
+			"description": "Output directory",
+			"help_text": "Output directory",
+			"type": "text",
+			"value_type": "string",
+			"default_value": "/results"
+		},
+		{
+			"id": "H0BU2GF10lzDXXtq",
+			"name": "debug",
+			"param_name": "debug",
+			"description": "Run with partial dataset",
+			"help_text": "Run with partial dataset",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "0"
+		},
+		{
+			"id": "kgJL0ffns8LFbYE7",
+			"name": "tmp_dir",
+			"param_name": "tmp_dir",
+			"description": "Directory for temporary files produced by Suite2P",
+			"help_text": "Directory for temporary files produced by Suite2P",
+			"type": "text",
+			"value_type": "string",
+			"default_value": "/scratch"
+		},
+		{
+			"id": "DJIyJ81DkRTouF1p",
+			"name": "data_type",
+			"param_name": "data_type",
+			"description": "bruker, tif, or h5",
+			"help_text": "bruker, tif, or h5",
+			"type": "text",
+			"value_type": "string",
+			"default_value": "h5"
+		},
+		{
+			"id": "XFGPZxUQYydagPAr",
+			"name": "frame_rate",
+			"param_name": "frame_rate",
+			"description": "Frame rate [Hz] fallback used only when it cannot be read from acquisition/session/platform metadata",
+			"help_text": "Frame rate [Hz] fallback used only when it cannot be read from acquisition/session/platform metadata",
+			"type": "text",
+			"value_type": "number"
+		},
+		{
+			"id": "D1rPT3Fru3vcMpF4",
+			"name": "do_registration",
+			"param_name": "do_registration",
+			"description": "whether to register data (2 forces re-registration)",
+			"help_text": "whether to register data (2 forces re-registration)",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "1"
+		},
+		{
+			"id": "ZSiyDiRJIDxj2cPb",
+			"name": "batch_size",
+			"param_name": "batch_size",
+			"description": "Number of frames per batch",
+			"help_text": "Number of frames per batch",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "500"
+		},
+		{
+			"id": "dlZ0aE6cc4N74fWz",
+			"name": "align_by_chan",
+			"param_name": "align_by_chan",
+			"description": "when multi-channel, align by non-functional channel (1-based)",
+			"help_text": "when multi-channel, align by non-functional channel (1-based)",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "1"
+		},
+		{
+			"id": "h3tDFz1IYiwFZsyP",
+			"name": "maxregshift",
+			"param_name": "maxregshift",
+			"description": "max allowed registration shift, as a fraction of frame max(width and height). Ignored if force_refImg is True",
+			"help_text": "max allowed registration shift, as a fraction of frame max(width and height). Ignored if force_refImg is True",
+			"type": "text",
+			"value_type": "number",
+			"default_value": "0.1"
+		},
+		{
+			"id": "G3RWFIbDf1vGr9Tf",
+			"name": "force_refImg",
+			"param_name": "force_refImg",
+			"description": "Force the use of an external reference image",
+			"help_text": "Force the use of an external reference image",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "1"
+		},
+		{
+			"id": "1VEEfcfJdSgrjWrp",
+			"name": "nonrigid",
+			"param_name": "nonrigid",
+			"description": "Whether to use non-rigid registration",
+			"help_text": "Whether to use non-rigid registration",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "1"
+		},
+		{
+			"id": "S3MqimsXsqRAIYG4",
+			"name": "block_size",
+			"param_name": "block_size",
+			"description": "Block size for non-rigid registration.",
+			"help_text": "Block size for non-rigid registration.",
+			"type": "text",
+			"value_type": "string",
+			"default_value": "[128, 128]"
+		},
+		{
+			"id": "giHOhSNBC7g6dWXQ",
+			"name": "snr_thresh",
+			"param_name": "snr_thresh",
+			"description": "if any nonrigid block is below this threshold, it gets smoothed until above it. 1.0 results in no smoothing",
+			"help_text": "if any nonrigid block is below this threshold, it gets smoothed until above it. 1.0 results in no smoothing",
+			"type": "text",
+			"value_type": "number",
+			"default_value": "1.2"
+		},
+		{
+			"id": "5jNMoyHQSsERDv59",
+			"name": "maxregshiftNR",
+			"param_name": "maxregshiftNR",
+			"description": "maximum pixel shift allowed for nonrigid, relative to rigid",
+			"help_text": "maximum pixel shift allowed for nonrigid, relative to rigid",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "5"
+		},
+		{
+			"id": "5F9csmjCJjniB6wG",
+			"name": "outlier_detrend_window",
+			"param_name": "outlier_detrend_window",
+			"description": "For outlier rejection in the xoff/yoff outputs of suite2p, the offsets are first de-trended with a median filter of this duration [seconds]. This is ~30 or 90 samples for 11 and 31 Hz sampling rates respectively.",
+			"help_text": "For outlier rejection in the xoff/yoff outputs of suite2p, the offsets are first de-trended with a median filter of this duration [seconds]. This is ~30 or 90 samples for 11 and 31 Hz sampling rates respectively.",
+			"type": "text",
+			"value_type": "number",
+			"default_value": "3.0"
+		},
+		{
+			"id": "ISFYl48JVfBcyjlq",
+			"name": "outlier_maxregshift",
+			"param_name": "outlier_maxregshift",
+			"description": "Units [fraction FOV dim]. After median-filter detrending, outliers more than this value are clipped to it in x and y offset, independently. Similar to Suite2P's internal maxregshift but allows for low-frequency drift. Default 0.05 typically clips outliers to 512 * 0.05 = 25 pixels above or below the median trend.",
+			"help_text": "Units [fraction FOV dim]. After median-filter detrending, outliers more than this value are clipped to it in x and y offset, independently. Similar to Suite2P's internal maxregshift but allows for low-frequency drift. Default 0.05 typically clips outliers to 512 * 0.05 = 25 pixels above or below the median trend.",
+			"type": "text",
+			"value_type": "number",
+			"default_value": "0.05"
+		},
+		{
+			"id": "jrFcUnhJt4MVRc42",
+			"name": "clip_negative",
+			"param_name": "clip_negative",
+			"description": "Whether to clip negative pixel values in output. Pixel values in raw movies are set by the current off a photomultiplier tube, so there can be negative pixels (current has a sign), possibly from rig noise. Some segmentation algorithms cannot handle negative values, so this sets those pixels to zero.",
+			"help_text": "Whether to clip negative pixel values in output. Pixel values in raw movies are set by the current off a photomultiplier tube, so there can be negative pixels (current has a sign), possibly from rig noise. Some segmentation algorithms cannot handle negative values, so this sets those pixels to zero.",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "0"
+		},
+		{
+			"id": "P9lIIvcjCahaIKXd",
+			"name": "max_reference_iterations",
+			"param_name": "max_reference_iterations",
+			"description": "Maximum number of iterations for creating a reference image",
+			"help_text": "Maximum number of iterations for creating a reference image",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "8"
+		},
+		{
+			"id": "MTeuMaCGaNOqHIUc",
+			"name": "auto_remove_empty_frames",
+			"param_name": "auto_remove_empty_frames",
+			"description": "Automatically detect empty noise frames at the start and end of the movie. Overrides trim_frames_start and trim_frames_end. Some movies contain empty pure-noise frames that receive large random shifts and throw off motion-border calculation; detecting them removes them from reference creation, smoothing parameter searches, and the motion-border calculation. The frames are still written, but any estimated shift is set to 0.",
+			"help_text": "Automatically detect empty noise frames at the start and end of the movie. Overrides trim_frames_start and trim_frames_end. Some movies contain empty pure-noise frames that receive large random shifts and throw off motion-border calculation; detecting them removes them from reference creation, smoothing parameter searches, and the motion-border calculation. The frames are still written, but any estimated shift is set to 0.",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "1"
+		},
+		{
+			"id": "etPGzXEGT4YjPPvW",
+			"name": "trim_frames_start",
+			"param_name": "trim_frames_start",
+			"description": "Number of frames to remove from the start of the movie if known. Removes frames from motion-border calculation and resets the frame shifts found. Frames are still written. Raises an error if auto_remove_empty_frames is set and trim_frames_start > 0",
+			"help_text": "Number of frames to remove from the start of the movie if known. Removes frames from motion-border calculation and resets the frame shifts found. Frames are still written. Raises an error if auto_remove_empty_frames is set and trim_frames_start > 0",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "0"
+		},
+		{
+			"id": "MYzpSzSdM9qZ27sw",
+			"name": "trim_frames_end",
+			"param_name": "trim_frames_end",
+			"description": "Number of frames to remove from the end of the movie if known. Removes frames from motion-border calculation and resets the frame shifts found. Frames are still written. Raises an error if auto_remove_empty_frames is set and trim_frames_end > 0",
+			"help_text": "Number of frames to remove from the end of the movie if known. Removes frames from motion-border calculation and resets the frame shifts found. Frames are still written. Raises an error if auto_remove_empty_frames is set and trim_frames_end > 0",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "0"
+		},
+		{
+			"id": "TBZox9401r3Kkrqx",
+			"name": "do_optimize_motion_params",
+			"param_name": "do_optimize_motion_params",
+			"description": "Search for the best smooth_sigma and smooth_sigma_time. Adds significant runtime and should only be run once per experiment, storing the resulting parameters for later use.",
+			"help_text": "Search for the best smooth_sigma and smooth_sigma_time. Adds significant runtime and should only be run once per experiment, storing the resulting parameters for later use.",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "0"
+		},
+		{
+			"id": "urw6WZxhKhXXaQzX",
+			"name": "smooth_sigma_time",
+			"param_name": "smooth_sigma_time",
+			"description": "gaussian smoothing in time. Overridden if do_optimize_motion_params is set",
+			"help_text": "gaussian smoothing in time. Overridden if do_optimize_motion_params is set",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "0"
+		},
+		{
+			"id": "1Ci9jNHvneDwzCSC",
+			"name": "smooth_sigma",
+			"param_name": "smooth_sigma",
+			"description": "~1 good for 2P recordings, recommend 3-5 for 1P. Overridden if do_optimize_motion_params is set",
+			"help_text": "~1 good for 2P recordings, recommend 3-5 for 1P. Overridden if do_optimize_motion_params is set",
+			"type": "text",
+			"value_type": "number",
+			"default_value": "1.15"
+		},
+		{
+			"id": "lFGz18AailRylnMS",
+			"name": "use_ave_image_as_reference",
+			"param_name": "use_ave_image_as_reference",
+			"description": "Only if do_optimize_motion_params is set. After the best smoothing parameters are found, use the resulting average image as the reference for the full registration. Enables two-step registration when smooth_sigma_min=smooth_sigma_max and smooth_sigma_time_min=smooth_sigma_time_max and steps=1.",
+			"help_text": "Only if do_optimize_motion_params is set. After the best smoothing parameters are found, use the resulting average image as the reference for the full registration. Enables two-step registration when smooth_sigma_min=smooth_sigma_max and smooth_sigma_time_min=smooth_sigma_time_max and steps=1.",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "0"
+		},
+		{
+			"id": "G690IUGWcTZg52Od",
+			"name": "movie_lower_quantile",
+			"param_name": "movie_lower_quantile",
+			"description": "Lower quantile for avg-projection histogram adjustment of the movie",
+			"help_text": "Lower quantile for avg-projection histogram adjustment of the movie",
+			"type": "text",
+			"value_type": "number",
+			"default_value": "0.1"
+		},
+		{
+			"id": "MV7NyPe01KKRrKI3",
+			"name": "movie_upper_quantile",
+			"param_name": "movie_upper_quantile",
+			"description": "Upper quantile for avg-projection histogram adjustment of the movie",
+			"help_text": "Upper quantile for avg-projection histogram adjustment of the movie",
+			"type": "text",
+			"value_type": "number",
+			"default_value": "0.999"
+		},
+		{
+			"id": "PBgiSwrBwwX2DIV1",
+			"name": "preview_frame_bin_seconds",
+			"param_name": "preview_frame_bin_seconds",
+			"description": "Before creating the webm, movies are averaged into bins of this many seconds",
+			"help_text": "Before creating the webm, movies are averaged into bins of this many seconds",
+			"type": "text",
+			"value_type": "number",
+			"default_value": "2.0"
+		},
+		{
+			"id": "pjNN1yKKVBWzdMuS",
+			"name": "preview_playback_factor",
+			"param_name": "preview_playback_factor",
+			"description": "The preview movie plays back at this factor times real-time",
+			"help_text": "The preview movie plays back at this factor times real-time",
+			"type": "text",
+			"value_type": "number",
+			"default_value": "10.0"
+		},
+		{
+			"id": "gVWQ2At7g6w4CAfO",
+			"name": "n_batches",
+			"param_name": "n_batches",
+			"description": "Number of batches to load from the movie for smoothing parameter testing. Batches are evenly spaced throughout the movie.",
+			"help_text": "Number of batches to load from the movie for smoothing parameter testing. Batches are evenly spaced throughout the movie.",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "20"
+		},
+		{
+			"id": "MfiwSgvxa044xxFw",
+			"name": "smooth_sigma_min",
+			"param_name": "smooth_sigma_min",
+			"description": "Minimum of the parameter search for smooth_sigma",
+			"help_text": "Minimum of the parameter search for smooth_sigma",
+			"type": "text",
+			"value_type": "number",
+			"default_value": "0.65"
+		},
+		{
+			"id": "yx6BmqkcCnC7atNB",
+			"name": "smooth_sigma_max",
+			"param_name": "smooth_sigma_max",
+			"description": "Maximum of the parameter search for smooth_sigma",
+			"help_text": "Maximum of the parameter search for smooth_sigma",
+			"type": "text",
+			"value_type": "number",
+			"default_value": "2.15"
+		},
+		{
+			"id": "hjUnS1SK87bXPxxS",
+			"name": "smooth_sigma_steps",
+			"param_name": "smooth_sigma_steps",
+			"description": "Number of steps to grid between smooth_sigma and smooth_sigma_max",
+			"help_text": "Number of steps to grid between smooth_sigma and smooth_sigma_max",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "4"
+		},
+		{
+			"id": "uJf7x0nQc9gx8dB1",
+			"name": "smooth_sigma_time_min",
+			"param_name": "smooth_sigma_time_min",
+			"description": "Minimum of the parameter search for smooth_sigma_time",
+			"help_text": "Minimum of the parameter search for smooth_sigma_time",
+			"type": "text",
+			"value_type": "number",
+			"default_value": "0"
+		},
+		{
+			"id": "4rYfCJGmx5DVTcRx",
+			"name": "smooth_sigma_time_max",
+			"param_name": "smooth_sigma_time_max",
+			"description": "Maximum of the parameter search for smooth_sigma_time",
+			"help_text": "Maximum of the parameter search for smooth_sigma_time",
+			"type": "text",
+			"value_type": "number",
+			"default_value": "6"
+		},
+		{
+			"id": "NlRLNaH2h2n1lK4h",
+			"name": "smooth_sigma_time_steps",
+			"param_name": "smooth_sigma_time_steps",
+			"description": "Number of steps to grid between smooth_sigma_time and smooth_sigma_time_max. Large values add significant time.",
+			"help_text": "Number of steps to grid between smooth_sigma_time and smooth_sigma_time_max. Large values add significant time.",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "7"
+		}
+	]
+}
