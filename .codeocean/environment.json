@@ -1,0 +1,20 @@
+{
+	"version": 1,
+	"base_image": "codeocean/mambaforge3:23.1.0-4-python3.10.12-ubuntu22.04",
+	"options": {
+		"registry_host_arg": true,
+		"git_ask_pass": true,
+		"mount_secrets": true
+	},
+	"installers": {
+		"pip3": {
+			"packages": [
+				{
+					"name": "git+https://github.com/AllenNeuralDynamics/aind-ophys-motion-correction-library.git@04c806c1697759f66a7df6408e4f6ac9eaa70b34#egg=aind-ophys-motion-correction-library"
+				}
+			],
+			"options": {},
+			"pre_install_options": {}
+		}
+	}
+}

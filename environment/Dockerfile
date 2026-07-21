@@ -1,25 +1,12 @@
-# hash:sha256:99280683fb763da41f3d9cf24ffdb942310963bc393cfb11c0445b591bf7a603
-FROM registry.codeocean.allenneuraldynamics.org/codeocean/jupyterlab:3.4.4-miniconda4.12.0-python3.9-ubuntu20.04
+# hash:sha256:8631dbc44dbb2314e13aabee9a7f4377f4b198b5257f27cd6df218bb6792e667
+ARG REGISTRY_HOST
+FROM $REGISTRY_HOST/codeocean/mambaforge3:23.1.0-4-python3.10.12-ubuntu22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
-ENV PIPELINE_URL="https://codeocean.allenneuraldynamics.org/capsule/5619253/tree"
-ENV PIPELINE_VERSION="1.0"
-ENV VERSION="8.0"
 ARG GIT_ASKPASS
-ARG GIT_ACCESS_TOKEN
-COPY git-askpass /
+COPY git-ask-pass /
 
-RUN ["apt-get", "update"]
-RUN ["apt-get", "install", "-y", "vim"]
-RUN pip3 install -U --no-cache-dir \
-    torch --index-url https://download.pytorch.org/whl/cpu
-WORKDIR /
-RUN pip3 install -U --no-cache-dir \
-    aind-ophys-utils \
-    sbxreader \
-    suite2p \
-    aind-data-schema==1.1.0 \
-    pydantic==2.8.1 \
-    aind-qcportal-schema \
-    aind-log-utils \
-    pydantic-settings
+RUN --mount=type=secret,id=git-access-token \
+    GIT_ACCESS_TOKEN="$(cat /run/secrets/git-access-token)" \
+    pip3 install -U --no-cache-dir \
+    -e git+https://github.com/AllenNeuralDynamics/aind-ophys-motion-correction-library.git@04c806c1697759f66a7df6408e4f6ac9eaa70b34#egg=aind-ophys-motion-correction-library
