@@ -33,6 +33,16 @@
 			"default_value": "0"
 		},
 		{
+			"id": "CSUmXxscT6IvMTV7",
+			"name": "verify",
+			"param_name": "verify",
+			"description": "Round-trip the emitted processing.json / quality_control.json through the core v2 schema objects after writing, so bad output fails in-capsule rather than downstream",
+			"help_text": "Round-trip the emitted processing.json / quality_control.json through the core v2 schema objects after writing, so bad output fails in-capsule rather than downstream",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "0"
+		},
+		{
 			"id": "kgJL0ffns8LFbYE7",
 			"name": "tmp_dir",
 			"param_name": "tmp_dir",
@@ -125,8 +135,8 @@
 			"id": "S3MqimsXsqRAIYG4",
 			"name": "block_size",
 			"param_name": "block_size",
-			"description": "Block size for non-rigid registration.",
-			"help_text": "Block size for non-rigid registration.",
+			"description": "Block size for non-rigid registration. Accepts a CLI/env string like '[128, 128]'; elements are coerced to int.",
+			"help_text": "Block size for non-rigid registration. Accepts a CLI/env string like '[128, 128]'; elements are coerced to int.",
 			"type": "text",
 			"value_type": "string",
 			"default_value": "[128, 128]"
