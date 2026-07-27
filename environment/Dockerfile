@@ -1,4 +1,4 @@
-# hash:sha256:1955dff4a8e6607d5052a057f07187bac65522f1dad5e3ddaa7df0776069dde0
+# hash:sha256:9129484ea2a8b9aff6820f7d4e91f4a1f152d96d73e7543e251f76286c444c94
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/mambaforge3:23.1.0-4-python3.10.12-ubuntu22.04
 
@@ -9,4 +9,4 @@ COPY git-ask-pass /
 RUN --mount=type=secret,id=git-access-token \
     GIT_ACCESS_TOKEN="$(cat /run/secrets/git-access-token)" \
     pip3 install -U --no-cache-dir \
-    -e git+https://github.com/AllenNeuralDynamics/aind-ophys-motion-correction-library.git@8a47b97#egg=aind-ophys-motion-correction-library
+    -e git+https://github.com/AllenNeuralDynamics/aind-ophys-motion-correction-library.git@5185b47#egg=aind-ophys-motion-correction-library
