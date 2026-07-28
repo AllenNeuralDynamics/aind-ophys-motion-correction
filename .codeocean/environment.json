@@ -10,7 +10,7 @@
 		"pip3": {
 			"packages": [
 				{
-					"name": "git+https://github.com/AllenNeuralDynamics/aind-ophys-motion-correction-library.git@0fa8aa8#egg=aind-ophys-motion-correction-library"
+					"name": "git+https://github.com/AllenNeuralDynamics/aind-ophys-motion-correction-library.git@857ae56#egg=aind-ophys-motion-correction-library"
 				}
 			],
 			"options": {},
