@@ -9,4 +9,4 @@ COPY git-ask-pass /
 RUN --mount=type=secret,id=git-access-token \
     GIT_ACCESS_TOKEN="$(cat /run/secrets/git-access-token)" \
     pip3 install -U --no-cache-dir \
-    -e git+https://github.com/AllenNeuralDynamics/aind-ophys-motion-correction-library.git@857ae56#egg=aind-ophys-motion-correction-library
+    -e git+https://github.com/AllenNeuralDynamics/aind-ophys-motion-correction-library.git@f1b4cca#egg=aind-ophys-motion-correction-library

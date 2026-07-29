@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
-set -ex
+set -e
 
-ls ../data
+# Nextflow interleaves concurrent tasks into one stream, so tag every line.
+TAG="[aind-ophys-motion-correction@${HOSTNAME:-nohost}]"
+trap 'echo "${TAG} run end: exit $?"' EXIT
 
-pip list 2>&1 | tee -a /results/pip_list.log
+echo "${TAG} inputs: $(ls ../data | tr '\n' ' ')"
 
-python -u registration.py "$@" 2>&1 | tee -a /results/capsule_output.log
+# Plain text, so tag every line.
+pip list 2>&1 | sed "s|^|${TAG} pip |"
+
+echo "${TAG} run begin: python -u registration.py $*"
+# Unprefixed: log_schema emits JSON records that must stay parseable, and each
+# already carries process_name / acquisition_name.
+python -u registration.py "$@" 2>&1
