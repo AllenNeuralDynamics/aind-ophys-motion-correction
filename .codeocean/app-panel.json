@@ -33,16 +33,6 @@
 			"default_value": "0"
 		},
 		{
-			"id": "CSUmXxscT6IvMTV7",
-			"name": "verify",
-			"param_name": "verify",
-			"description": "Round-trip the emitted processing.json / quality_control.json through the core v2 schema objects after writing, so bad output fails in-capsule rather than downstream",
-			"help_text": "Round-trip the emitted processing.json / quality_control.json through the core v2 schema objects after writing, so bad output fails in-capsule rather than downstream",
-			"type": "text",
-			"value_type": "integer",
-			"default_value": "0"
-		},
-		{
 			"id": "kgJL0ffns8LFbYE7",
 			"name": "tmp_dir",
 			"param_name": "tmp_dir",
@@ -75,8 +65,8 @@
 			"id": "D1rPT3Fru3vcMpF4",
 			"name": "do_registration",
 			"param_name": "do_registration",
-			"description": "whether to register data (2 forces re-registration)",
-			"help_text": "whether to register data (2 forces re-registration)",
+			"description": "Whether to register the movie",
+			"help_text": "Whether to register the movie",
 			"type": "text",
 			"value_type": "integer",
 			"default_value": "1"
